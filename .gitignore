@@ -9,3 +9,5 @@ node_modules/
 *.xlsx
 trecord-*.json
 _test*
+
+.vercel/

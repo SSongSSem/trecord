@@ -940,7 +940,7 @@ const AIKEY = KEY + ".ai";
 /* 공용 연결 — 키는 프록시 서버에만 있고 앱에는 주소만 둔다.
    비워 두면 예전처럼 각자 키로만 동작한다. 본인 키가 있으면 언제나 그쪽이 우선이다
    (공용 한도와 무관하게 쓰고, 그 호출은 프록시를 거치지 않는다). */
-const AI_PROXY = "";
+const AI_PROXY = "https://proxy-vercel-red.vercel.app";
 let AI = {key:"", model:"gemini-3.5-flash", agreed:false, models:null};
 try{ Object.assign(AI, JSON.parse(localStorage.getItem(AIKEY) || "{}")); }catch(e){}
 const aiShared = () => !AI.key && !!AI_PROXY;

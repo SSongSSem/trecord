@@ -1,0 +1,7 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "regions": ["icn1"],
+  "rewrites": [
+    { "source": "/v1beta/:path*", "destination": "/api/proxy?p=:path*" }
+  ]
+}

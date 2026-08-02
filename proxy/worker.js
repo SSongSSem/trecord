@@ -43,8 +43,11 @@ export default {
     if (req.method === "OPTIONS") return new Response(null, { headers: h });
     if (origin && !ALLOW.includes(origin))
       return fail("허용되지 않은 주소에서 온 요청입니다.", 403, h);
-    if (!env.GEMINI_KEY)
-      return fail("서버에 키가 설정되지 않았습니다.", 500, h);
+
+    /* 시크릿 이름은 둘 다 받는다 — 대시보드에서 넣을 때 이름이 갈리기 쉽다 */
+    const KEY = env.GEMINI_API_KEY || env.GEMINI_KEY;
+    if (!KEY)
+      return fail("서버에 키가 설정되지 않았습니다. 시크릿 이름을 GEMINI_API_KEY로 넣어 주세요.", 500, h);
 
     const url = new URL(req.url);
     const gen = url.pathname.match(/^\/v1beta\/models\/([^:/]+):generateContent$/);
@@ -64,7 +67,7 @@ export default {
 
     const res = await fetch(UPSTREAM + url.pathname + url.search, {
       method: req.method,
-      headers: { "Content-Type": "application/json", "x-goog-api-key": env.GEMINI_KEY },
+      headers: { "Content-Type": "application/json", "x-goog-api-key": KEY },
       body,
     });
 
