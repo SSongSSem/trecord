@@ -1,0 +1,2211 @@
+<meta charset="utf-8">
+<title>평가 기록 도우미 — 근거로 쌓는 학기말 기록</title>
+
+<style>
+:root{
+  --ground:#E9F2FA; --surface:#FFFFFF; --raise:#F4F9FD; --sink:#DDEAF5;
+  --rule:#D8E4EF; --rule-strong:#B9CCDD;
+  --ink:#1A2733; --ink-2:#55677C; --ink-3:#7C8DA0;
+  --accent:#1E6FD9; --accent-deep:#1558B0; --accent-soft:#E3EEFB; --accent-line:#A9C8EE;
+  --on-accent:#FFFFFF;
+  --warm:#9C5324; --warm-soft:#FFEFE3; --warm-line:#EFC8A6;
+  --low:#B3372A; --mid:#8F6410; --good:#1E7A55;
+  --low-soft:#FBE9E5; --mid-soft:#FAF0DC; --good-soft:#E5F3EC;
+  --shadow-card:0 1px 3px rgba(30,111,217,.06), 0 4px 16px rgba(30,111,217,.07);
+  --shadow-pop:0 4px 12px rgba(30,111,217,.10), 0 12px 32px rgba(30,111,217,.12);
+  --sans:'Pretendard Variable',Pretendard,'Malgun Gothic','Apple SD Gothic Neo',system-ui,sans-serif;
+  --mono:ui-monospace,'Cascadia Mono','D2Coding',Consolas,'Courier New',monospace;
+}
+@media (prefers-color-scheme:dark){
+  :root{
+  --ground:#0E1621; --surface:#17212E; --raise:#1D2938; --sink:#101923;
+  --rule:#2C3B4D; --rule-strong:#3E5065;
+  --ink:#E8EFF7; --ink-2:#A9B9CB; --ink-3:#7B8CA0;
+  --accent:#7FB4F2; --accent-deep:#9CC5F6; --accent-soft:#1A2D45; --accent-line:#2E4A6B;
+  --on-accent:#0E1621;
+  --warm:#F0B183; --warm-soft:#33241A; --warm-line:#57402D;
+  --low:#EE8F7E; --mid:#E0B45C; --good:#63C094;
+  --low-soft:#35201C; --mid-soft:#322817; --good-soft:#16301F;
+  --shadow-card:0 1px 3px rgba(0,0,0,.30), 0 4px 16px rgba(0,0,0,.35);
+  --shadow-pop:0 4px 12px rgba(0,0,0,.40), 0 12px 32px rgba(0,0,0,.45);
+  }
+}
+:root[data-theme="dark"]{
+  --ground:#0E1621; --surface:#17212E; --raise:#1D2938; --sink:#101923;
+  --rule:#2C3B4D; --rule-strong:#3E5065;
+  --ink:#E8EFF7; --ink-2:#A9B9CB; --ink-3:#7B8CA0;
+  --accent:#7FB4F2; --accent-deep:#9CC5F6; --accent-soft:#1A2D45; --accent-line:#2E4A6B;
+  --on-accent:#0E1621;
+  --warm:#F0B183; --warm-soft:#33241A; --warm-line:#57402D;
+  --low:#EE8F7E; --mid:#E0B45C; --good:#63C094;
+  --low-soft:#35201C; --mid-soft:#322817; --good-soft:#16301F;
+  --shadow-card:0 1px 3px rgba(0,0,0,.30), 0 4px 16px rgba(0,0,0,.35);
+  --shadow-pop:0 4px 12px rgba(0,0,0,.40), 0 12px 32px rgba(0,0,0,.45);
+}
+:root[data-theme="light"]{
+  --ground:#E9F2FA; --surface:#FFFFFF; --raise:#F4F9FD; --sink:#DDEAF5;
+  --rule:#D8E4EF; --rule-strong:#B9CCDD;
+  --ink:#1A2733; --ink-2:#55677C; --ink-3:#7C8DA0;
+  --accent:#1E6FD9; --accent-deep:#1558B0; --accent-soft:#E3EEFB; --accent-line:#A9C8EE;
+  --on-accent:#FFFFFF;
+  --warm:#9C5324; --warm-soft:#FFEFE3; --warm-line:#EFC8A6;
+  --low:#B3372A; --mid:#8F6410; --good:#1E7A55;
+  --low-soft:#FBE9E5; --mid-soft:#FAF0DC; --good-soft:#E5F3EC;
+  --shadow-card:0 1px 3px rgba(30,111,217,.06), 0 4px 16px rgba(30,111,217,.07);
+  --shadow-pop:0 4px 12px rgba(30,111,217,.10), 0 12px 32px rgba(30,111,217,.12);
+}
+
+*{box-sizing:border-box}
+body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--sans);
+     font-size:14px;line-height:1.65;-webkit-font-smoothing:antialiased}
+h1,h2,h3{margin:0;font-weight:650}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.mono{font-family:var(--mono);font-variant-numeric:tabular-nums}
+summary{cursor:pointer;list-style:none}
+summary::-webkit-details-marker{display:none}
+summary::after{content:"⌄";margin-left:5px;font-size:11px;color:var(--ink-3)}
+details[open]>summary::after{content:"⌃"}
+
+/* 라벨 — 화면의 모든 작은 제목은 이 하나로 통일 */
+.lab{font-size:13px;font-weight:600;color:var(--ink-2)}
+
+/* ── 상단 ── */
+.top{position:sticky;top:0;z-index:30;background:var(--surface);border-bottom:1px solid var(--rule-strong)}
+.top-in{max-width:1120px;margin:0 auto;padding:10px 18px 0;display:flex;align-items:baseline;gap:12px}
+.brand{font-size:14.5px;font-weight:700;letter-spacing:-.01em}
+.brand em{font-style:normal;color:var(--accent)}
+.klass{font-size:12.5px;color:var(--ink-2);background:var(--surface);border:1px solid var(--rule);
+       padding:4px 8px;border-radius:999px;max-width:230px}
+.klass:hover{border-color:var(--accent-line);color:var(--accent)}
+.top-right{margin-left:auto;display:flex;align-items:center;gap:8px}
+.saved{font-size:11px;color:var(--ink-3);font-family:var(--mono)}
+.tabs{max-width:1120px;margin:0 auto;padding:0 18px;display:flex;gap:4px}
+.tab{background:none;border:0;border-bottom:2px solid transparent;padding:10px 12px 8px;
+     font-size:13.5px;font-weight:600;color:var(--ink-3)}
+.tab[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--accent)}
+.tab:hover:not(:disabled){color:var(--ink)}
+.tab:disabled{opacity:.4;cursor:not-allowed}
+.tab .dot{display:inline-block;width:5px;height:5px;border-radius:50%;background:var(--mid);
+          vertical-align:2px;margin-left:5px}
+
+.wrap{max-width:1120px;margin:0 auto;padding:16px 18px 72px}
+
+/* 버튼 */
+.ghost{background:var(--surface);border:1px solid var(--rule-strong);
+       padding:6px 12px;font-size:12.5px;color:var(--ink-2);border-radius:12px}
+.ghost:hover{border-color:var(--accent);color:var(--accent)}
+.primary{background:var(--accent);color:var(--on-accent);border:1px solid var(--accent);
+         border-radius:12px;padding:7px 18px;font-size:13.5px;font-weight:600}
+.primary:hover:not(:disabled){background:var(--accent-deep);border-color:var(--accent-deep)}
+.primary:disabled{opacity:.4;cursor:not-allowed}
+.danger{color:var(--low);border-color:var(--rule-strong)}
+.danger:hover{border-color:var(--low);color:var(--low)}
+.link{background:none;border:0;color:var(--accent);font-size:12.5px;padding:0;text-decoration:underline}
+
+select,input[type=text],textarea{background:var(--surface);border:1px solid var(--rule-strong);
+  border-radius:12px;padding:7px 11px;font-size:13.5px}
+select:focus,input[type=text]:focus,textarea:focus{outline:none;border-color:var(--accent);
+  box-shadow:0 0 0 3px var(--accent-soft)}
+textarea{line-height:1.7}
+
+/* 패널 */
+.panel{background:var(--surface);border:1px solid var(--rule);border-radius:16px;box-shadow:var(--shadow-card)}
+.ph{display:flex;align-items:center;gap:10px;padding:14px 20px;border-bottom:1px solid var(--rule)}
+.ph h2{font-size:15px;font-weight:650;letter-spacing:-.01em}
+.ph .r{margin-left:auto;display:flex;gap:8px;align-items:center}
+.pb{padding:20px}
+.stack{display:flex;flex-direction:column;gap:20px}
+
+/* ── 2단 ── */
+.cols{display:grid;grid-template-columns:206px minmax(0,1fr);gap:20px;align-items:start}
+@media (max-width:820px){.cols{grid-template-columns:1fr}}
+
+/* 명렬표 */
+.roster{max-height:calc(100vh - 190px);overflow:auto}
+.rrow{display:grid;grid-template-columns:24px minmax(0,1fr) auto 16px;gap:8px;align-items:center;width:100%;
+      background:none;border:0;border-bottom:1px solid var(--rule);padding:0 10px 0 12px;height:32px;
+      text-align:left;font-size:13px;color:var(--ink);cursor:pointer}
+.rrow:hover{background:var(--raise)}
+.rrow .x{background:none;border:0;color:var(--ink-3);font-size:15px;line-height:1;padding:0;
+         opacity:0;transition:opacity .1s}
+.rrow:hover .x,.rrow[aria-current="true"] .x,.rrow .x:focus-visible{opacity:1}
+.rrow .x:hover{color:var(--low)}
+@media (prefers-reduced-motion:reduce){.rrow .x{transition:none}}
+.rrow[aria-current="true"]{background:var(--accent-soft);box-shadow:inset 3px 0 0 var(--accent);font-weight:600}
+.rrow .no{font-family:var(--mono);font-size:11.5px;color:var(--ink-3)}
+.rrow .cnt{font-family:var(--mono);font-size:11px;color:var(--ink-3)}
+.rrow[aria-current="true"] .cnt{color:var(--accent)}
+
+/* 학생 추가 줄 */
+.addstu{display:flex;gap:5px;padding:8px 10px;border-top:1px solid var(--rule);background:var(--sink)}
+.addstu input{flex:1;min-width:0;background:var(--surface)}
+.addstu button{font-family:var(--mono);font-weight:700;padding:6px 10px;border-radius:12px}
+
+/* 말풍선 도움말 */
+.tip{position:relative}
+.tip::after{content:attr(data-tip);position:absolute;left:50%;bottom:calc(100% + 7px);transform:translateX(-50%);
+  width:210px;background:var(--ink);color:var(--surface);font-family:var(--sans);font-weight:400;
+  font-size:11.5px;line-height:1.5;padding:6px 8px;border-radius:3px;text-align:left;
+  opacity:0;visibility:hidden;transition:opacity .12s;z-index:40;pointer-events:none}
+.tip:hover::after,.tip:focus-visible::after{opacity:1;visibility:visible}
+@media (prefers-reduced-motion:reduce){.tip::after{transition:none}}
+
+/* 학생 머리 */
+.shead{padding:14px 16px 12px;border-bottom:1px solid var(--rule);display:flex;
+       align-items:baseline;gap:12px;flex-wrap:wrap}
+.shead .nm{font-size:20px;font-weight:700;letter-spacing:-.02em}
+.shead .meta{font-size:12px;color:var(--ink-3);font-family:var(--mono)}
+.shead .r{margin-left:auto;display:flex;gap:6px;align-items:baseline}
+
+/* 슬롯 */
+.slots{display:flex;flex-wrap:wrap;gap:4px;padding:10px 16px;border-bottom:1px solid var(--rule);
+       background:var(--sink)}
+.slot{background:var(--surface);border:1px solid var(--rule);border-radius:999px;padding:5px 12px;
+      font-size:12px;color:var(--ink-2);display:inline-flex;gap:6px;align-items:center}
+.slot:hover{border-color:var(--accent-line)}
+.slot b{font-family:var(--mono);font-size:11px;font-weight:600;color:var(--ink-3)}
+.slot .ok{width:5px;height:5px;border-radius:50%;background:var(--good)}
+.slot[aria-pressed="true"]{border-color:var(--accent);background:var(--accent-soft);
+                           color:var(--accent);font-weight:600}
+.slot[aria-pressed="true"] b{color:var(--accent)}
+
+/* 구역 */
+.sec{padding:14px 16px;border-bottom:1px solid var(--rule)}
+.sec:last-child{border-bottom:0}
+.sechead{display:flex;align-items:baseline;gap:8px;margin-bottom:9px}
+.sechead .r{margin-left:auto;display:flex;gap:14px;align-items:baseline}
+
+/* 관찰 담기 */
+.catch{border:1px solid var(--rule);border-radius:16px;background:var(--raise);padding:16px}
+.catch-top{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-bottom:7px}
+.catch-top .where{font-size:12px;font-weight:600;color:var(--accent)}
+.catch-in{display:flex;gap:6px}
+.catch-in input{flex:1;background:var(--surface)}
+.tags{display:flex;flex-wrap:wrap;gap:5px;align-items:center;margin-top:7px}
+.chip{display:inline-flex;align-items:center;gap:4px;border:1px solid var(--accent-line);
+      background:var(--accent-soft);color:var(--accent);border-radius:999px;padding:2px 9px;
+      font-size:11px;font-family:var(--mono)}
+.chip.std{gap:6px;max-width:100%;font-family:var(--sans);font-size:11.5px;white-space:normal}
+.chip.std b{font-family:var(--mono);font-weight:600}
+.chip button{background:none;border:0;color:inherit;padding:0 0 0 2px;line-height:1}
+
+/* 키워드 */
+.kw{display:flex;gap:8px;align-items:flex-start;margin-top:8px}
+.kw select{flex:0 0 auto;max-width:170px}
+.kw button{flex:0 0 auto;white-space:nowrap}
+.kwchips{display:flex;flex-wrap:wrap;gap:5px;max-height:62px;overflow-y:auto;padding-right:2px}
+.kwc{background:var(--surface);border:1px solid var(--rule);border-radius:999px;
+     padding:2px 10px;font-size:12px;color:var(--ink-2);white-space:nowrap}
+.kwc:hover{border-color:var(--accent-line);color:var(--accent);background:var(--accent-soft)}
+
+/* 관찰 목록 */
+.memo{display:grid;grid-template-columns:42px 68px minmax(0,1fr) 22px;gap:10px;align-items:baseline;
+      border-bottom:1px solid var(--rule);padding:7px 0}
+.memo:last-child{border-bottom:0}
+.memo .dt{font-family:var(--mono);font-size:11.5px;color:var(--ink-3)}
+.memo .src{font-size:11.5px;color:var(--warm);background:var(--warm-soft);border:1px solid var(--warm-line);border-radius:999px;
+           padding:1px 9px;justify-self:start;white-space:nowrap}
+.memo .body{word-break:break-word;line-height:1.65}
+.memo .code{font-family:var(--mono);font-size:11px;color:var(--accent);margin-right:6px}
+.memo .task{font-size:11px;color:var(--ink-3);margin-right:6px}
+.memo .clip{background:none;border:0;padding:0 0 0 6px;font-size:12px;line-height:1;opacity:.75}
+.memo .clip:hover{opacity:1}
+.memo .del{background:none;border:0;color:var(--ink-3);font-size:13px;padding:0;opacity:0}
+.memo:hover .del{opacity:1}
+.memo .del:hover{color:var(--low)}
+.empty{color:var(--ink-3);font-size:12.5px;padding:14px 0;text-align:center}
+.empty b{display:block;color:var(--ink-2);font-weight:600;margin-bottom:2px}
+
+/* 문장 */
+textarea.draft{width:100%;min-height:132px;resize:vertical;font-size:15px;line-height:1.9}
+.meter{display:flex;gap:14px;align-items:baseline;margin-top:7px;font-size:11.5px;color:var(--ink-3)}
+.meter b{font-family:var(--mono);font-size:12.5px;color:var(--ink-2);font-weight:600}
+
+/* 검사 */
+.scan{margin-top:12px}
+.scan-head{display:flex;align-items:baseline;gap:10px;padding-bottom:7px}
+.tally{font-family:var(--mono);font-size:12px}
+.tally .b{color:var(--low);font-weight:700}
+.tally .w{color:var(--mid);font-weight:700}
+.tally .none{color:var(--good);font-weight:600;font-family:var(--sans);font-size:12.5px}
+.f{border-top:1px solid var(--rule)}
+.f summary{display:flex;align-items:baseline;gap:8px;padding:6px 2px;font-size:13px}
+.f summary:hover{background:var(--raise)}
+.f .mk{font-size:9px;line-height:1.9}
+.f.block .mk{color:var(--low)} .f.warn .mk{color:var(--mid)}
+.f .hit{font-family:var(--mono);font-size:12px;padding:0 4px;border-radius:2px}
+.f.block .hit{background:var(--low-soft);color:var(--low)}
+.f.warn .hit{background:var(--mid-soft);color:var(--mid)}
+.f .to{color:var(--ink-2);font-size:12.5px}
+.f .r{margin-left:auto;display:flex;gap:8px;align-items:baseline}
+.f.done .mk{color:var(--good)}
+.f.done .hit{background:var(--good-soft);color:var(--good)}
+.f.done summary{opacity:.85}
+.f .why{padding:2px 2px 9px 26px;font-size:12px;color:var(--ink-2)}
+.f .basis{font-family:var(--mono);font-size:10.5px;color:var(--ink-3)}
+.fix{background:var(--surface);border:1px solid var(--accent-line);color:var(--accent);
+     border-radius:8px;padding:1px 8px;font-size:11.5px}
+
+/* 게이트 */
+.gate{margin-top:16px;background:var(--sink);border:1.5px solid var(--rule-strong);border-radius:8px;padding:16px 20px}
+.gate .row{display:flex;flex-wrap:wrap;gap:6px 14px;margin:7px 0 10px}
+.gate label{display:inline-flex;gap:6px;align-items:center;font-size:12.5px;color:var(--ink-3);cursor:pointer}
+.gate label.on{color:var(--ink)}
+.gate input{accent-color:var(--accent)}
+.gate .foot{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.gate .msg{font-size:11.5px;color:var(--ink-3)}
+.gate .msg.warn{color:var(--low)}
+
+/* 짚어주기 */
+.pt{display:grid;grid-template-columns:18px minmax(0,1fr) auto;gap:12px;align-items:baseline;
+    padding:12px 16px;border-bottom:1px solid var(--rule);font-size:14px}
+.pt:last-child{border-bottom:0}
+.pt .mk{font-size:10px;line-height:1.7}
+.pt.high .mk{color:var(--low)} .pt.mid .mk{color:var(--mid)} .pt.low .mk{color:var(--ink-3)}
+.pt .who{font-size:12px;color:var(--ink-3);margin-top:1px}
+.pt .go{white-space:nowrap}
+.clear{padding:16px 14px;font-size:13px;color:var(--good);display:flex;gap:8px;align-items:baseline}
+.clear span{color:var(--ink-3);font-size:12px}
+
+/* 표 */
+table{width:100%;border-collapse:collapse;font-size:13px}
+th,td{text-align:left;padding:6px 10px;border-bottom:1px solid var(--rule)}
+th{font-size:10.5px;letter-spacing:.06em;color:var(--ink-3);font-weight:600}
+td.n,th.n{text-align:right;font-family:var(--mono);font-variant-numeric:tabular-nums}
+.scroll{overflow-x:auto}
+.muted{color:var(--ink-3);font-size:12.5px}
+.rowbtns{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.help{margin-top:10px;font-size:12.5px;color:var(--ink-2)}
+.help summary{font-size:12px;color:var(--ink-3)}
+.help div{padding-top:8px;line-height:1.7}
+.help p{margin:0 0 7px}
+
+/* 문서 올리기 */
+.drop{border:1px dashed var(--rule-strong);border-radius:12px;padding:18px 14px;text-align:center;
+      background:var(--raise);color:var(--ink-3);font-size:12.5px}
+.drop.on{border-color:var(--accent);background:var(--accent-soft);color:var(--accent)}
+.drop b{display:block;color:var(--ink-2);font-size:13.5px;font-weight:600;margin-bottom:3px}
+
+/* 설정 */
+.setup{max-width:560px;margin:28px auto}
+.field{margin-bottom:16px}
+.field>.lab{display:block;margin-bottom:5px}
+.inline{display:flex;gap:10px;align-items:flex-end}
+.subjgrid{display:flex;flex-wrap:wrap;gap:5px}
+.subjgrid label{display:inline-flex;gap:5px;align-items:center;border:1px solid var(--rule-strong);
+                border-radius:3px;padding:3px 9px;font-size:12.5px;cursor:pointer;color:var(--ink-2)}
+.subjgrid label.on{border-color:var(--accent);background:var(--accent-soft);color:var(--accent);font-weight:600}
+textarea.big{width:100%;min-height:120px;font-family:var(--mono);font-size:13px}
+.hint{font-size:11.5px;color:var(--ink-3);margin-top:5px}
+.steps{display:flex;gap:18px;font-size:12px;color:var(--ink-3);margin-bottom:14px;flex-wrap:wrap}
+.steps .n{color:var(--accent);font-family:var(--mono);font-weight:700;margin-right:6px}
+
+/* 성취기준 창 */
+dialog{border:1px solid var(--rule-strong);border-radius:16px;box-shadow:var(--shadow-pop);background:var(--surface);color:var(--ink);
+       padding:0;width:min(700px,94vw);max-height:86vh}
+dialog::backdrop{background:rgba(8,12,20,.45)}
+.dh{display:flex;gap:10px;align-items:center;padding:11px 14px;border-bottom:1px solid var(--rule)}
+.dh strong{font-size:13px}
+.dh input[type=text]{flex:1}
+.dtask{padding:12px 14px;border-bottom:1px solid var(--rule);background:var(--raise)}
+.dtask input,.dtask textarea{width:100%}
+.dbody{max-height:52vh;overflow:auto}
+.dfoot{padding:10px 14px;border-top:1px solid var(--rule);display:flex;gap:8px;align-items:center;
+       justify-content:flex-end}
+.fview{padding:12px;overflow:auto;max-height:74vh;background:var(--sink);text-align:center}
+.fview img{max-width:100%;height:auto;border:1px solid var(--rule);background:#fff}
+.ahead{position:sticky;top:0;background:var(--sink);border-bottom:1px solid var(--rule);
+       padding:5px 14px;font-size:10.5px;letter-spacing:.06em;color:var(--ink-2);font-weight:600}
+.srow{display:grid;grid-template-columns:18px 74px minmax(0,1fr);gap:9px;align-items:baseline;width:100%;
+      background:none;border:0;border-bottom:1px solid var(--rule);padding:6px 14px;text-align:left;
+      font-size:13px;color:var(--ink)}
+.srow:hover{background:var(--raise)}
+.srow .mk{color:var(--ink-3)}
+.srow[data-on="1"]{background:var(--accent-soft)}
+.srow[data-on="1"] .mk{color:var(--good);font-weight:700}
+.srow .code{font-family:var(--mono);font-size:11.5px;color:var(--accent)}
+</style>
+
+<header class="top">
+  <div class="top-in">
+    <h1 class="brand">평가 기록 도우미 <em>T-record</em></h1>
+    <select class="klass" id="klass" title="학급 바꾸기"></select>
+    <span class="top-right">
+      <span class="saved" id="saved"></span>
+      <button class="ghost" id="btn-theme" type="button">화면</button>
+    </span>
+  </div>
+  <nav class="tabs" role="tablist">
+    <button class="tab" role="tab" id="tab-prep" aria-selected="false" type="button">준비</button>
+    <button class="tab" role="tab" id="tab-write" aria-selected="true" type="button">기록</button>
+    <button class="tab" role="tab" id="tab-check" aria-selected="false" type="button">점검</button>
+    <button class="tab" role="tab" id="tab-ai" aria-selected="false" type="button">AI 연결</button>
+  </nav>
+</header>
+
+<main class="wrap" id="main"></main>
+
+<dialog id="fdlg">
+  <div class="dh"><strong id="fdlg-name">산출물</strong>
+    <span class="r" style="margin-left:auto;display:flex;gap:8px;align-items:center">
+      <span class="muted mono" id="fdlg-size"></span>
+      <button class="ghost" id="fdlg-save" type="button">내려받기</button>
+      <button class="ghost" id="fdlg-close" type="button">닫기</button></span></div>
+  <div class="fview" id="fdlg-body"></div>
+</dialog>
+
+<dialog id="dlg">
+  <div class="dh">
+    <strong id="dlg-title">성취기준 고르기</strong>
+    <select id="dlg-subj"></select>
+    <input type="text" id="dlg-q" placeholder="코드나 낱말로 찾기">
+    <span class="mono" id="dlg-cnt" style="font-size:11px;color:var(--ink-3)"></span>
+  </div>
+  <div class="dtask" id="dlg-task" hidden>
+    <div class="field" style="margin-bottom:9px">
+      <span class="lab">평가과제 이름</span>
+      <input type="text" id="dlg-name" placeholder="예) 우리 지역의 문제 해결하기">
+    </div>
+    <div class="field" style="margin-bottom:0">
+      <span class="lab">평가기준 — 학교 평가계획 문장을 그대로</span>
+      <textarea id="dlg-crit" rows="2"></textarea>
+    </div>
+  </div>
+  <div class="dbody" id="dlg-body"></div>
+  <div class="dfoot">
+    <span class="muted" id="dlg-sel"></span>
+    <button class="ghost" id="dlg-cancel" type="button">취소</button>
+    <button class="primary" id="dlg-ok" type="button">담기</button>
+  </div>
+</dialog>
+
+<script>
+"use strict";
+
+/* ══ 성취기준 원문 (2022 개정 초등 611건) ══ */
+const STD = /*__STD__*/{}/*__/STD__*/;
+
+/* ══ 교과·창체·행동특성 평가 키워드 (v1 확장 자료, 688개) ══ */
+const KW = /*__KW__*/{"subj":{},"cca":{"auto":[],"career":[]},"behavior":[]}/*__/KW__*/;
+
+const CCA = {auto:{label:"창체 자율·동아리"}, career:{label:"창체 진로"}};
+const COMMON_KW = [
+  {a:"태도·참여", k:["적극적으로 참여함","끝까지 해냄","스스로 계획해 실천함","친구를 도와줌","끝까지 경청함",
+                   "궁금한 점을 질문함","꼼꼼히 확인함","자신 있게 발표함","모둠에서 협력함","맡은 일을 책임짐",
+                   "정리정돈이 바름","새로운 방법을 시도함"]},
+  {a:"성장 지점", k:["도움을 받아 해냄","조금 더 시간이 필요함","자신감이 자라는 중","집중하는 시간이 늘고 있음",
+                   "발표를 조심스러워함","되돌아보기를 연습 중","꾸준함이 자라는 중","스스로 하려는 시도가 늘고 있음"]}
+];
+const SOURCES = ["직접관찰","수업산출물","자기평가서","동료평가서","소감문","독후감"];
+const RECOGNIZED = ["수업산출물","자기평가서","동료평가서","소감문","독후감"];   // 기재요령이 인정하는 학생 산출 자료 5종
+const BAND_OF = {1:"1~2",2:"1~2",3:"3~4",4:"3~4",5:"5~6",6:"5~6"};
+const INTEGRATED = "통합교과", INTEGRATED_LABEL = "바른 생활·슬기로운 생활·즐거운 생활";
+
+/* ── 코드 사전 ── */
+const CODEMAP = {};
+for(const subj of Object.keys(STD))
+  for(const g of Object.keys(STD[subj]))
+    for(const a of STD[subj][g])
+      for(const [c,t] of a.s) CODEMAP[c] = {subject:subj, grade:g, area:a.a, text:t};
+
+/* ══ 기재요령 검사 ══ */
+const SWAPS = [
+  [/구글|네이버|다음(?=에서 검색|을 이용|을 활용)/g,"포털사이트"],
+  [/유튜브|넷플릭스/g,"동영상 플랫폼"],
+  [/줌(?=을|으로|에서| 수업| 회의)/g,"화상 회의"],
+  [/카카오톡|카톡/g,"메신저"],
+  [/인스타그램|페이스북/g,"누리소통망"],
+  [/엔트리|스크래치/g,"교육용 프로그래밍 도구"],
+  [/커리어넷|워크넷/g,"진로 정보망"],
+  [/챗지피티|챗GPT|ChatGPT|제미나이/gi,"인공지능 챗봇"],
+  [/MBTI|엠비티아이/gi,"성격유형 검사"],
+  [/아이패드|갤럭시탭/g,"태블릿피시"],
+  [/아래아한글|MS ?워드|한글 ?파일/gi,"문서작성 프로그램"],
+  [/엑셀/g,"스프레드시트"],
+  [/파워포인트|프레지|미리캔버스|캔바/gi,"발표 자료 제작 도구"]
+];
+const RULES = [
+  {id:"lang", lv:"block", basis:"기재요령 p.18", why:"공인어학시험·자격증·인증시험은 어떤 서술형 항목에도 쓸 수 없음",
+   re:/토익|토플|텝스|TOEIC|TOEFL|TEPS|HSK|JLPT|DELF|공인 ?어학|한자능력검정|자격증|자격 ?취득|인증 ?시험|급수 ?취득/gi},
+  {id:"paper", lv:"block", basis:"기재요령 p.18", why:"논문·출간·지식재산권은 기재 금지. 책은 ‘출간’이 아니라 ‘제작함’으로",
+   re:/논문|학술지|등재|출간|출판|ISBN|ISSN|특허|실용신안|지식재산권|상표 ?등록|디자인 ?등록/gi},
+  {id:"money", lv:"block", basis:"기재요령 p.18 · 현장점검 p.7", why:"장학금·기부·해외 활동 실적은 기재 금지",
+   re:/장학금|장학생|기부금|후원금|성금|(?:현금|물품)\s*을?\s*기부|어학연수|해외 ?봉사|해외 ?체험|해외 ?활동/g},
+  {id:"intl", lv:"block", basis:"질의회신 p.108", why:"국제기구명은 교과서에 나오더라도 기재 불가",
+   re:/\bUN\b|유엔|\bWHO\b|UNESCO|유네스코|OECD|\bIMF\b|\bEU\b|모의 ?유엔/g},
+  {id:"contest", lv:"warn", basis:"기재요령 p.18", why:"‘대회’라는 말 자체를 쓰지 않음. 학교 행사라면 ‘운동회·한마당·발표회’로 바꿔 쓸 것",
+   re:/대회|경시|올림피아드|왕중왕|선발전|입상|우승/g},
+  {id:"score", lv:"warn", basis:"기재요령 p.18", why:"점수·등급·석차는 기재 금지. ‘3등분’, ‘1등성’처럼 뜻이 다르면 그대로 두어도 됨",
+   re:/\d+\s*점(?!\s*을\s*(?:이어|찍|연결))|\d+\s*등급|\d+\s*등(?![분성급])|석차|백분위|모의고사|만점/g},
+  {id:"subj", lv:"warn", basis:"질의회신 p.114", why:"학생 이름·주어는 넣지 않는 것이 관례",
+   re:/학생은|학생이 |본 학생|이 학생/g}
+];
+const SPECIALS = /[①-⑳➀-➉◦○●▶▷◆■□★☆♡♥→←※•‣]{1}|[\u{1F300}-\u{1FAFF}\u{2190}-\u{21FF}\u{2600}-\u{27BF}]/gu;
+
+function check(text){
+  const out = [];
+  if(!text || !text.trim()) return out;
+  for(const r of RULES){
+    r.re.lastIndex = 0; let m;
+    while((m = r.re.exec(text))){
+      out.push({lv:r.lv, id:r.id, hit:m[0], at:m.index, basis:r.basis, why:r.why});
+      if(m.index === r.re.lastIndex) r.re.lastIndex++;
+    }
+  }
+  for(const [re,to] of SWAPS){
+    re.lastIndex = 0; let m;
+    while((m = re.exec(text))){
+      out.push({lv:"block", id:"brand", hit:m[0], at:m.index, swap:to,
+                basis:"유의사항 p.6", why:"상표·앱 실명은 일반명사로 대체"});
+      if(m.index === re.lastIndex) re.lastIndex++;
+    }
+  }
+  SPECIALS.lastIndex = 0; let m;
+  while((m = SPECIALS.exec(text)))
+    out.push({lv:"block", id:"special", hit:m[0], at:m.index, swap:"",
+              basis:"유의사항 p.2", why:"특수문자·번호기호·이모지는 지양(괄호와 작은따옴표는 가능)"});
+  // 명사형 종결 — 마지막 글자 받침이 ㅁ/ㄻ인지로 판정(‘익힘·찾아냄·이끎’을 위반으로 잡지 않기 위해)
+  let at = 0;
+  for(const s of text.split(/(?<=\.)\s*/)){
+    const start = at; at += s.length;
+    const core = s.replace(/[\s.。!?'"’”)\]」』…·\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]+$/gu, "");
+    if(core.length < 5) continue;
+    const j = core.charCodeAt(core.length-1) - 0xAC00;
+    if(j < 0 || j > 11171) continue;
+    const jong = j % 28;
+    if(jong !== 16 && jong !== 10)
+      out.push({lv:"warn", id:"ending", hit:core.slice(-6), at:start + Math.max(0, core.length-6),
+                basis:"기재요령 p.30", why:"서술형은 명사형 어미(‘~함’, ‘~음’)로 종결"});
+  }
+  return out.sort((a,b) => a.at - b.at);
+}
+
+/* 지운 자리에 남는 쉼표·빈 괄호·겹공백을 정리한다 */
+function tidySentence(t){
+  return String(t).replace(/\(\s*\)/g, "").replace(/\s*,\s*,/g, ",")
+    .replace(/\.\s*,/g, ". ").replace(/,\s*\./g, ".")
+    .replace(/\s+([,.])/g, "$1").replace(/([,.])\s*\1+/g, "$1")
+    .replace(/([.,])(?=[^\s])/g, "$1 ").replace(/\s{2,}/g, " ")
+    .replace(/^[\s,.]+/, "").trim();
+}
+/* ‘~하였다’ → ‘~하였음’처럼 명사형으로 바꾼다(제안이므로 교사가 확인한다) */
+function toNominal(s){
+  const m = String(s).match(/^([\s\S]*?)([가-힣]+)다$/);
+  if(!m) return null;
+  const head = m[1], stem = m[2], last = stem.slice(-1), rest = stem.slice(0,-1);
+  const j = last.charCodeAt(0) - 0xAC00;
+  if(j < 0 || j > 11171) return null;
+  const jong = j % 28;
+  if(/[았었였겠]/.test(last)) return head + stem + "음";
+  if(last === "는") return head + rest + "음";
+  if(jong === 4)  return head + rest + String.fromCharCode(0xAC00 + j - 4 + 16);   // 종성 ㄴ → ㅁ
+  if(jong === 0)  return head + rest + String.fromCharCode(0xAC00 + j + 16);       // 받침 없음 → ㅁ
+  return head + stem + "음";
+}
+/* 자동 검사에서 교사가 ‘확인함’으로 넘긴 항목 (화면에만 남는다) */
+let ackScan = {}, upFile = null;
+let _kwArea = 0, _aiKw = null, _level = '';
+const ackKey = f => f.id + "|" + f.hit;
+
+/* ══ 상태 ══ */
+const KEY = "trecord.v3";
+const blank = () => ({schema:"trecord.v3", classes:[], curId:null,
+                      klass:null, students:[], tasks:[], notes:[], drafts:{},
+                      ui:{tab:"write", sid:null, slot:null}});
+/* 저장은 classes 하나만 정본으로 두고, 화면은 그중 한 학급을 펼쳐서 쓴다 */
+function newClass(klass, students){
+  return {id:uid(), klass, students:students||[], tasks:[], notes:[], drafts:{}};
+}
+function stashActive(){
+  const c = S.classes.find(x => x.id === S.curId);
+  if(c) Object.assign(c, {klass:S.klass, students:S.students, tasks:S.tasks, notes:S.notes, drafts:S.drafts});
+}
+function activate(id){
+  const c = S.classes.find(x => x.id === id) || S.classes[0];
+  if(!c){ S.curId = null; S.klass = null; S.students = []; S.tasks = []; S.notes = []; S.drafts = {}; return; }
+  S.curId = c.id; S.klass = c.klass; S.students = c.students;
+  S.tasks = c.tasks || (c.tasks = []); S.notes = c.notes || (c.notes = []); S.drafts = c.drafts || (c.drafts = {});
+}
+function switchClass(id){
+  stashActive(); activate(id);
+  S.ui.sid = S.students[0]?.id || null; S.ui.slot = null;
+  pendingStd = []; pendingFile = null; _taskId = ""; _aiKw = null; _kwArea = 0;
+  save(); render();
+}
+const klassName = c => `${c.klass.grade}학년 ${c.klass.room||""}반`.replace(/\s+반$/, "반");
+let S = blank(), pendingStd = [], pendingFile = null, _taskId = "", _src = "직접관찰", dlgState = null, upload = null;
+/* AI 검토 결과는 문장 칸별로 화면에 남겨 둔다(저장하지는 않는다) */
+let aiReview = {};
+
+const el = id => document.getElementById(id);
+const esc = s => String(s??"").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const uid = () => Math.random().toString(36).slice(2,9);
+const today = () => new Date().toISOString().slice(0,10);
+
+function load(){
+  try{
+    const raw = localStorage.getItem(KEY); if(!raw) return;
+    const d = JSON.parse(raw);
+    S = Object.assign(blank(), d);
+    S.ui = Object.assign({tab:"write", sid:null, slot:null}, d.ui||{});
+    if(!Array.isArray(S.classes) || !S.classes.length){
+      S.classes = d.klass ? [{id:uid(), klass:d.klass, students:d.students||[], tasks:d.tasks||[],
+                              notes:d.notes||[], drafts:d.drafts||{}}] : [];
+      S.curId = S.classes[0]?.id || null;
+    }
+    activate(S.curId);
+  }catch(e){}
+}
+let st = null;
+function save(){
+  clearTimeout(st);
+  st = setTimeout(() => {
+    S.savedAt = new Date().toISOString();
+    stashActive();
+    try{
+      localStorage.setItem(KEY, JSON.stringify({schema:S.schema, classes:S.classes, curId:S.curId,
+                                                ui:S.ui, savedAt:S.savedAt}));
+      el("saved").textContent = "저장 " + S.savedAt.slice(11,16);
+    }
+    catch(e){ el("saved").textContent = "저장 실패"; }
+  }, 250);
+}
+
+/* ══ 계산 ══ */
+const band = () => BAND_OF[S.klass?.grade] || "3~4";
+const allSubjects = () => Object.keys(STD).filter(s => STD[s][band()]);
+const subjects = () => allSubjects().filter(s => !(S.klass?.excluded||[]).includes(s));
+const subjShort = s => s === INTEGRATED ? "바·슬·즐" : s;
+const subjLabel = s => s === INTEGRATED ? INTEGRATED_LABEL : s;
+
+function slots(){
+  const out = subjects().map(s => ({key:"subj:"+s, kind:"subj", subject:s, label:subjShort(s),
+                                    full:subjLabel(s) + " 성취수준 및 특기사항"}));
+  out.push({key:"cca:auto", kind:"cca", cca:"auto", label:"창체 자율·동아리",
+            full:"창의적 체험활동 특기사항 — 자율·자치활동과 동아리활동을 통합해 입력"});
+  out.push({key:"cca:career", kind:"cca", cca:"career", label:"창체 진로",
+            full:"창의적 체험활동 특기사항 — 진로활동(별도 입력, 이수시간은 넣지 않음)"});
+  out.push({key:"behavior", kind:"behavior", label:"행동특성", full:"행동특성 및 종합의견"});
+  return out;
+}
+const slotOf = n => n.axis === "subj" ? "subj:"+n.subject : n.axis === "cca" ? "cca:"+n.cca : "behavior";
+const notesOf = (sid, k) => S.notes.filter(n => n.studentId === sid && (!k || slotOf(n) === k));
+const dkey = (sid, k) => sid + "|" + k;
+const draftOf = (sid, k) => S.drafts[dkey(sid,k)] || {text:"", gate:[false,false,false,false]};
+function draftDone(sid, k){
+  const d = S.drafts[dkey(sid,k)];
+  return !!(d && d.text.trim() && d.gate.every(Boolean) && !check(d.text).some(f => f.lv === "block"));
+}
+function bytes(t){ let n = 0; for(const c of String(t)) n += c.charCodeAt(0) > 127 ? 3 : 1; return n; }
+
+/* ══ 산출물 보관 ══
+   사진은 localStorage(5MB)가 아니라 IndexedDB에 둔다. 넣기 전에 크기를 줄인다. */
+const FDB = "trecord.files", FSTORE = "f";
+let _fdb = null;
+function fdb(){
+  return new Promise((ok,no) => {
+    if(_fdb) return ok(_fdb);
+    if(!window.indexedDB) return no(new Error("이 브라우저는 파일 보관을 지원하지 않습니다."));
+    const r = indexedDB.open(FDB, 1);
+    r.onupgradeneeded = () => { if(!r.result.objectStoreNames.contains(FSTORE)) r.result.createObjectStore(FSTORE); };
+    r.onsuccess = () => ok(_fdb = r.result);
+    r.onerror = () => no(r.error || new Error("파일 보관함을 열지 못했습니다."));
+  });
+}
+function ftx(mode, fn){
+  return fdb().then(db => new Promise((ok,no) => {
+    const tx = db.transaction(FSTORE, mode), st = tx.objectStore(FSTORE);
+    let out; try{ out = fn(st); }catch(e){ return no(e); }
+    tx.oncomplete = () => ok(out && out.result !== undefined ? out.result : out);
+    tx.onerror = () => no(tx.error);
+  }));
+}
+const filePut = (id, rec) => ftx("readwrite", st => st.put(rec, id));
+const fileGet = id => ftx("readonly", st => st.get(id));
+const fileDel = id => ftx("readwrite", st => st.delete(id));
+const fileKeys = () => ftx("readonly", st => st.getAllKeys());
+const fileAll  = () => ftx("readonly", st => st.getAll());
+
+/* 이미지는 긴 변 1600px·품질 0.72로 줄인다. PDF 등은 그대로 둔다. */
+async function shrink(file){
+  if(!/^image\//.test(file.type) || !window.createImageBitmap) return file;
+  try{
+    const bmp = await createImageBitmap(file);
+    const sc = Math.min(1, 1600 / Math.max(bmp.width, bmp.height));
+    if(sc === 1 && file.size < 400*1024) return file;
+    const c = document.createElement("canvas");
+    c.width = Math.round(bmp.width*sc); c.height = Math.round(bmp.height*sc);
+    c.getContext("2d").drawImage(bmp, 0, 0, c.width, c.height);
+    const b = await new Promise(r => c.toBlob(r, "image/jpeg", 0.72));
+    return (b && b.size < file.size) ? b : file;
+  }catch(e){ return file; }
+}
+const kb = n => n < 1024*1024 ? Math.round(n/1024) + "KB" : (n/1024/1024).toFixed(1) + "MB";
+/* 어떤 메모도 참조하지 않는 사진은 지운다 */
+async function sweepFiles(){
+  try{
+    const used = new Set(S.notes.map(n => n.fileId).filter(Boolean));
+    const keys = await fileKeys();
+    for(const k of keys) if(!used.has(k)) await fileDel(k);
+  }catch(e){}
+}
+
+/* ══ AI 연결 (선택) ══
+   키는 백업 JSON에 넣지 않는다 — 별도 저장소에 둔다. */
+const AIKEY = KEY + ".ai";
+let AI = {key:"", model:"gemini-3.5-flash", agreed:false, models:null};
+try{ Object.assign(AI, JSON.parse(localStorage.getItem(AIKEY) || "{}")); }catch(e){}
+const aiOn = () => !!(AI.key && AI.agreed);
+function aiSave(){ try{ localStorage.setItem(AIKEY, JSON.stringify(AI)); }catch(e){} }
+/* 기본 후보. 실제 목록은 ‘모델 목록 가져오기’로 키에서 직접 받아온다. */
+const AI_MODELS = ["gemini-3.5-flash","gemini-3-flash","gemini-flash-latest","gemini-2.5-flash"];
+const aiModelList = () => {
+  const seen = [...(AI.models||[]), ...AI_MODELS, AI.model].filter(Boolean);
+  return [...new Set(seen)];
+};
+async function aiFetchModels(){
+  if(!AI.key) throw new Error("먼저 키를 넣어 주세요.");
+  let res;
+  try{
+    res = await fetch("https://generativelanguage.googleapis.com/v1beta/models?pageSize=200",
+                      {headers:{"x-goog-api-key":AI.key}});
+  }catch(e){
+    throw new Error("바깥으로 연결하지 못했습니다. 공개 주소(claude.ai)에서 연 페이지는 외부 호출이 막혀 있습니다.");
+  }
+  if(!res.ok) throw new Error(res.status === 400 || res.status === 403
+    ? "키가 올바르지 않거나 권한이 없습니다." : "목록을 받지 못했습니다 (" + res.status + ")");
+  const j = await res.json();
+  const names = (j.models||[])
+    .filter(m => (m.supportedGenerationMethods||[]).includes("generateContent"))
+    .map(m => String(m.name||"").replace(/^models\//,""))
+    .filter(n => /gemini/.test(n) && !/embedding|aqa|vision-latest/.test(n));
+  if(!names.length) throw new Error("쓸 수 있는 모델이 없습니다.");
+  // 최신(숫자가 큰) 순으로
+  names.sort((a,b) => (parseFloat((b.match(/[\d.]+/)||[0])[0]) - parseFloat((a.match(/[\d.]+/)||[0])[0])));
+  AI.models = names; aiSave();
+  return names;
+}
+
+async function aiCall(prompt, opt){
+  opt = opt || {};
+  if(!AI.key) throw new Error("먼저 AI 연결 탭에서 키를 넣어 주세요.");
+  const m = opt.model || AI.model || AI_MODELS[0];
+  const cfg = {temperature:0.3, maxOutputTokens:8192};
+  if(opt.json) cfg.responseMimeType = "application/json";   // 최신 모델은 생각 토큰을 쓰므로 여유 있게
+  let res;
+  try{
+    res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${m}:generateContent`, {
+      method:"POST",
+      headers:{"Content-Type":"application/json","x-goog-api-key":AI.key},
+      body:JSON.stringify({contents:[{parts:[{text:prompt}, ...(opt.parts||[])]}], generationConfig:cfg})
+    });
+  }catch(e){
+    throw new Error("바깥으로 연결하지 못했습니다. 공개 주소(claude.ai)에서 연 페이지는 보안 정책으로 외부 호출이 막혀 있습니다. AI 연결 탭의 안내를 읽어 주세요.");
+  }
+  if(res.status === 400 || res.status === 401 || res.status === 403) throw new Error("키가 올바르지 않거나 권한이 없습니다. 키를 다시 확인해 주세요.");
+  if(res.status === 404) throw new Error(`‘${m}’ 모델을 찾지 못했습니다. AI 연결 탭에서 ‘모델 목록 가져오기’를 눌러 쓸 수 있는 이름을 받아오세요.`);
+  if(res.status === 429) throw new Error("무료 사용 한도를 넘었습니다. 잠시 뒤 다시 시도해 주세요.");
+  if(!res.ok) throw new Error("응답을 받지 못했습니다 (" + res.status + ")");
+  const j = await res.json();
+  const c = j?.candidates?.[0];
+  const t = (c?.content?.parts || []).filter(p => !p.thought).map(p => p.text || "").join("");
+  if(!t){
+    if(c?.finishReason === "MAX_TOKENS") throw new Error("답이 길어 잘렸습니다. 관찰이 아주 많다면 몇 건만 두고 다시 시도해 주세요.");
+    if(c?.finishReason === "SAFETY" || j?.promptFeedback?.blockReason) throw new Error("모델이 응답을 거부했습니다. 문장을 조금 바꿔 다시 시도해 주세요.");
+    throw new Error("빈 응답이 왔습니다. 다시 시도해 주세요.");
+  }
+  return t;
+}
+/* 모델이 코드펜스를 두르거나 닫는 괄호를 하나 더 붙이는 일이 있어 너그럽게 읽는다. */
+function looseJSON(raw){
+  let s = String(raw).trim();
+  const fence = s.match(/```(?:json)?\s*([\s\S]*?)```/);
+  if(fence) s = fence[1].trim();
+  try{ return JSON.parse(s); }catch(e){}
+  const start = s.search(/[{[]/);
+  if(start < 0) return null;
+  let depth = 0, inStr = false, esc2 = false;
+  for(let i = start; i < s.length; i++){
+    const c = s[i];
+    if(inStr){ if(esc2) esc2 = false; else if(c === "\\") esc2 = true; else if(c === '"') inStr = false; continue; }
+    if(c === '"') inStr = true;
+    else if(c === "{" || c === "[") depth++;
+    else if(c === "}" || c === "]"){ depth--;
+      if(depth === 0){ try{ return JSON.parse(s.slice(start, i+1)); }catch(e){ return null; } } }
+  }
+  return null;
+}
+async function aiJSON(prompt, opt){
+  const raw = await aiCall(prompt, Object.assign({json:true}, opt||{}));
+  const v = looseJSON(raw);
+  if(!v) throw new Error("응답을 이해하지 못했습니다. 다시 시도해 주세요.");
+  return v;
+}
+const AI_RULES = `기재 금지: 대회·경시·수상·입상, 어학시험·자격증·인증시험, 점수·등급·석차(PAPS 제외), 논문·출간·특허, 장학금·기부·해외활동, 국제기구명, 대학·기관·상호·강사명, 부모의 직업이나 지위, 질병명·가정환경. 상표나 앱 실명은 일반명사로 바꾼다. 명사형('~함','~음')으로 끝맺고 학생 이름이나 주어를 쓰지 않는다.`;
+const student = id => S.students.find(s => s.id === id);
+const sname = s => S.klass?.numbersOnly ? String(s.no) : (s.name || String(s.no));
+const taskOf = n => S.tasks.find(t => t.id === n.taskId);
+
+/* ══ 짚어주기 — 데이터에서 교사가 볼 지점을 찾아 순서대로 ══ */
+function pointers(){
+  const out = [], sl = slots(), N = S.students.length;
+  if(!N) return out;
+  const notesBy = id => notesOf(id);
+
+  // 1. 등급 1 위반이 남은 문장
+  const bad = [];
+  for(const s of S.students) for(const x of sl){
+    const d = S.drafts[dkey(s.id,x.key)];
+    if(d && d.text.trim() && check(d.text).some(f => f.lv === "block"))
+      bad.push({s, x});
+  }
+  if(bad.length) out.push({sev:"high", title:`기재 금지 표현이 남은 문장 ${bad.length}건`,
+    who: bad.slice(0,6).map(b => `${sname(b.s)} ${b.x.label}`).join(" · ") + (bad.length>6?" 외":""),
+    go: bad[0]});
+
+  // 2. 관찰이 하나도 없는 학생
+  const none = S.students.filter(s => notesBy(s.id).length === 0);
+  if(none.length) out.push({sev:"high", title:`관찰이 한 건도 없는 학생 ${none.length}명`,
+    who: none.map(sname).join(" · "), go:{s:none[0], x:sl[0]}});
+
+  // 3. 인정 근거 자료가 없는 학생 (직접관찰만)
+  const onlyDirect = S.students.filter(s => {
+    const ns = notesBy(s.id);
+    return ns.length > 0 && !ns.some(n => RECOGNIZED.includes(n.source));
+  });
+  if(onlyDirect.length) out.push({sev:"mid", title:`근거가 직접관찰뿐인 학생 ${onlyDirect.length}명`,
+    who: onlyDirect.map(sname).join(" · ") + " — 수업산출물·자기평가서 등 인정 자료 5종 중 하나를 함께 남겨 두면 좋습니다",
+    go:{s:onlyDirect[0], x:sl[0]}});
+
+  // 4. 문장에 관찰에 없는 내용이 많은 경우(과장 위험)
+  const risky = [];
+  for(const s of S.students) for(const x of sl){
+    const d = S.drafts[dkey(s.id,x.key)];
+    if(!d || !d.text.trim()) continue;
+    const pool = notesOf(s.id, x.key).map(n => n.text).join(" ");
+    const words = [...new Set(d.text.replace(/[^가-힣\s]/g," ").split(/\s+/)
+                    .map(w => w.replace(/(을|를|이|가|은|는|에|에서|으로|로|와|과|의|도|만|하며|하고|하여|함|음)$/,""))
+                    .filter(w => w.length >= 2))];
+    if(words.length < 4) continue;
+    const miss = words.filter(w => !pool.includes(w));
+    if(miss.length / words.length > 0.75) risky.push({s, x, r:Math.round(miss.length/words.length*100)});
+  }
+  if(risky.length) out.push({sev:"mid", title:`관찰에 없는 내용이 대부분인 문장 ${risky.length}건`,
+    who: risky.slice(0,5).map(r => `${sname(r.s)} ${r.x.label}`).join(" · ") +
+         " — 근거를 확인하거나 관찰을 먼저 담아 두세요", go:risky[0]});
+
+  // 5. 축이 비어 있는 학생 (창체·행동특성)
+  for(const k of ["cca:auto","behavior"]){
+    const x = sl.find(v => v.key === k);
+    const miss = S.students.filter(s => notesOf(s.id,k).length === 0);
+    if(miss.length && miss.length < N) out.push({sev:"low", title:`${x.label} 관찰이 없는 학생 ${miss.length}명`,
+      who: miss.map(sname).join(" · "), go:{s:miss[0], x}});
+  }
+
+  // 6. 관찰이 없는 교과
+  const emptySubj = sl.filter(x => x.kind === "subj" && !S.notes.some(n => slotOf(n) === x.key));
+  if(emptySubj.length && emptySubj.length < sl.length)
+    out.push({sev:"low", title:`관찰이 한 건도 없는 교과 ${emptySubj.length}개`,
+      who: emptySubj.map(x => x.label).join(" · "), go:{s:S.students[0], x:emptySubj[0]}});
+
+  // 7. 남은 문장 칸
+  const left = S.students.reduce((a,s) => a + sl.filter(x => !draftDone(s.id,x.key)).length, 0);
+  if(left) out.push({sev:"low", title:`아직 확인이 끝나지 않은 문장 칸 ${left}개`,
+    who:`전체 ${N*sl.length}칸 가운데 ${N*sl.length-left}칸 완료`, go:null});
+
+  return out;
+}
+
+/* ══ 화면 ══ */
+function render(){
+  el("klass").innerHTML = S.classes.map(c =>
+      `<option value="${c.id}"${c.id===S.curId?" selected":""}>${esc(klassName(c))} · ${c.students.length}명${c.klass.demo?" (예시)":""}</option>`).join("")
+    + `<option value="__new">＋ 새 학급 만들기</option>`;
+  el("klass").style.display = S.classes.length ? "" : "none";
+  el("tab-prep").setAttribute("aria-selected", String(S.ui.tab === "prep"));
+  el("tab-write").setAttribute("aria-selected", String(S.ui.tab === "write"));
+  el("tab-check").setAttribute("aria-selected", String(S.ui.tab === "check"));
+  el("tab-ai").setAttribute("aria-selected", String(S.ui.tab === "ai"));
+  el("tab-ai").innerHTML = "AI 연결" + (aiOn() ? `<span class="dot" style="background:var(--good)"></span>` : "");
+  const p = S.klass ? pointers().filter(x => x.sev !== "low").length : 0;
+  el("tab-check").innerHTML = "점검" + (p ? `<span class="dot"></span>` : "");
+  const ready = !!(S.klass && S.classes.length);
+  // 학급을 만들기 전에는 기록·점검으로 갈 수 없다. 눌러도 안 되는 이유를 보이게 한다.
+  for(const id of ["tab-write","tab-check"]){
+    el(id).disabled = !ready;
+    el(id).title = ready ? "" : "먼저 준비 탭에서 우리 반을 등록해 주세요";
+  }
+  if(!ready && S.ui.tab !== "ai") S.ui.tab = "prep";
+  el("tab-prep").setAttribute("aria-selected", String(S.ui.tab === "prep"));
+  el("tab-write").setAttribute("aria-selected", String(S.ui.tab === "write"));
+  el("tab-check").setAttribute("aria-selected", String(S.ui.tab === "check"));
+  if(S.ui.tab === "ai"){ renderAI(); return; }
+  if(!ready){ renderSetup(); return; }
+  if(S.ui.tab === "prep") renderPrep();
+  else if(S.ui.tab === "check") renderCheck();
+  else renderWrite();
+}
+
+/* ── 설정 ── */
+function renderSetup(edit){
+  const k = S.klass || {grade:4, room:"", excluded:[], numbersOnly:false};
+  const subjOpts = Object.keys(STD).filter(s => STD[s][BAND_OF[k.grade]]);
+  el("main").innerHTML = `
+  <div class="setup">
+    ${edit ? "" : `<div class="steps">
+      <span><span class="n">1</span>우리 반을 등록하고</span><span><span class="n">2</span>평소 관찰을 한 줄씩 담아 두면</span>
+      <span><span class="n">3</span>학기말에 학생별로 모여 문장이 됩니다</span></div>`}
+    <div class="panel">
+      <div class="ph"><h2>우리 반</h2>
+        <span class="r muted">기록은 이 기기에만 저장됩니다</span></div>
+      <div class="pb">
+        <div class="field inline">
+          <span><span class="lab">학년</span><br>
+            <select id="f-grade">${[1,2,3,4,5,6].map(n=>`<option value="${n}"${n===k.grade?" selected":""}>${n}학년</option>`).join("")}</select></span>
+          <span><span class="lab">반</span><br>
+            <input type="text" id="f-room" value="${esc(k.room||"")}" style="width:64px" placeholder="3"></span>
+          <span style="flex:1"><span class="lab">담임 (선택)</span><br>
+            <input type="text" id="f-teacher" value="${esc(k.teacher||"")}" style="width:100%"></span>
+        </div>
+
+        <div class="field">
+          <span class="lab">전담 교과 빼기</span>
+          <div class="subjgrid" id="f-subj">
+            ${subjOpts.map(s=>`<label class="${(k.excluded||[]).includes(s)?"on":""}">
+              <input type="checkbox" value="${esc(s)}"${(k.excluded||[]).includes(s)?" checked":""}>${esc(subjShort(s))}</label>`).join("")}
+          </div>
+          <div class="hint">체크한 교과는 화면에서 감춥니다.</div>
+        </div>
+
+        <div class="field">
+          <span class="lab">학생 명렬</span>
+          <textarea class="big" id="f-roster" placeholder="1 김ㅇㅇ&#10;2 이ㅇㅇ&#10;3 박ㅇㅇ">${esc(S.students.map(s=>`${s.no} ${s.name}`).join("\n"))}</textarea>
+          <div class="hint">한 줄에 한 명. 번호만 적어도 됩니다.</div>
+          <label style="display:inline-flex;gap:6px;align-items:center;margin-top:8px;font-size:12.5px;color:var(--ink-2)">
+            <input type="checkbox" id="f-numbers"${k.numbersOnly?" checked":""}> 이름 대신 번호로만 보기
+          </label>
+        </div>
+
+        <div class="rowbtns">
+          <button class="primary" id="f-save" type="button">${edit?"저장":"시작하기"}</button>
+          ${edit?`<button class="ghost" id="f-cancel" type="button">취소</button>`:""}
+        </div>
+      </div>
+    </div>
+  </div>`;
+
+  el("f-grade").onchange = () => { const c = collect(); S.klass = Object.assign(S.klass||{}, c.klass, {excluded:[]}); renderSetup(edit); };
+  el("f-subj").onclick = e => { const l = e.target.closest("label");
+    if(l) setTimeout(()=>l.classList.toggle("on", l.querySelector("input").checked),0); };
+  if(edit) el("f-cancel").onclick = () => render();
+  el("f-save").onclick = () => {
+    const c = collect();
+    if(!c.students.length){ alert("학생을 한 명 이상 적어 주세요."); return; }
+    if(!S.curId){                                   // 새 학급
+      const nc = newClass(c.klass, c.students);
+      S.classes.push(nc); activate(nc.id);
+      S.ui.sid = S.students[0]?.id || null; S.ui.tab = "prep";
+    } else {
+      S.klass = c.klass;
+      const old = new Map(S.students.map(s => [String(s.no), s]));
+      S.students = c.students.map(s => { const p = old.get(String(s.no)); return p ? {id:p.id, no:s.no, name:s.name} : s; });
+      if(!S.students.some(s => s.id === S.ui.sid)) S.ui.sid = S.students[0]?.id || null;
+      S.ui.tab = "write";
+    }
+    save(); render();
+  };
+}
+function collect(){
+  const grade = +el("f-grade").value;
+  const excluded = [...el("f-subj").querySelectorAll("input:checked")].map(i => i.value);
+  const students = el("f-roster").value.split(/\r?\n/).map(l => l.trim()).filter(Boolean).map((line,i) => {
+    const m = line.match(/^(\d+)[.)\s]*(.*)$/);
+    const no = m ? +m[1] : i+1, name = (m ? m[2] : line).trim();
+    return {id:uid(), no, name:name || String(no)};
+  });
+  return {klass:{grade, room:el("f-room").value.trim(), teacher:el("f-teacher").value.trim(),
+                 excluded, numbersOnly:el("f-numbers").checked}, students};
+}
+
+/* ── 작성 ── */
+function renderWrite(){
+  if(!S.ui.sid) S.ui.sid = S.students[0]?.id || null;
+  const sl = slots();
+  if(!sl.some(x => x.key === S.ui.slot)) S.ui.slot = sl[0].key;
+  el("main").innerHTML = `<div class="cols">
+    <div class="panel"><div class="ph"><h2>명렬표</h2><span class="r saved">${S.students.length}</span></div>
+      <div class="roster" id="roster">${rosterHTML()}</div>
+      <div class="addstu">
+        <input type="text" id="stu-new" placeholder="이름 적고 Enter" autocomplete="off">
+        <button class="ghost tip" id="stu-add" type="button"
+                data-tip="한 명 추가 — 이름을 적고 누르세요. ‘12 김ㅇㅇ’처럼 번호를 함께 적어도 됩니다">＋</button>
+        <button class="ghost tip" id="stu-file-btn" type="button"
+                data-tip="명렬표 파일로 한꺼번에 추가 — txt·csv 파일을 고르거나, 엑셀에서 복사한 목록을 왼쪽 칸에 붙여넣어도 됩니다">＋＋</button>
+        <input type="file" id="stu-file" accept=".txt,.csv,.tsv,text/plain" style="display:none">
+      </div>
+    </div>
+    <div class="panel" id="detail">${detailHTML()}</div></div>`;
+  el("roster").onclick = e => {
+    const x = e.target.closest("[data-del-stu]");
+    if(x){ e.stopPropagation(); removeStudent(x.dataset.delStu); return; }
+    const b = e.target.closest(".rrow"); if(!b) return;
+    S.ui.sid = b.dataset.id; pendingStd = []; pendingFile = null; save();
+    el("roster").innerHTML = rosterHTML();
+    el("detail").innerHTML = detailHTML(); bindDetail();
+  };
+  el("roster").onkeydown = e => {
+    const b = e.target.closest(".rrow");
+    if(!b || (e.key !== "Enter" && e.key !== " ")) return;
+    if(e.target.matches("[data-del-stu]")) return;   // X는 button이라 스스로 처리한다
+    e.preventDefault(); b.click();
+  };
+  const ni = el("stu-new");
+  const addStudents = raw => {
+    raw = (raw ?? ni.value).trim(); if(!raw) return;
+    let next = S.students.reduce((m,s) => Math.max(m, +s.no||0), 0);
+    const made = raw.split(/\r?\n/).map(l => l.trim()).filter(Boolean).map(line => {
+      const m = line.match(/^(\d+)\s*[.),\t]?\s*(.*)$/);
+      let no, name;
+      if(m && m[2]){ no = +m[1]; name = m[2].trim(); next = Math.max(next, no); }
+      else { no = ++next; name = line.replace(/^[\d.),\t\s]+/,"").trim() || String(no); }
+      return {id:uid(), no, name:name.split(/[,\t]/)[0].trim() || String(no)};
+    }).filter(s => s.name && !/^(번호|이름|성명|연번|순번)$/.test(s.name));   // 머리글 줄은 거른다
+    if(!made.length) return;
+    S.students.push(...made);
+    S.students.sort((a,b) => a.no - b.no);
+    S.ui.sid = made[0].id; ni.value = ""; save(); renderWrite();
+    const f = el("stu-new"); if(f) f.focus();
+  };
+  ni.onkeydown = e => { if(e.key === "Enter"){ e.preventDefault(); addStudents(); } };
+  ni.onpaste = e => { const t = (e.clipboardData||window.clipboardData).getData("text");
+    if(t && /\r?\n/.test(t)){ e.preventDefault(); addStudents(t); } };
+  el("stu-add").onclick = () => addStudents();
+  el("stu-file-btn").onclick = () => el("stu-file").click();
+  el("stu-file").onchange = e => {
+    const f = e.target.files[0]; if(!f) return;
+    const fr = new FileReader();
+    fr.onload = () => addStudents(String(fr.result));
+    fr.readAsText(f, "utf-8");
+    e.target.value = "";
+  };
+  bindDetail();
+}
+function rosterHTML(){
+  const sl = slots();
+  return S.students.map(s => {
+    const c = notesOf(s.id).length, done = sl.filter(x => draftDone(s.id,x.key)).length;
+    return `<div class="rrow" role="button" tabindex="0" data-id="${s.id}" aria-current="${s.id===S.ui.sid}">
+      <span class="no">${esc(String(s.no).padStart(2,"0"))}</span><span>${esc(sname(s))}</span>
+      <span class="cnt">${c||"·"}${done?` <span style="color:var(--good)">✓${done}</span>`:""}</span>
+      <button class="x" type="button" data-del-stu="${s.id}"
+              title="${esc(sname(s))} 지우기" aria-label="${esc(sname(s))} 지우기">×</button></div>`;
+  }).join("");
+}
+
+/* 학생 지우기 — 담긴 것이 있으면 한 번 더 묻는다 */
+function removeStudent(id){
+  const s = student(id); if(!s) return;
+  const n = notesOf(id).length;
+  const w = Object.keys(S.drafts).filter(k => k.startsWith(id + "|") && (S.drafts[k].text||"").trim()).length;
+  if(n || w){
+    const what = [n ? `관찰 ${n}건` : "", w ? `문장 ${w}칸` : ""].filter(Boolean).join(" · ");
+    if(!confirm(`${sname(s)} 학생에게 ${what}이 담겨 있습니다.\n학생과 함께 모두 지워지며 되돌릴 수 없습니다.\n\n정말 지울까요?`)) return;
+  }
+  S.notes = S.notes.filter(x => x.studentId !== id);
+  Object.keys(S.drafts).forEach(k => { if(k.startsWith(id + "|")) delete S.drafts[k]; });
+  S.students = S.students.filter(x => x.id !== id);
+  if(S.ui.sid === id) S.ui.sid = S.students[0]?.id || null;
+  save(); sweepFiles(); renderWrite();
+}
+
+function detailHTML(){
+  const s = student(S.ui.sid);
+  if(!s) return `<div class="empty" style="padding:40px">왼쪽에서 학생을 고르세요.</div>`;
+  const sl = slots(), cur = sl.find(x => x.key === S.ui.slot) || sl[0];
+  const ns = notesOf(s.id, cur.key), d = draftOf(s.id, cur.key), fs = check(d.text);
+  const ack = ackScan[dkey(s.id, cur.key)] || new Set();
+  const nb = fs.filter(f => f.lv === "block").length;
+  const nw = fs.filter(f => f.lv === "warn" && !ack.has(ackKey(f))).length;
+  const nok = fs.filter(f => ack.has(ackKey(f))).length;
+  const ok = d.gate.every(Boolean) && !nb && d.text.trim();
+
+  return `
+  <div class="shead">
+    <span class="nm" id="s-name" title="눌러서 이름 고치기">${esc(sname(s))}</span>
+    <span class="meta">${S.klass.grade}학년 ${esc(S.klass.room||"")}반 ${String(s.no).padStart(2,"0")}번</span>
+    <span class="r meta">관찰 ${notesOf(s.id).length} · 문장 ${sl.filter(x=>draftDone(s.id,x.key)).length}/${sl.length}</span>
+  </div>
+
+  <div class="slots" id="slots">
+    ${sl.map(x => { const c = notesOf(s.id,x.key).length;
+      return `<button class="slot" type="button" data-slot="${esc(x.key)}" aria-pressed="${x.key===cur.key}">
+        ${esc(x.label)}${c?`<b>${c}</b>`:""}${draftDone(s.id,x.key)?`<i class="ok"></i>`:""}</button>`;}).join("")}
+  </div>
+
+  <div class="sec">
+    <div class="catch">
+      <div class="catch-top">
+        <span class="where">${esc(cur.label)}</span>
+        <select id="c-src">${SOURCES.map(v=>`<option value="${esc(v)}"${v===_src?" selected":""}>${esc(v)}</option>`).join("")}</select>
+        ${cur.kind==="subj" ? `<select id="c-task">
+            <option value="">평가과제 없음</option>
+            ${S.tasks.filter(t=>t.subject===cur.subject).map(t=>`<option value="${t.id}"${t.id===_taskId?" selected":""}>${esc(t.name)}</option>`).join("")}
+          </select>
+          <button class="ghost" id="c-newtask" type="button">＋ 과제</button>
+          <button class="ghost" id="c-std" type="button">＋ 성취기준</button>` : ``}
+      </div>
+      <div class="catch-in">
+        <input type="text" id="c-text" placeholder="오늘 본 것을 한 줄로" autocomplete="off">
+        <button class="primary" id="c-add" type="button">담기</button>
+      </div>
+      ${(() => { const bs = kwBlocks(cur); if(!bs.length) return "";
+        const i = Math.min(_kwArea, bs.length-1);
+        return `<div class="kw">
+          <select id="kw-area">${bs.map((b,j)=>`<option value="${j}"${j===i?" selected":""}>${esc(b.a)}</option>`).join("")}</select>
+          ${aiOn() && cur.kind==="subj" ? `<button class="ghost tip" id="kw-ai" type="button"
+             data-tip="담은 성취기준·평가과제에 맞춰 지식·기능·태도 키워드를 AI가 뽑아 줍니다">AI 키워드</button>` : ``}
+          <div class="kwchips" id="kw-chips">${bs[i].k.map(w=>`<button class="kwc" type="button" data-kw="${esc(w)}">${esc(w)}</button>`).join("")}</div>
+        </div>`; })()}
+      <div class="tags" style="justify-content:flex-end">
+        ${pendingFile ? `<span class="chip" title="${esc(pendingFile.name)} · ${kb(pendingFile.size)}">📎 ${esc(pendingFile.name.slice(0,18))}<button type="button" data-dropfile>×</button></span>` : ``}
+        <button class="link" id="c-shot" type="button">${aiOn()?"산출물 첨부하고 읽기":"산출물 첨부"}</button>
+        <input type="file" id="c-file" accept="image/*,application/pdf" style="display:none">
+        ${aiOn() ? `` : `<span class="hint" style="margin:0">— <button class="link" id="c-shot-off" type="button">AI를 연결</button>하면 사진 속 글씨까지 읽어 줍니다</span>`}
+      </div>
+      <div id="c-shot-out"></div>
+      ${(cur.kind==="subj" && (pendingStd.length || taskStd().length)) ? `<div class="tags" id="c-tags">
+        ${taskStd().map(c=>`<span class="chip std" title="${esc(CODEMAP[c]?.text||"")}"><b>${esc(c)}</b>${esc(stdCut(c,26))}</span>`).join("")}
+        ${pendingStd.map(c=>`<span class="chip std" title="${esc(CODEMAP[c]?.text||"")}"><b>${esc(c)}</b>${esc(stdCut(c,26))}<button type="button" data-drop="${esc(c)}">×</button></span>`).join("")}
+      </div>` : ``}
+    </div>
+  </div>
+
+  <div class="sec">
+    <div class="sechead"><span class="lab">담아 둔 근거</span>
+      <span class="r muted">${esc(cur.full)}</span></div>
+    ${ns.length ? ns.map(n => `<div class="memo">
+        <span class="dt" title="${esc(n.date)}">${esc(n.date.slice(5))}</span>
+        <span class="src">${esc(n.source)}</span>
+        <span class="body">${taskOf(n)?`<span class="task">${esc(taskOf(n).name)}</span>`:""}${n.standards?.length?`<span class="code">${n.standards.map(esc).join(" ")}</span>`:""}${esc(n.text)}${n.standards?.length?`<div class="stdline">${n.standards.map(c=>esc(stdCut(c,60))).filter(Boolean).join(" / ")}</div>`:""}${n.fileId?`<button class="clip" type="button" data-open="${esc(n.fileId)}" title="붙어 있는 산출물 보기">📎</button>`:""}</span>
+        <button class="del" type="button" data-del="${n.id}" title="지우기">×</button></div>`).join("")
+      : `<div class="empty"><b>아직 담아 둔 것이 없습니다</b>위 칸에 한 줄 적고 Enter를 누르면 여기에 쌓입니다</div>`}
+  </div>
+
+  <div class="sec">
+    <div class="sechead"><span class="lab">기록 문장</span>
+      <span class="r">
+        <button class="ghost" id="mk-draft" type="button"${ns.length?"":" disabled"}
+                data-tip="담아 둔 근거를 명사형 문장으로 이어 붙여 초안을 만듭니다">근거로 초안</button>
+        ${aiOn() ? `<select id="lv-sel" title="초안의 서술 수준">
+             <option value=""${_level===""?" selected":""}>수준 선택 안 함</option>
+             <option value="잘함"${_level==="잘함"?" selected":""}>잘함</option>
+             <option value="보통"${_level==="보통"?" selected":""}>보통</option>
+             <option value="노력요함"${_level==="노력요함"?" selected":""}>노력요함</option>
+           </select>
+           <button class="ghost" id="ai-draft" type="button"${ns.length?"":" disabled"}>AI 초안</button>
+                    <button class="ghost" id="ai-review" type="button"${d.text.trim()?"":" disabled"}>AI 검토</button>`
+                 : `<button class="link" id="ai-go" type="button">AI 검토 켜기</button>`}
+        <span class="meter"><b>${bytes(d.text)}</b> B<span>·</span><b>${[...d.text].length}</b>자</span></span></div>
+    <textarea class="draft" id="draft" placeholder="담아 둔 근거를 보며 문장을 씁니다. ‘~함’으로 끝맺습니다.">${esc(d.text)}</textarea>
+    <div id="ai-out">${aiReviewHTML(dkey(s.id, cur.key), d.text)}</div>
+
+    <div class="scan">
+      <div class="scan-head">
+        <span class="lab">검사</span>
+        <span class="tally">${fs.length
+          ? `<span class="b">●${nb}</span> 위반 &nbsp;<span class="w">▲${nw}</span> 확인${nok?` &nbsp;<span style="color:var(--good)">✓${nok}</span> 넘김`:""}`
+          : `<span class="none">발견된 항목 없음</span>`}</span>
+        <span class="r"></span>
+      </div>
+      ${fs.map((f,i)=>{
+        const acked = (ackScan[dkey(s.id,cur.key)]||new Set()).has(ackKey(f));
+        const nom = f.id === "ending" ? toNominal(f.hit) : null;
+        return `<details class="f ${acked?"done":f.lv}">
+        <summary><span class="mk">${acked?"✓":f.lv==="block"?"●":"▲"}</span>
+          <span class="hit">${esc(f.hit)}</span>
+          ${acked?`<span class="to" style="color:var(--good)">선생님이 확인함</span>`
+            : f.swap!==undefined?`<span class="to">→ ${esc(f.swap||"삭제")}</span>`
+            : nom?`<span class="to">→ ${esc(nom)}</span>` : ``}
+          <span class="r">${acked?"":`
+            ${f.swap!==undefined?`<button class="fix" type="button" data-fix="${i}">바꾸기</button>`:``}
+            ${nom?`<button class="fix" type="button" data-nom="${i}">명사형으로</button>`:``}
+            ${f.id==="subj"?`<button class="fix" type="button" data-cut="${i}">지우기</button>`:``}
+            ${f.lv==="warn"?`<button class="fix" type="button" data-ack="${i}" title="뜻이 달라 그대로 두어도 되는 경우">확인함</button>`:``}`}
+            <span class="basis">${esc(f.basis)}</span></span></summary>
+        <div class="why">${esc(f.why)}</div></details>`;}).join("")}
+      ${fs.length ? `<div class="hint">자동 검사는 낱말로 드러나는 유형만 찾습니다. 최종 확인은 선생님이 합니다.</div>`
+        : `<div class="hint">자동 검사는 일부 유형만 탐지합니다. ‘이상 없음’이라는 뜻이 아닙니다.</div>`}
+    </div>
+
+    <div class="gate">
+      <span class="lab">확인하고 복사</span>
+      <div class="row">
+        ${["허위·과장 없음","금지 항목 없음","개인정보 없음","교사 최종 확인"].map((t,i)=>
+          `<label class="${d.gate[i]?"on":""}"><input type="checkbox" data-gate="${i}"${d.gate[i]?" checked":""}>${t}</label>`).join("")}
+      </div>
+      <div class="foot">
+        <button class="primary" id="copy" type="button"${ok?"":" disabled"}>문장 복사</button>
+        <span class="msg${nb?" warn":""}">${nb?`위반 ${nb}건을 먼저 고쳐 주세요`
+          : !d.text.trim()?"문장을 먼저 쓰세요" : ok?"복사할 수 있습니다":"네 항목을 확인해 주세요"}</span>
+      </div>
+      <details class="help"><summary>이 네 가지가 무엇인가요</summary><div>
+        <p>① 직접 관찰·평가한 사실에 근거하며 허위·과장이 없음을 <b>본인이 확인</b>했다는 뜻입니다.</p>
+        <p>② 대회·수상·어학시험·자격증·점수·기관명 등이 없음을 확인했다는 뜻입니다.</p>
+        <p>③ 부모·친인척의 지위, 질병명, 가정환경이 없음을 확인했다는 뜻입니다.</p>
+        <p>④ AI 도구를 썼다면 그 문장을 교사가 최종 검토·수정했다는 뜻입니다. 2026학년도에 새로 들어온 조항입니다(기재요령 p.18).</p>
+      </div></details>
+    </div>
+  </div>`;
+}
+function kwBlocks(cur){
+  if(_aiKw && _aiKw.slot === cur.key) return _aiKw.blocks.concat(baseKw(cur), COMMON_KW);
+  return baseKw(cur).concat(COMMON_KW);
+}
+function baseKw(cur){
+  if(cur.kind === "subj") return (KW.subj[cur.subject] || {})[band()] || [];
+  if(cur.kind === "cca")  return KW.cca[cur.cca] || [];
+  return KW.behavior || [];
+}
+function stdCut(code, n){
+  const t = CODEMAP[code]?.text || "";
+  return t.length > n ? t.slice(0, n) + "…" : t;
+}
+function taskStd(){ const t = S.tasks.find(x => x.id === _taskId); return t ? t.standards : []; }
+
+/* AI 검토 결과 — 고치기·확인함으로 하나씩 닫아 나간다 */
+function aiReviewHTML(k, text){
+  const rv = aiReview[k];
+  if(!rv) return "";
+  const items = rv.items.map(it => {
+    const gone = it.hit && !text.includes(it.hit);
+    const state = it.state || (gone ? "gone" : "");
+    return Object.assign({}, it, {state});
+  });
+  const left = items.filter(i => !i.state).length;
+  return `
+  <div class="scan" id="ai-block">
+    <div class="scan-head"><span class="lab">AI 검토</span>
+      <span class="tally">${items.length
+        ? (left ? `${left}건 남음` : `<span class="none">모두 처리했습니다</span>`)
+        : `<span class="none">짚은 것 없음</span>`}</span>
+      <span class="r" style="margin-left:auto;display:flex;gap:8px">
+        <button class="link" data-airedo="1" type="button">다시 검토</button>
+        <button class="link" data-aiclose="1" type="button">닫기</button></span>
+    </div>
+    ${items.map((f,i)=>{
+      const done = !!f.state;
+      const badge = f.state === "applied" ? "고쳤음" : f.state === "ok" ? "선생님이 확인함"
+                  : f.state === "gone" ? "문장에서 사라짐" : "";
+      return `<details class="f ${done?"done":(f.level==="위반"?"block":"warn")}"${done?"":" open"}>
+        <summary><span class="mk">${done?"✓":(f.level==="위반"?"●":"▲")}</span>
+          <span class="hit">${esc(f.hit||"")}</span>
+          ${f.fix&&!done?`<span class="to">→ ${esc(f.fix)}</span>`:""}
+          ${done?`<span class="to" style="color:var(--good)">${badge}</span>`:""}
+          <span class="r">${done?"":`
+            ${f.fix?`<button class="fix" type="button" data-aifix="${i}">이대로 고치기</button>`:""}
+            <button class="fix" type="button" data-aiok="${i}" title="규정에 어긋나지 않는다고 판단해 그대로 두기">확인함</button>`}
+            <span class="basis">AI 검토</span></span></summary>
+        <div class="why">${esc(f.why||"")}${f.state==="ok"?`<br><span style="color:var(--good)">선생님이 확인해 그대로 두기로 한 항목입니다.</span>`:""}</div></details>`;
+    }).join("")}
+    ${rv.note?`<div class="hint">${esc(rv.note)}</div>`:""}
+    <div class="hint">AI 검토는 참고 의견입니다. 규정 판단과 최종 확인은 선생님이 합니다.</div>
+  </div>`;
+}
+
+function bindDetail(){
+  const s = student(S.ui.sid); if(!s) return;
+  const wrap = el("detail"), sl = slots(), cur = sl.find(x => x.key === S.ui.slot);
+
+  el("slots").onclick = e => { const b = e.target.closest(".slot"); if(!b) return;
+    S.ui.slot = b.dataset.slot; pendingStd = []; pendingFile = null; _kwArea = 0; _aiKw = null; save(); repaint(); };
+
+  el("s-name").onclick = () => {
+    const span = el("s-name");
+    const inp = document.createElement("input");
+    inp.type = "text"; inp.value = s.name || ""; inp.style.cssText = "font-size:19px;font-weight:700;width:8em";
+    span.replaceWith(inp); inp.focus(); inp.select();
+    const done = () => {
+      const v = inp.value.trim();
+      if(v && v !== s.name){ s.name = v; save(); renderWrite(); } else repaint();
+    };
+    inp.onblur = done;
+    inp.onkeydown = e => { if(e.key === "Enter"){ e.preventDefault(); done(); } if(e.key === "Escape") repaint(); };
+  };
+
+  el("c-src").onchange = () => { _src = el("c-src").value; };
+  const tk = el("c-task");
+  if(tk) tk.onchange = () => { _taskId = tk.value; repaint(); };
+  const nt = el("c-newtask");
+  if(nt) nt.onclick = () => openTask(cur.subject, null, id => { _taskId = id; repaint(); });
+  const sb = el("c-std");
+  if(sb) sb.onclick = () => openStd(cur.subject, pendingStd, cs => { pendingStd = cs; repaint(); });
+  const tg = el("c-tags");
+  if(tg) tg.onclick = e => { const b = e.target.closest("[data-drop]"); if(!b) return;
+    pendingStd = pendingStd.filter(c => c !== b.dataset.drop); repaint(); };
+
+  const lv = el("lv-sel");
+  if(lv) lv.onchange = () => { _level = lv.value; };
+  const kai = el("kw-ai");
+  if(kai) kai.onclick = async () => {
+    const codes = [...new Set([...taskStd(), ...pendingStd])];
+    const task = S.tasks.find(t => t.id === _taskId);
+    kai.disabled = true; kai.textContent = "…";
+    try{
+      const r = await aiJSON(`한국 초등학교 ${S.klass.grade}학년 ${cur.subject} 수업에서 교사가 관찰 기록에 쓸 키워드를 뽑는다.
+${codes.length ? "성취기준:\n" + codes.map(c => `- [${c}] ${CODEMAP[c]?.text||""}`).join("\n") : "영역: " + cur.label}
+${task ? "평가과제: " + task.name + (task.criteria ? " / 평가기준: " + task.criteria : "") : ""}
+지식·기능·태도 세 갈래로 각각 6개씩, 교사가 관찰한 사실을 적을 때 쓰는 짧은 명사구로 쓴다(예: 중심 문장 찾기, 근거 들어 설명하기).
+점수·등급·대회·상표명은 넣지 않는다.
+JSON만 출력한다: {"지식":["..."],"기능":["..."],"태도":["..."]}`);
+      const blocks = [["지식","지식"],["기능","기능"],["태도","태도"]]
+        .map(([key,label]) => ({a:"AI · " + label, k:(r[key]||[]).map(String).filter(Boolean)}))
+        .filter(b => b.k.length);
+      if(blocks.length){ _aiKw = {slot:cur.key, blocks}; _kwArea = 0; repaint(); }
+      else { kai.textContent = "AI 키워드"; kai.disabled = false; }
+    }catch(e){
+      kai.disabled = false; kai.textContent = "AI 키워드";
+      el("c-shot-out").innerHTML = `<div class="hint" style="color:var(--low)">${esc(e.message)}</div>`;
+    }
+  };
+  const ka = el("kw-area");
+  if(ka) ka.onchange = () => { _kwArea = +ka.value; repaint(); };
+  const kc = el("kw-chips");
+  if(kc) kc.onclick = e => {
+    const b = e.target.closest("[data-kw]"); if(!b) return;
+    const t = el("c-text"), v = t.value.trim();
+    t.value = v ? v.replace(/[\s,·]+$/, "") + ", " + b.dataset.kw : b.dataset.kw;
+    t.focus();
+  };
+  const ti = el("c-text");
+  ti.onkeydown = e => { if(e.key === "Enter"){ e.preventDefault(); addNote(); } };
+  el("c-add").onclick = addNote;
+
+  /* 산출물 사진·PDF → 글자 읽기 → 관찰 메모 후보 */
+  const off = el("c-shot-off");
+  if(off) off.onclick = () => { S.ui.tab = "ai"; save(); render(); };
+  const dropf = wrap.querySelector("[data-dropfile]");
+  if(dropf) dropf.onclick = () => { pendingFile = null; repaint(); };
+  const shot = el("c-shot"), shotOut = el("c-shot-out");
+  if(shot){
+    shot.onclick = () => el("c-file").click();
+    el("c-file").onchange = async e => {
+      const f = e.target.files[0]; if(!f) return;
+      e.target.value = "";
+      if(f.size > 25 * 1024 * 1024){ shotOut.innerHTML = `<div class="hint" style="color:var(--low)">파일이 너무 큽니다(25MB 넘음).</div>`; return; }
+      shotOut.innerHTML = `<div class="hint">산출물을 보관하는 중…</div>`;
+      let blob;
+      try{
+        blob = await shrink(f);
+        const id = uid();
+        await filePut(id, {blob, name:f.name, type:blob.type || f.type, size:blob.size, at:today()});
+        pendingFile = {id, name:f.name, size:blob.size, type:blob.type || f.type};
+      }catch(err){
+        shotOut.innerHTML = `<div class="hint" style="color:var(--low)">보관하지 못했습니다 — ${esc(err.message)}</div>`;
+        return;
+      }
+      const keep = `<div class="hint">📎 ${esc(pendingFile.name)} (${kb(pendingFile.size)}) 보관했습니다. 이제 담는 관찰에 이 산출물이 붙습니다.</div>`;
+      repaint();
+      if(!aiOn()){ el("c-shot-out").innerHTML = keep; el("c-text").focus(); return; }
+      el("c-shot-out").innerHTML = `<div class="hint">사진에서 글자를 읽는 중… 잠시 기다려 주세요.</div>`;
+      try{
+        const b64 = await new Promise((ok,no) => {
+          const fr = new FileReader();
+          fr.onload = () => ok(String(fr.result).split(",")[1]);
+          fr.onerror = () => no(new Error("파일을 읽지 못했습니다."));
+          fr.readAsDataURL(blob);
+        });
+        const r = await aiJSON(
+`아래는 한국 초등학교 ${S.klass.grade}학년 학생이 만든 수업 산출물이다(학습지·공책·소감문·독후감 등).
+1) 이미지 속 글씨를 그대로 옮겨 적는다. 알아보기 어려운 글자는 ?로 둔다.
+2) 교사가 학교생활기록부 근거로 담아 둘 관찰 메모 후보를 2~4개 만든다.
+   한 줄이고 명사형('~함','~음')으로 끝낸다. 이미지에서 확인되는 사실만 쓴다. 점수·등수·학생 이름은 쓰지 않는다.
+3) 교사가 눈여겨볼 지점을 1~3개 짧게. 잘한 점만이 아니라 더 볼 부분도 좋다.
+JSON만 출력한다: {"text":"옮겨 적은 글","memos":["메모1","메모2"],"points":["지점1"]}`,
+          {parts:[{inline_data:{mime_type:pendingFile.type || "image/jpeg", data:b64}}]});
+        const memos = (r.memos||[]).map(String).filter(Boolean);
+        el("c-shot-out").innerHTML = `
+          <div class="scan" style="margin-top:10px">
+            <div class="scan-head"><span class="lab">사진에서 읽은 것</span>
+              <span class="tally">${memos.length}개 후보</span></div>
+            ${memos.map((m,i)=>`<div class="pt mid" style="padding:7px 0;border-bottom:1px solid var(--rule)">
+                <span class="mk">·</span><span>${esc(m)}</span>
+                <span class="go"><button class="ghost" type="button" data-take="${i}">담기</button></span></div>`).join("")}
+            ${(r.points||[]).length?`<div class="hint" style="margin-top:8px">${(r.points||[]).map(p=>"· "+esc(p)).join("<br>")}</div>`:""}
+            ${r.text?`<details class="help"><summary>옮겨 적은 글 보기</summary><div style="white-space:pre-wrap">${esc(r.text)}</div></details>`:""}
+            <div class="hint">AI가 읽은 것입니다. 사실과 표현을 확인한 뒤 담아 주세요.</div>
+          </div>`;
+        el("c-shot-out").querySelectorAll("[data-take]").forEach(b => b.onclick = () => {
+          el("c-text").value = memos[+b.dataset.take];
+          if(el("c-src").value === "직접관찰"){ el("c-src").value = "수업산출물"; _src = "수업산출물"; }
+          addNote();
+        });
+      }catch(err){ el("c-shot-out").innerHTML = `<div class="hint" style="color:var(--low)">${esc(err.message)}</div>`; }
+    };
+  }
+
+  wrap.querySelectorAll("[data-del]").forEach(b => b.onclick = () => {
+    S.notes = S.notes.filter(n => n.id !== b.dataset.del);
+    save(); sweepFiles(); renderWrite(); });
+  wrap.querySelectorAll("[data-open]").forEach(b => b.onclick = () => openFile(b.dataset.open));
+
+  const ta = el("draft"), k = dkey(s.id, S.ui.slot);
+  let t = null;
+  ta.oninput = () => {
+    const d = S.drafts[k] || (S.drafts[k] = {text:"", gate:[false,false,false,false]});
+    d.text = ta.value; save();
+    clearTimeout(t);
+    t = setTimeout(() => { const p = ta.selectionStart; repaint();
+      const n = el("draft"); n.focus(); n.setSelectionRange(p,p); }, 450);
+  };
+  wrap.querySelectorAll("[data-gate]").forEach(c => c.onchange = () => {
+    const d = S.drafts[k] || (S.drafts[k] = {text:ta.value, gate:[false,false,false,false]});
+    d.gate[+c.dataset.gate] = c.checked; save(); repaint(); });
+  const patch = (idx, make) => {
+    const d = S.drafts[k]; if(!d) return;
+    const f = check(d.text)[idx]; if(!f) return;
+    const to = make(f); if(to === null || to === undefined) return;
+    d.text = tidySentence(d.text.slice(0, f.at) + to + d.text.slice(f.at + f.hit.length));
+    save(); repaint();
+  };
+  wrap.querySelectorAll("[data-fix]").forEach(b => b.onclick = e => {
+    e.preventDefault(); patch(+b.dataset.fix, f => f.swap === undefined ? null : f.swap); });
+  wrap.querySelectorAll("[data-nom]").forEach(b => b.onclick = e => {
+    e.preventDefault(); patch(+b.dataset.nom, f => toNominal(f.hit)); });
+  wrap.querySelectorAll("[data-cut]").forEach(b => b.onclick = e => {
+    e.preventDefault(); patch(+b.dataset.cut, () => ""); });
+  wrap.querySelectorAll("[data-ack]").forEach(b => b.onclick = e => {
+    e.preventDefault();
+    const f = check(S.drafts[k]?.text || "")[+b.dataset.ack]; if(!f) return;
+    (ackScan[k] = ackScan[k] || new Set()).add(ackKey(f));
+    repaint(); });
+  const mk = el("mk-draft");
+  if(mk) mk.onclick = () => {
+    const list = notesOf(s.id, S.ui.slot); if(!list.length) return;
+    const seen = new Set(), parts = [];
+    list.forEach(n => {
+      const t = n.text.trim().replace(/[.\s]+$/, "");
+      if(t && !seen.has(t)){ seen.add(t); parts.push(toNominal(t) || t); }
+    });
+    const d2 = S.drafts[k] || (S.drafts[k] = {text:"", gate:[false,false,false,false]});
+    d2.text = tidySentence(parts.join(". ") + ".");
+    d2.gate = [false,false,false,false];
+    save(); repaint();
+  };
+  const go = el("ai-go");
+  if(go) go.onclick = () => { S.ui.tab = "ai"; save(); render(); };
+  const dr = el("ai-draft"), rv = el("ai-review"), out = el("ai-out");
+  const cur2 = slots().find(x => x.key === S.ui.slot);
+  const evid = () => notesOf(s.id, S.ui.slot).map(n =>
+      `- (${n.source}) ${n.text}${n.standards?.length?` [${n.standards.join(" ")}: ${n.standards.map(c=>CODEMAP[c]?.text||"").join(" / ")}]`:""}`).join("\n");
+  function busy(b, on, label){ b.disabled = on; b.textContent = on ? "…" : label; }
+  if(dr) dr.onclick = async () => {
+    busy(dr, true, "AI 초안");
+    out.innerHTML = `<div class="hint">근거만 가지고 초안을 만드는 중…</div>`;
+    try{
+      const r = await aiJSON(`아래 [근거]만 사용해 한국 초등학교 학교생활기록부 ‘${cur2.full}’에 넣을 문장 초안을 쓴다.
+근거에 없는 사실을 지어내지 않는다. 2~4문장. 학생의 특성과 성장이 드러나게 쓴다. ${AI_RULES}
+${_level ? `성취수준은 ‘${_level}’ 정도로 읽히게 서술한다. 다만 ‘${_level}’·점수·등급을 문장에 직접 쓰지 않는다.${_level==="노력요함"?" 부족한 점만 남기지 말고 변화 가능성을 함께 쓴다." : ""}` : ""}
+JSON만 출력한다: {"text":"초안"}
+[근거]
+${evid()}`);
+      const d2 = S.drafts[k] || (S.drafts[k] = {text:"", gate:[false,false,false,false]});
+      d2.text = (r.text||"").trim(); d2.gate = [false,false,false,false];
+      save(); repaint();
+      el("ai-out").innerHTML = `<div class="hint" style="color:var(--mid)">AI 초안입니다. 사실과 표현을 반드시 손본 뒤 아래 네 항목을 확인해 주세요.</div>`;
+    }catch(e){ out.innerHTML = `<div class="hint" style="color:var(--low)">${esc(e.message)}</div>`; busy(dr, false, "AI 초안"); }
+  };
+  if(rv) rv.onclick = async () => {
+    busy(rv, true, "AI 검토");
+    out.innerHTML = `<div class="hint">문장을 검토하는 중…</div>`;
+    try{
+      const r = await aiJSON(`너는 한국 초등학교 학교생활기록부 기재요령을 잘 아는 검토자다.
+[근거]는 교사가 직접 관찰해 담아 둔 사실이고 [문장]은 생활기록부 초안이다. 다음만 점검한다.
+1) 근거에 없는 내용이 문장에 있는가(과장·허위 위험) 2) 기재 금지 항목 3) 상표·앱 실명 4) 명사형 종결과 주어 5) 단순 나열이나 성취기준 문구 베끼기.
+${AI_RULES}
+JSON만 출력한다: {"findings":[{"level":"위반","hit":"문장에서 문제되는 부분 그대로","why":"한 문장","fix":"고쳐 쓴 표현"}],"note":"교사가 볼 한 문장"}
+level은 "위반" 또는 "확인" 중 하나. 문제가 없으면 findings는 빈 배열.
+[근거]
+${evid() || "(없음)"}
+[문장]
+${S.drafts[k].text}`);
+      aiReview[k] = {items:(r.findings||[]).map(f => ({level:f.level||"확인", hit:String(f.hit||""),
+                       why:String(f.why||""), fix:String(f.fix||""), state:""})),
+                     note:String(r.note||"")};
+      repaint();
+    }catch(e){ out.innerHTML = `<div class="hint" style="color:var(--low)">${esc(e.message)}</div>`; busy(rv, false, "AI 검토"); }
+  };
+  /* AI 검토 항목 처리 — 고치기 / 확인함 */
+  wrap.querySelectorAll("[data-aifix]").forEach(b => b.onclick = e => {
+    e.preventDefault();
+    const it = aiReview[k]?.items[+b.dataset.aifix]; const d = S.drafts[k];
+    if(!it || !d) return;
+    if(!d.text.includes(it.hit)){
+      b.outerHTML = `<span class="basis" style="color:var(--low)">문장에서 그 부분을 찾지 못했습니다</span>`;
+      return;
+    }
+    /* fix가 대체 문구가 아니라 ‘(해당 부분 삭제)’ 같은 지시문이면 지우기로 본다 */
+    const drop = !it.fix || /^[\s(（'"‘“]*(해당\s*부분\s*)?(전체\s*)?(삭제|제거|빼기|생략)[^가-힣]*$/.test(it.fix.trim());
+    d.text = tidySentence(d.text.replace(it.hit, drop ? "" : it.fix));
+    it.state = "applied";
+    d.gate = [false,false,false,false];      // 문장이 바뀌었으니 확인은 다시 받는다
+    save(); repaint();
+  });
+  wrap.querySelectorAll("[data-aiok]").forEach(b => b.onclick = e => {
+    e.preventDefault();
+    const it = aiReview[k]?.items[+b.dataset.aiok];
+    if(it){ it.state = "ok"; repaint(); }
+  });
+  const redo = wrap.querySelector("[data-airedo]");
+  if(redo) redo.onclick = e => { e.preventDefault(); delete aiReview[k]; repaint(); el("ai-review")?.click(); };
+  const closeAi = wrap.querySelector("[data-aiclose]");
+  if(closeAi) closeAi.onclick = e => { e.preventDefault(); delete aiReview[k]; repaint(); };
+
+  const cp = el("copy");
+  if(cp) cp.onclick = async () => {
+    try{ await navigator.clipboard.writeText(S.drafts[k].text.trim()); }
+    catch(e){ ta.select(); document.execCommand("copy"); }
+    cp.textContent = "복사했습니다"; setTimeout(()=>{ cp.textContent = "문장 복사"; }, 1500); };
+
+  function repaint(){ wrap.innerHTML = detailHTML(); bindDetail(); }
+}
+
+function addNote(){
+  const ti = el("c-text"), text = ti.value.trim();
+  if(!text){ ti.focus(); return; }
+  const cur = slots().find(x => x.key === S.ui.slot);
+  const n = {id:uid(), studentId:S.ui.sid, date:today(), source:_src, text, standards:[]};
+  if(cur.kind === "subj"){
+    n.axis = "subj"; n.subject = cur.subject;
+    if(_taskId && S.tasks.find(t => t.id === _taskId && t.subject === cur.subject)) n.taskId = _taskId;
+    n.standards = [...new Set([...taskStd(), ...pendingStd])];
+  } else if(cur.kind === "cca"){ n.axis = "cca"; n.cca = cur.cca; }
+  else n.axis = "behavior";
+  if(pendingFile) n.fileId = pendingFile.id;
+  S.notes.push(n); pendingStd = []; save();
+  renderWrite(); el("c-text").focus();
+}
+
+/* ── 점검 ── */
+/* ── 준비: 우리 반 · 평가 계획 ── */
+function renderPrep(){
+  const sl = slots(), byGrade = allSubjects().filter(x => !(S.klass.excluded||[]).includes(x));
+  el("main").innerHTML = `<div class="stack">
+
+    <div class="panel">
+      <div class="ph"><h2>우리 반</h2>
+        <span class="r" style="display:flex;gap:8px">
+          <button class="ghost" id="p-setup" type="button">고치기</button>
+          ${S.classes.length > 1 ? `<button class="ghost danger" id="p-del" type="button">이 학급 지우기</button>` : ``}
+        </span></div>
+      <div class="pb">
+        <div style="display:flex;flex-wrap:wrap;gap:18px;align-items:baseline">
+          <span style="font-size:20px;font-weight:700">${S.klass.grade}학년 ${esc(S.klass.room||"")}반</span>
+          <span class="muted">학생 ${S.students.length}명 · ${esc(band())}학년군 · 기록 칸 ${sl.length}개</span>
+        </div>
+        <div class="tags" style="margin-top:12px">
+          ${byGrade.map(x=>`<span class="chip" style="background:var(--surface);color:var(--ink-2);border-color:var(--rule)">${esc(subjShort(x))}</span>`).join("")}
+          ${(S.klass.excluded||[]).map(x=>`<span class="chip" style="background:var(--sink);color:var(--ink-3);border-color:var(--rule)">${esc(subjShort(x))} 전담</span>`).join("")}
+        </div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="ph"><h2>평가 문서에서 가져오기</h2>
+        <span class="r muted">파일은 이 기기 안에서만 읽습니다</span></div>
+      <div class="pb">
+        <div class="drop" id="drop">
+          <b>학교 평가계획을 끌어다 놓거나 붙여넣으세요</b>
+          PDF · txt · csv 파일, 또는 표를 복사해서 아래 칸에 붙여넣기
+        </div>
+        <textarea class="big" id="up-text" style="margin-top:10px;min-height:96px"
+          placeholder="한글·엑셀 파일은 표를 선택해 복사한 뒤 여기에 붙여넣으세요."></textarea>
+        <div class="rowbtns" style="margin-top:8px">
+          <button class="primary" id="up-pick2" type="button">파일 선택</button>
+          <button class="ghost" id="up-run" type="button">붙여넣은 표 읽기</button>
+          ${aiOn()?`<button class="ghost" id="up-ai" type="button">AI로 읽기</button>`:``}
+          <input type="file" id="up-file" accept=".txt,.csv,.md,.tsv,.pdf,text/plain,application/pdf" style="display:none">
+        </div>
+        <div id="up-out"></div>
+      </div>
+    </div>
+
+
+    <div class="panel">
+      <div class="ph"><h2>평가과제</h2><span class="r muted">${S.tasks.length}개</span></div>
+      <div class="scroll"><table>
+        <thead><tr><th>교과</th><th>과제</th><th>성취기준</th><th class="n">관찰</th><th></th></tr></thead>
+        <tbody>${S.tasks.map(t=>`<tr>
+          <td>${esc(subjShort(t.subject))}</td>
+          <td>${esc(t.name)}${t.criteria?`<div class="muted">${esc(t.criteria)}</div>`:""}</td>
+          <td style="font-size:11.5px"><span class="mono" style="color:var(--accent)">${t.standards.map(esc).join(" ")||"—"}</span>
+            ${t.standards.length?`<div class="muted" style="font-size:11.5px;line-height:1.5">${t.standards.map(c=>esc(stdCut(c,44))).filter(Boolean).join("<br>")}</div>`:""}</td>
+          <td class="n">${S.notes.filter(n=>n.taskId===t.id).length}</td>
+          <td style="text-align:right;white-space:nowrap">
+            <button class="ghost" type="button" data-tedit="${t.id}">고치기</button>
+            <button class="ghost danger" type="button" data-tdel="${t.id}">삭제</button></td></tr>`).join("")
+          || `<tr><td colspan="5" class="muted">아직 없습니다. 위에서 평가계획을 가져오거나, 작성 화면에서 ＋과제로 등록합니다.</td></tr>`}</tbody>
+      </table></div>
+    </div>
+
+  </div>`;
+
+  el("p-setup").onclick = () => renderSetup(true);
+  const pdel = el("p-del"); if(pdel) pdel.onclick = () => removeClass(S.curId);
+  el("main").querySelectorAll("[data-tedit]").forEach(b => b.onclick = () => {
+    const t = S.tasks.find(x => x.id === b.dataset.tedit); openTask(t.subject, t, () => renderPrep()); });
+  el("main").querySelectorAll("[data-tdel]").forEach(b => b.onclick = () => {
+    const t = S.tasks.find(x => x.id === b.dataset.tdel);
+    const used = S.notes.filter(n => n.taskId === t.id).length;
+    if(!confirm(`‘${t.name}’을 지웁니다.` + (used?`
+이 과제로 담은 관찰 ${used}건은 그대로 남습니다.`:""))) return;
+    S.tasks = S.tasks.filter(x => x.id !== t.id); if(_taskId === t.id) _taskId = "";
+    save(); renderPrep(); });
+  bindUpload();
+}
+
+function renderCheck(){
+  const sl = slots(), pts = pointers();
+  const done = S.students.reduce((a,s) => a + sl.filter(x => draftDone(s.id,x.key)).length, 0);
+  el("main").innerHTML = `<div class="stack">
+
+    <div class="panel">
+      <div class="ph"><h2>짚어주기</h2>
+        <span class="r muted">담긴 기록에서 찾은 것들</span></div>
+      ${pts.length ? pts.map((p,i)=>`<div class="pt ${p.sev}">
+          <span class="mk">${p.sev==="high"?"●":p.sev==="mid"?"▲":"·"}</span>
+          <span><b style="font-weight:600">${esc(p.title)}</b><div class="who">${esc(p.who)}</div></span>
+          <span class="go">${p.go?`<button class="ghost" type="button" data-go="${i}">보기</button>`:""}</span>
+        </div>`).join("")
+        : `<div class="clear">아직 짚을 것이 없습니다 <span>관찰을 담기 시작하면 여기에 나타납니다</span></div>`}
+    </div>
+
+
+    <div class="panel">
+      <div class="ph"><h2>진행</h2><span class="r muted">${done}/${S.students.length*sl.length}칸 확인 완료</span></div>
+      <div class="scroll"><table>
+        <thead><tr><th class="n">번호</th><th>학생</th><th class="n">관찰</th><th class="n">완료</th><th>담긴 근거</th></tr></thead>
+        <tbody>${S.students.map(s=>{
+          const srcs = [...new Set(notesOf(s.id).map(n=>n.source))];
+          return `<tr><td class="n">${s.no}</td><td>${esc(sname(s))}</td>
+            <td class="n">${notesOf(s.id).length}</td>
+            <td class="n">${sl.filter(x=>draftDone(s.id,x.key)).length}</td>
+            <td class="muted">${srcs.map(esc).join(" · ")||"—"}</td></tr>`;}).join("")}</tbody>
+      </table></div>
+    </div>
+
+
+    <div class="panel">
+      <div class="ph"><h2>데이터</h2>
+        <span class="r muted">${S.savedAt?esc(S.savedAt.replace("T"," ").slice(0,16)):"—"}</span></div>
+      <div class="pb">
+        <div class="rowbtns">
+          <button class="primary" id="ex" type="button">백업 내려받기</button>
+          <button class="ghost" id="im" type="button">백업 열기</button>
+          <input type="file" id="imf" accept="application/json,.json" style="display:none">
+          <button class="ghost" id="setup" type="button">우리 반 고치기</button>
+          <button class="ghost" id="demo" type="button">예시 관찰 넣기</button>
+          <button class="ghost" id="seed" type="button">예시 학급 6개 만들기</button>
+          <button class="ghost danger" id="reset" type="button">전부 지우기</button>
+        </div>
+        <div class="hint" style="margin-top:8px">
+          <label style="display:inline-flex;gap:6px;align-items:center;color:var(--ink-2)">
+            <input type="checkbox" id="ex-files"> 산출물 사진까지 넣기</label>
+          <span id="fstat">— 보관된 산출물을 세는 중…</span>
+        </div>
+        <div class="hint">학교 PC와 집 PC는 저장소가 다릅니다. 주 1회 백업을 권합니다.
+          내려받은 파일에는 학생 기록이 들어 있으니 문서처럼 다루세요.</div>
+      </div>
+    </div>
+
+
+    <div class="panel">
+      <div class="ph"><h2>검사 기준과 한계</h2></div>
+      <div class="pb">
+        <div class="scroll"><table>
+          <thead><tr><th>등급</th><th>검사</th><th>근거</th></tr></thead>
+          <tbody>
+            ${[["●","어학시험·자격증·인증시험","기재요령 p.18"],["●","논문·출간·특허","기재요령 p.18"],
+               ["●","장학금·기부·해외활동","기재요령 p.18"],["●","국제기구명","질의회신 p.108"],
+               ["●","상표·앱 실명 13종 → 치환","유의사항 p.6"],["●","특수문자·번호기호·이모지","유의사항 p.2"],
+               ["▲","대회·경시·입상","기재요령 p.18"],["▲","점수·등급·석차","기재요령 p.18"],
+               ["▲","명사형 종결이 아닌 문장","기재요령 p.30"],["▲","주어가 있는 문장","질의회신 p.114"]]
+              .map(([m,n,b])=>`<tr><td style="color:${m==="●"?"var(--low)":"var(--mid)"};text-align:center">${m}</td>
+                <td>${n}</td><td class="mono" style="font-size:11.5px;color:var(--ink-3)">${b}</td></tr>`).join("")}
+          </tbody></table></div>
+        <details class="help"><summary>찾지 못하는 것</summary><div>
+          <p>낱말로 드러나지 않는 위반은 기계가 찾지 못합니다. “구청장배 줄넘기 왕중왕전에서 학교 대표로 뛰어난 성적을 거둠”,
+            “역사 관련 국가 공인 시험에서 최고 등급을 취득함”, “부모님께서 운영하시는 병원에서 직업 체험을 함”,
+            대체표에 없는 새 상표명은 모두 검사를 통과합니다.</p>
+          <p>그래서 이 도구는 ‘이상 없음’이라고 말하지 않습니다. 최종 책임은 교사에게 있습니다(기재요령 p.18, 2026 신설).</p>
+        </div></details>
+        <details class="help"><summary>근거로 쓸 수 있는 자료</summary><div>
+          <p>서술형 항목의 근거로 삼을 수 있는 학생 산출 자료는 <b>동료평가서·자기평가서·수업산출물·소감문·독후감</b> 5종뿐입니다(기재요령 p.27-28).
+            관찰마다 근거 유형을 묻는 이유입니다. 그 밖의 자료를 학생·학부모에게 요구하면 부정청탁이 될 수 있습니다.</p>
+          <p>성취기준은 2022 개정 교육과정 별책 원문 611건입니다. 창의적 체험활동은 초등에서 자율·자치활동과 동아리활동을 통합해,
+            진로활동은 따로 입력하며 이수시간은 넣지 않습니다.</p>
+        </div></details>
+      </div>
+    </div>
+  </div>`;
+
+  el("main").querySelectorAll("[data-go]").forEach(b => b.onclick = () => {
+    const p = pts[+b.dataset.go]; if(!p.go) return;
+    S.ui.tab = "write"; S.ui.sid = p.go.s.id; S.ui.slot = p.go.x.key; save(); render();
+    window.scrollTo(0,0);
+  });
+  fileStat();
+  el("ex").onclick = exportJSON;
+  el("im").onclick = () => el("imf").click();
+  el("imf").onchange = e => importJSON(e.target.files[0]);
+  el("setup").onclick = () => renderSetup(true);
+  el("demo").onclick = demo;
+  el("seed").onclick = seedClasses;
+  el("reset").onclick = () => {
+    if(!confirm("모든 학급의 기록을 지웁니다.\n백업을 받아 두셨나요?")) return;
+    localStorage.removeItem(KEY); S = blank();
+    fileKeys().then(ks => ks.forEach(fileDel)).catch(()=>{});
+    render(); };
+}
+
+
+/* ── AI 연결 ── */
+function renderAI(){
+  el("main").innerHTML = `<div class="stack" style="max-width:760px;margin:0 auto">
+
+    <div class="panel">
+      <div class="ph"><h2>AI 검토를 쓰려면</h2>
+        <span class="r muted">${aiOn()?`<span style="color:var(--good)">연결됨</span>`:"연결 안 됨"}</span></div>
+      <div class="pb">
+        <p style="margin:0 0 10px">이 도구의 기본 기능(관찰 담기·검사·게이트·백업)은 <b>AI 없이도 모두 동작</b>합니다.
+          AI는 정규식이 못 잡는 것을 한 번 더 훑어보는 <b>보조 검토</b>로만 씁니다.</p>
+        <div class="pt mid" style="border:0;padding:10px 0">
+          <span class="mk">▲</span>
+          <span><b style="font-weight:600">공개 주소(claude.ai)에서 연 화면이라면 아래 ‘연결 확인’이 실패합니다</b>
+          <div class="who">그 페이지는 보안 정책상 바깥 서버로 연결하지 못합니다. 두 가지 방법 중 하나로 열면 그대로 동작합니다 —
+            ① 이 화면에서 <b>Ctrl+S</b>로 저장한 뒤 그 파일을 열기, ② 학교·개인 웹 공간이나 GitHub Pages에 올려서 열기.
+            어느 쪽이든 기록은 그 기기에만 남습니다.</div></span><span></span></div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="ph"><h2>무료 키 받기</h2><span class="r muted">구글 계정만 있으면 됩니다</span></div>
+      <div class="pb">
+        <div class="steps" style="flex-direction:column;gap:10px;color:var(--ink-2);font-size:13px">
+          <span><span class="n">1</span>주소창에 <span class="mono" style="user-select:all">aistudio.google.com/apikey</span> 를 입력해 엽니다.</span>
+          <span><span class="n">2</span>구글 계정으로 로그인합니다. 학교 계정이 막혀 있으면 개인 계정을 쓰세요.</span>
+          <span><span class="n">3</span>파란 버튼 <b>‘API 키 만들기(Create API key)’</b>를 누릅니다.
+            프로젝트를 고르라고 하면 아무 것이나 새로 만들면 됩니다.</span>
+          <span><span class="n">4</span>만들어진 키(<span class="mono">AIza…</span>로 시작하는 긴 문자열)를 복사해 아래 칸에 붙여넣습니다.</span>
+        </div>
+        <div class="hint" style="margin-top:12px">무료 등급의 하루 사용량과 정책은 구글이 정하며 바뀔 수 있습니다.
+          학급 규모로 검토를 돌리는 정도는 보통 무료 범위에서 됩니다.</div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="ph"><h2>키 넣기</h2></div>
+      <div class="pb">
+        <div class="field">
+          <span class="lab">API 키</span>
+          <input type="text" id="ai-key" style="width:100%;font-family:var(--mono)"
+                 placeholder="AIza…" value="${esc(AI.key||"")}">
+          <div class="hint">이 기기의 브라우저에만 저장되며, 백업 파일에는 들어가지 않습니다.
+            공용 PC에서는 쓰고 난 뒤 ‘키 지우기’를 눌러 주세요.</div>
+        </div>
+        <div class="field">
+          <span class="lab">모델</span><br>
+          <span style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+            <select id="ai-model">${aiModelList().map(m=>`<option value="${m}"${m===AI.model?" selected":""}>${m}</option>`).join("")}</select>
+            <button class="ghost" id="ai-list" type="button">모델 목록 가져오기</button>
+            <span class="hint" id="ai-list-msg" style="margin:0">${AI.models?`키에서 받아온 ${AI.models.length}개`:"키를 넣고 누르면 쓸 수 있는 모델을 직접 받아옵니다"}</span>
+          </span>
+        </div>
+        <div class="field">
+          <label style="display:flex;gap:7px;align-items:flex-start;font-size:12.5px;color:var(--ink-2)">
+            <input type="checkbox" id="ai-agree"${AI.agreed?" checked":""} style="margin-top:3px">
+            <span>AI 검토를 쓰면 <b>선택한 관찰 기록과 문장이 구글 서버로 전송</b>된다는 것을 이해했습니다.
+              학생 실명 대신 번호로 관리하기를 권합니다(우리 반 설정에서 바꿀 수 있습니다).
+              AI가 만든 문장은 초안이며, <b>최종 확인은 교사가 합니다</b>(기재요령 p.18, 2026 신설).</span>
+          </label>
+        </div>
+        <div class="rowbtns">
+          <button class="primary" id="ai-save" type="button">저장하고 연결 확인</button>
+          <button class="ghost danger" id="ai-clear" type="button">키 지우기</button>
+          <span class="hint" id="ai-msg"></span>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="ph"><h2>AI가 하는 일 · 하지 않는 일</h2></div>
+      <div class="pb">
+        <table>
+          <tbody>
+            <tr><td style="width:96px;color:var(--good)">합니다</td><td>담아 둔 관찰만 가지고 문장 <b>초안</b>을 만듭니다</td></tr>
+            <tr><td style="color:var(--good)">합니다</td><td>쓴 문장을 기재요령 관점으로 <b>검토</b>합니다(정규식이 못 잡는 우회 표현까지)</td></tr>
+            <tr><td style="color:var(--good)">합니다</td><td>평가계획 문서를 읽어 과제·성취기준으로 <b>정리</b>하고 확인할 지점을 짚습니다</td></tr>
+            <tr><td style="color:var(--low)">안 합니다</td><td>관찰에 없는 사실을 지어내지 않습니다</td></tr>
+            <tr><td style="color:var(--low)">안 합니다</td><td>검증 게이트를 대신 통과시키지 않습니다 — 확인은 교사가 직접 체크합니다</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>`;
+
+  el("ai-save").onclick = async () => {
+    AI.key = el("ai-key").value.trim();
+    AI.model = el("ai-model").value;
+    AI.agreed = el("ai-agree").checked;
+    aiSave();
+    const msg = el("ai-msg");
+    if(!AI.key){ msg.textContent = "키를 넣어 주세요."; return; }
+    if(!AI.agreed){ msg.textContent = "전송 안내에 동의해야 씁니다."; return; }
+    msg.textContent = "확인 중…";
+    try{
+      const t = await aiCall("한 낱말로만 답하라: 연결");
+      msg.innerHTML = `<span style="color:var(--good)">연결됐습니다.</span> 응답: ${esc(t.trim().slice(0,20))}`;
+      render();
+    }catch(e){ msg.innerHTML = `<span style="color:var(--low)">${esc(e.message)}</span>`; }
+  };
+  el("ai-list").onclick = async () => {
+    AI.key = el("ai-key").value.trim(); aiSave();
+    const m = el("ai-list-msg");
+    m.textContent = "받아오는 중…";
+    try{
+      const names = await aiFetchModels();
+      if(!names.includes(AI.model)) AI.model = names[0];
+      aiSave(); renderAI();
+      el("ai-list-msg").innerHTML = `<span style="color:var(--good)">${names.length}개를 받아왔습니다.</span> 최신 것이 위에 옵니다.`;
+    }catch(e){ m.innerHTML = `<span style="color:var(--low)">${esc(e.message)}</span>`; }
+  };
+  el("ai-clear").onclick = () => {
+    AI = {key:"", model:AI.model, agreed:false, models:null}; aiSave(); render();
+  };
+}
+
+
+/* ── 2015 개정 코드 → 2022 개정 성취기준 추정 ── */
+function bigrams(t){
+  const x = String(t).replace(/[^가-힣0-9a-zA-Z]/g, "");
+  const m = new Map();
+  for(let i = 0; i < x.length - 1; i++){
+    const g = x.slice(i, i+2);
+    m.set(g, (m.get(g)||0) + 1);
+  }
+  return m;
+}
+function simText(a, b){
+  const A = bigrams(a), B = bigrams(b);
+  if(!A.size || !B.size) return 0;
+  let dot = 0, na = 0, nb = 0;
+  for(const [g,v] of A){ na += v*v; if(B.has(g)) dot += v * B.get(g); }
+  for(const v of B.values()) nb += v*v;
+  return dot / Math.sqrt(na*nb);
+}
+/* 교과·학년군 안에서 가장 비슷한 성취기준을 찾는다 */
+function guessStd(text, subject, n){
+  const areas = (STD[subject] || {})[band()] || [];
+  const cand = [];
+  for(const a of areas) for(const [c,t] of a.s) cand.push({code:c, text:t, score:simText(text, t)});
+  cand.sort((x,y) => y.score - x.score);
+  return cand.slice(0, n || 1);
+}
+
+/* ── 평가 문서 읽기 ── */
+const CODE_RE = /\[?([246][가-힣]{1,2}\d{2}-\d{2})\]?/g;
+function readPlan(text){
+  const lines = text.split(/\r?\n/), rows = [], seen = new Set(), notes = [];
+  for(const raw of lines){
+    const line = raw.trim(); if(!line) continue;
+    CODE_RE.lastIndex = 0;
+    const codes = [...new Set([...line.matchAll(CODE_RE)].map(m => m[1]))];
+    if(!codes.length) continue;
+    // 표는 보통 [교과 | 평가과제 | 성취기준 | 평가기준] 순서다. 셀 위치로 읽는다.
+    const cells = line.split(/\s*[|\t]\s*/).map(c => c.trim()).filter(Boolean);
+    const hasCode = c => { CODE_RE.lastIndex = 0; return CODE_RE.test(c); };
+    const ci = cells.findIndex(hasCode);
+    const si = cells.findIndex(c => allSubjects().some(s => s === c || subjShort(s) === c || s.startsWith(c)));
+    let name = "", criteria = "";
+    if(ci > 0){
+      const before = cells.slice(0, ci).filter((c,i) => i !== si && !hasCode(c));
+      name = before[before.length-1] || "";
+      criteria = cells.slice(ci+1).filter(c => !hasCode(c)).join(" ");
+    }
+    if(!name && cells.length === 1)
+      name = line.replace(CODE_RE,"").replace(/^[\s·\-–—.\d)]+/,"").replace(/\s{2,}/g," ").trim();
+    if(!name) name = cells.filter((c,i) => i !== si && !hasCode(c))[0] || "";
+    if(name.length > 60) name = name.slice(0,60) + "…";
+    const known = codes.filter(c => CODEMAP[c]);
+    const subj = (si >= 0 ? allSubjects().find(s => s === cells[si] || subjShort(s) === cells[si] || s.startsWith(cells[si])) : "")
+                 || (known.length ? CODEMAP[known[0]].subject : "");
+    rows.push({name, codes, subject:subj, criteria, pick:true});
+    for(const c of codes){
+      if(!CODEMAP[c]) notes.push({sev:"mid", t:`2022 개정에 없는 코드 ${c}`, d:"2015 개정 코드이거나 오타일 수 있습니다. 아래 표에서 추정 성취기준을 확인하세요"});
+      else{
+        if(CODEMAP[c].grade !== band()) notes.push({sev:"mid", t:`${c}는 ${CODEMAP[c].grade}학년군`, d:`우리 반은 ${band()}학년군입니다`});
+        if((S.klass.excluded||[]).includes(CODEMAP[c].subject)) notes.push({sev:"low", t:`${c}는 전담으로 뺀 ${subjShort(CODEMAP[c].subject)}`, d:"기록은 전담 교사가 입력합니다"});
+        if(seen.has(c)) notes.push({sev:"low", t:`${c}가 여러 줄에 있습니다`, d:"같은 성취기준을 여러 과제가 나눠 쓰는지 확인하세요"});
+        seen.add(c);
+      }
+    }
+  }
+  // 같은 지적은 한 번만
+  const uniq = [], keys = new Set();
+  for(const n of notes){ const k = n.t; if(!keys.has(k)){ keys.add(k); uniq.push(n); } }
+  return {rows, notes:uniq, found:seen.size};
+}
+/* 코드가 있어도 뜻이 다를 수 있다 — 평가기준 문장과의 닮은 정도로 판정한다 */
+const SIM_OK = 0.45, SIM_LOW = 0.15;
+function fillGuesses(rows){
+  rows.forEach(r => {
+    const q = [r.name, r.criteria].filter(Boolean).join(" ");
+    r.q = q;
+    const checked = (r.codes||[]).map(c => {
+      const t = CODEMAP[c]?.text || "";
+      return {code:c, exists:!!t, sim:t ? simText(q, t) : 0};
+    });
+    r.known = checked.filter(x => x.exists && x.sim >= SIM_OK).map(x => x.code);
+    r.doubt = checked.filter(x => !r.known.includes(x.code));
+    r.guess = (r.subject && r.doubt.length) ? guessStd(q, r.subject, 2).filter(g => g.score > SIM_LOW) : [];
+    r.useGuess = !!(r.guess.length && r.guess[0].score >= 0.3);
+    r.manual = r.manual || [];
+  });
+  return rows;
+}
+function rowCodes(r){
+  const out = (r.known||[]).slice();
+  if(r.useGuess && r.guess?.length) out.push(r.guess[0].code);
+  (r.manual||[]).forEach(c => out.push(c));
+  return [...new Set(out)];
+}
+function bindUpload(){
+  const drop = el("drop"), ta = el("up-text"), out = el("up-out");
+  el("up-pick2").onclick = () => el("up-file").click();
+  drop.style.cursor = "pointer";
+  drop.onclick = () => el("up-file").click();
+  el("up-file").onchange = e => { take(e.target.files[0]); e.target.value = ""; };
+  drop.ondragover = e => { e.preventDefault(); drop.classList.add("on"); };
+  drop.ondragleave = () => drop.classList.remove("on");
+  drop.ondrop = e => { e.preventDefault(); drop.classList.remove("on"); take(e.dataTransfer.files[0]); };
+
+  function take(f){
+    if(!f) return;
+    const isPdf = /pdf$/i.test(f.type) || /\.pdf$/i.test(f.name);
+    if(!isPdf){
+      const fr = new FileReader();
+      fr.onload = () => { upFile = null; ta.value = fr.result; run(); };
+      fr.readAsText(f, "utf-8");
+      return;
+    }
+    if(f.size > 20 * 1024 * 1024){ out.innerHTML = `<div class="hint" style="color:var(--low)">PDF가 너무 큽니다(20MB 넘음).</div>`; return; }
+    const fr = new FileReader();
+    fr.onload = () => {
+      upFile = {name:f.name, type:"application/pdf", b64:String(fr.result).split(",")[1], size:f.size};
+      ta.value = "";
+      if(aiOn()){ out.innerHTML = `<div class="hint">${esc(f.name)} — AI가 읽는 중…</div>`; readAI(); }
+      else out.innerHTML = `<div class="hint" style="color:var(--mid)">${esc(f.name)}을 받았습니다. PDF는 글자를 뽑는 데 AI가 필요합니다 —
+        <b>AI 연결</b> 탭에서 키를 넣으면 바로 읽습니다. 지금 바로 하시려면 한글·엑셀에서 표를 복사해 아래 칸에 붙여넣으세요.</div>`;
+    };
+    fr.readAsDataURL(f);
+  }
+  el("up-run").onclick = run;
+  const aiBtn = el("up-ai");
+  if(aiBtn) aiBtn.onclick = readAI;
+  async function readAI(){
+    const t = ta.value.trim();
+    if(!t && !upFile){ out.innerHTML = `<div class="hint">읽을 내용이 없습니다.</div>`; return; }
+    const aiBtn2 = el("up-ai");
+    if(aiBtn2){ aiBtn2.disabled = true; aiBtn2.textContent = "…"; }
+    out.innerHTML = `<div class="hint">AI가 문서를 읽는 중…</div>`;
+    try{
+      const r = await aiJSON(`아래는 한국 초등학교 ${S.klass.grade}학년의 평가 계획 문서다. 표가 깨져 있을 수 있다.
+JSON만 출력한다: {"rows":[{"subject":"국어","name":"평가과제 이름","codes":["4국02-01"],"criteria":"평가기준 문장"}],
+"points":[{"level":"높음","title":"교사가 확인할 지점","detail":"한 문장"}]}
+codes는 2022 개정 성취기준 코드만 넣는다(예 4국02-01). 문서에 없으면 빈 배열.
+points에는 성취기준 누락·중복, 학년군이 맞지 않는 코드, 평가 방법 쏠림, 기록으로 옮길 때 주의할 점 등 3~6개를 넣는다. level은 높음/보통/낮음.
+${upFile ? "[문서] 첨부한 PDF 파일" : "[문서]\n" + t.slice(0,12000)}`,
+        upFile ? {parts:[{inline_data:{mime_type:"application/pdf", data:upFile.b64}}]} : undefined);
+      const rows = (r.rows||[]).map(x => ({
+        name:String(x.name||"").slice(0,60),
+        codes:(x.codes||[]).map(String),
+        subject:allSubjects().find(s => s === x.subject || subjShort(s) === x.subject) ||
+                (x.codes||[]).map(c => CODEMAP[c]?.subject).find(Boolean) || "",
+        criteria:String(x.criteria||""), pick:true }));
+      const notes = (r.points||[]).map(p => ({
+        sev: p.level === "높음" ? "high" : p.level === "낮음" ? "low" : "mid",
+        t:String(p.title||""), d:String(p.detail||"") }));
+      const local = t ? readPlan(t) : {rows:[], notes:[], found:0};
+      fillGuesses(rows); fillGuesses(local.rows);
+      upload = {rows: rows.length ? rows : local.rows,
+                notes: [...notes, ...local.notes],
+                found: new Set([...(rows.flatMap(x=>x.codes)), ...local.rows.flatMap(x=>x.codes)]).size};
+      paintUpload(true);
+    }catch(e){ out.innerHTML = `<div class="hint" style="color:var(--low)">${esc(e.message)}</div>`; }
+    const b = el("up-ai");
+    if(b){ b.disabled = false; b.textContent = "AI로 읽기"; }
+  }
+
+  function run(){
+    upFile = null;
+    const t = ta.value.trim();
+    if(!t){ out.innerHTML = `<div class="hint">읽을 내용이 없습니다.</div>`; return; }
+    upload = readPlan(t); fillGuesses(upload.rows);
+    if(!upload.rows.length){
+      out.innerHTML = `<div class="hint">성취기준 코드를 찾지 못했습니다. 코드가 들어 있는 표를 붙여넣거나,
+        ${aiOn()?"‘AI로 읽기’를 눌러 보세요.":"AI 연결을 켜면 코드가 없는 문서도 읽을 수 있습니다."}</div>`;
+      return;
+    }
+    paintUpload(false);
+  }
+
+  function paintUpload(byAI){
+    out.innerHTML = `
+      <div class="sechead" style="margin-top:14px"><span class="lab">${byAI?"AI가 읽은 것":"찾은 것"}</span>
+        <span class="r muted">성취기준 ${upload.found}건 · 과제 후보 ${upload.rows.length}줄</span></div>
+      ${upload.rows.some(r=>(r.doubt||[]).length) ? `<div class="hint">2015 개정 코드는 2022에도 같은 모양으로 남아 있지만 <b>뜻이 다른 경우가 많습니다</b>.
+        평가기준 문장과 실제로 닮았는지로 판정해, 어긋나는 것은 2022 성취기준을 추정해 두었습니다. 확인하고 등록하세요.</div>` : ``}
+      ${upload.notes.length ? upload.notes.map(n=>`<div class="pt ${n.sev}" style="padding:6px 0;border:0">
+          <span class="mk">${n.sev==="high"?"●":n.sev==="mid"?"▲":"·"}</span>
+          <span><b style="font-weight:600">${esc(n.t)}</b><div class="who">${esc(n.d)}</div></span><span></span></div>`).join("")
+        : `<div class="hint">코드는 모두 우리 반 학년군과 맞습니다.</div>`}
+      <div class="scroll" style="margin-top:10px"><table>
+        <thead><tr><th style="width:26px"></th><th>교과</th><th>과제 이름</th><th>성취기준</th></tr></thead>
+        <tbody>${upload.rows.map((r,i)=>`<tr>
+          <td><input type="checkbox" data-pick="${i}" ${r.pick?"checked":""}></td>
+          <td>${esc(subjShort(r.subject)||"—")}</td>
+          <td><input type="text" data-name="${i}" value="${esc(r.name)}" style="width:100%">
+            ${r.criteria?`<div class="muted" style="font-size:11.5px">${esc(r.criteria.slice(0,70))}</div>`:""}</td>
+          <td style="font-size:11.5px">
+            ${(r.known||[]).map(c=>`<div><span class="mono" style="color:var(--accent)">${esc(c)}</span>
+                <span class="muted"> 그대로</span><div class="muted">${esc(stdCut(c,46))}</div></div>`).join("")}
+            ${(r.doubt||[]).map(x=>`<div class="muted" style="margin-top:2px">
+                <span class="mono" style="text-decoration:line-through">${esc(x.code)}</span>
+                ${x.exists?`2022에서는 뜻이 다름(${Math.round(x.sim*100)}%)`:`2022에 없는 코드`}</div>`).join("")}
+            ${(r.guess||[]).length?`<label style="display:flex;gap:5px;align-items:flex-start;margin-top:4px;cursor:pointer">
+                <input type="checkbox" data-guess="${i}" ${r.useGuess?"checked":""}>
+                <span><span class="mono" style="color:var(--good)">${esc(r.guess[0].code)}</span>
+                  <span class="muted"> 추정 ${Math.round(r.guess[0].score*100)}%</span>
+                  <div class="muted">${esc(stdCut(r.guess[0].code, 46))}</div></span></label>` : ""}
+            ${(r.manual||[]).length?`<div style="margin-top:3px">${r.manual.map(c=>`<span class="mono" style="color:var(--good)">${esc(c)}</span>`).join(" ")}
+                <span class="muted">직접 고름</span></div>`:""}
+            ${r.subject?`<button class="fix" type="button" data-mstd="${i}" style="margin-top:4px">직접 고르기</button>`:`<span class="muted">교과를 알 수 없음</span>`}
+          </td>
+        </tr>`).join("")}</tbody></table></div>
+      <div class="rowbtns" style="margin-top:10px">
+        <button class="primary" id="up-save" type="button">체크한 줄을 평가과제로 등록</button>
+        <span class="hint" id="up-msg"></span>
+      </div>`;
+    out.querySelectorAll("[data-pick]").forEach(c => c.onchange = () => upload.rows[+c.dataset.pick].pick = c.checked);
+    out.querySelectorAll("[data-guess]").forEach(c => c.onchange = () => upload.rows[+c.dataset.guess].useGuess = c.checked);
+    out.querySelectorAll("[data-mstd]").forEach(b => b.onclick = () => {
+      const r = upload.rows[+b.dataset.mstd];
+      openStd(r.subject, rowCodes(r), codes => { r.manual = codes.filter(c => !(r.known||[]).includes(c)); paintUpload(true); });
+    });
+    out.querySelectorAll("[data-name]").forEach(c => c.oninput = () => upload.rows[+c.dataset.name].name = c.value);
+    el("up-save").onclick = () => {
+      const picked = upload.rows.filter(r => r.pick && r.subject && r.name);
+      if(!picked.length){ el("up-msg").textContent = "등록할 줄이 없습니다. 교과를 알아본 줄만 등록됩니다."; return; }
+      picked.forEach(r => S.tasks.push({id:uid(), name:r.name, subject:r.subject,
+                                        standards:rowCodes(r), criteria:r.criteria||""}));
+      ta.value = ""; save(); renderCheck();
+    };
+  }
+}
+
+/* ── 산출물 보기 ── */
+let _furl = null;
+async function openFile(id){
+  const d = el("fdlg"), body = el("fdlg-body");
+  el("fdlg-name").textContent = "산출물"; el("fdlg-size").textContent = "";
+  body.innerHTML = `<div class="empty">여는 중…</div>`;
+  d.showModal();
+  try{
+    const rec = await fileGet(id);
+    if(!rec) throw new Error("보관된 파일을 찾지 못했습니다. 다른 기기에서 담았거나 백업을 사진 없이 불러왔을 수 있습니다.");
+    if(_furl) URL.revokeObjectURL(_furl);
+    _furl = URL.createObjectURL(rec.blob);
+    el("fdlg-name").textContent = rec.name || "산출물";
+    el("fdlg-size").textContent = `${kb(rec.size||rec.blob.size)} · ${rec.at||""}`;
+    body.innerHTML = /^image\//.test(rec.type)
+      ? `<img src="${_furl}" alt="${esc(rec.name||"산출물")}">`
+      : `<embed src="${_furl}" type="${esc(rec.type||"application/pdf")}" style="width:100%;height:70vh">`;
+    el("fdlg-save").onclick = () => {
+      const a = document.createElement("a");
+      a.href = _furl; a.download = rec.name || "산출물"; a.click();
+    };
+  }catch(e){ body.innerHTML = `<div class="empty" style="color:var(--low)">${esc(e.message)}</div>`; }
+}
+el("fdlg-close").onclick = () => el("fdlg").close();
+el("fdlg").addEventListener("close", () => { if(_furl){ URL.revokeObjectURL(_furl); _furl = null; } });
+
+/* ── 성취기준 창 ── */
+function openTask(subject, task, onOK){
+  openStd(subject, task ? task.standards : [], null, {task, onSave(name, criteria, codes){
+    if(task){ Object.assign(task, {name, criteria, standards:codes, subject:dlgState.subject}); save(); onOK(task.id); }
+    else { const t = {id:uid(), name, subject:dlgState.subject, standards:codes, criteria};
+           S.tasks.push(t); save(); onOK(t.id); }
+  }});
+}
+function openStd(subject, selected, onOK, taskMode){
+  dlgState = {subject, sel:new Set(selected), onOK, taskMode};
+  const sel = el("dlg-subj");
+  sel.innerHTML = subjects().map(s=>`<option value="${esc(s)}"${s===subject?" selected":""}>${esc(subjShort(s))}</option>`).join("");
+  sel.onchange = () => { dlgState.subject = sel.value; paint(); };
+  el("dlg-q").value = ""; el("dlg-q").oninput = paint;
+  el("dlg-title").textContent = taskMode ? "평가과제 등록" : "성취기준 고르기";
+  el("dlg-task").hidden = !taskMode;
+  if(taskMode){ el("dlg-name").value = taskMode.task?.name || ""; el("dlg-crit").value = taskMode.task?.criteria || ""; }
+  el("dlg-cancel").onclick = () => el("dlg").close();
+  el("dlg-ok").onclick = () => {
+    if(dlgState.taskMode){
+      const name = el("dlg-name").value.trim();
+      if(!name){ el("dlg-name").focus(); return; }
+      dlgState.taskMode.onSave(name, el("dlg-crit").value.trim(), [...dlgState.sel]);
+    } else dlgState.onOK([...dlgState.sel]);
+    el("dlg").close();
+  };
+  el("dlg-body").onclick = e => { const r = e.target.closest(".srow"); if(!r) return;
+    const c = r.dataset.code; dlgState.sel.has(c) ? dlgState.sel.delete(c) : dlgState.sel.add(c); paint(); };
+  paint(); el("dlg").showModal();
+
+  function paint(){
+    const q = el("dlg-q").value.trim();
+    const areas = (STD[dlgState.subject]||{})[band()] || [];
+    let n = 0;
+    const html = areas.map(a => {
+      const rows = a.s.filter(([c,t]) => !q || c.includes(q) || t.includes(q));
+      n += rows.length;
+      return rows.length ? `<div class="ahead">${esc(a.n?a.n+" · ":"")}${esc(a.a)}</div>` +
+        rows.map(([c,t])=>`<button class="srow" type="button" data-code="${esc(c)}" data-on="${dlgState.sel.has(c)?1:0}">
+          <span class="mk">${dlgState.sel.has(c)?"✓":"＋"}</span><span class="code">${esc(c)}</span><span>${esc(t)}</span></button>`).join("") : "";
+    }).join("");
+    el("dlg-body").innerHTML = html || `<div class="empty">찾는 성취기준이 없습니다</div>`;
+    el("dlg-cnt").textContent = n + "건";
+    el("dlg-sel").textContent = dlgState.sel.size ? `${dlgState.sel.size}건 선택` : "";
+  }
+}
+
+/* ── 데이터 ── */
+async function exportJSON(){
+  const withFiles = el("ex-files")?.checked;
+  const data = Object.assign({}, S, {exportedAt:new Date().toISOString()});
+  if(withFiles){
+    const btn = el("ex"); if(btn){ btn.disabled = true; btn.textContent = "사진을 담는 중…"; }
+    try{
+      const keys = await fileKeys(), all = await fileAll(), files = {};
+      for(let i = 0; i < keys.length; i++){
+        const rec = all[i];
+        files[keys[i]] = {name:rec.name, type:rec.type, at:rec.at, size:rec.size,
+          data: await new Promise(ok => { const fr = new FileReader();
+            fr.onload = () => ok(String(fr.result).split(",")[1]); fr.readAsDataURL(rec.blob); })};
+      }
+      data.files = files;
+    }catch(e){}
+    const btn2 = el("ex"); if(btn2){ btn2.disabled = false; btn2.textContent = "백업 내려받기"; }
+  }
+  const blob = new Blob([JSON.stringify(data, null, 1)], {type:"application/json"});
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = `trecord-${S.klass?.grade||""}학년${S.klass?.room||""}반-${today()}${withFiles?"-사진포함":""}.json`;
+  a.click(); setTimeout(()=>URL.revokeObjectURL(a.href), 2000);
+}
+async function fileStat(){
+  const box = el("fstat"); if(!box) return;
+  try{
+    const all = await fileAll();
+    const n = all.length, sum = all.reduce((a,r) => a + (r.size || r.blob?.size || 0), 0);
+    box.textContent = n ? `— 지금 보관된 산출물 ${n}개, 모두 ${kb(sum)}` : "— 아직 보관된 산출물이 없습니다";
+  }catch(e){ box.textContent = ""; }
+}
+function importJSON(file){
+  if(!file) return;
+  const fr = new FileReader();
+  fr.onload = () => {
+    try{
+      const d = JSON.parse(fr.result);
+      if(d.schema !== "trecord.v3") throw new Error("이 도구에서 내보낸 파일이 아닙니다");
+      if(!confirm("지금 화면의 기록을 파일 내용으로 바꿉니다. 계속할까요?")) return;
+      const files = d.files; delete d.files;
+      S = Object.assign(blank(), d); S.ui = Object.assign({tab:"check", sid:null, slot:null}, d.ui||{});
+      save(); render();
+      if(files) (async () => {
+        try{
+          for(const [id, f] of Object.entries(files)){
+            const bin = atob(f.data), arr = new Uint8Array(bin.length);
+            for(let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
+            const blob = new Blob([arr], {type:f.type || "image/jpeg"});
+            await filePut(id, {blob, name:f.name, type:f.type, size:blob.size, at:f.at});
+          }
+          fileStat();
+        }catch(e){}
+      })();
+    }catch(err){ alert("열지 못했습니다 — " + err.message); }
+  };
+  fr.readAsText(file);
+}
+function seedClasses(){
+  const NAMES = ["김하준","이서연","박도윤","최지우","정시우","강하은","조은우","윤수아","장민준","임지호",
+                 "오예린","한서준","신아윤","권태오","황유나","문가온","서주원","배시윤","노하율","안리안"];
+  stashActive();
+  for(let g = 1; g <= 6; g++){
+    const pool = NAMES.slice().sort(() => Math.random() - 0.5).slice(0, 10);
+    const c = newClass({grade:g, room:String(1 + Math.floor(Math.random()*4)), teacher:"",
+                        excluded:[], numbersOnly:false, demo:true},
+                       pool.map((n,i) => ({id:uid(), no:i+1, name:n})));
+    S.classes.push(c);
+  }
+  save(); render();
+}
+function removeClass(id){
+  const c = S.classes.find(x => x.id === id); if(!c) return;
+  const n = (c.notes||[]).length, w = Object.keys(c.drafts||{}).length;
+  if(!confirm(`${klassName(c)} 학급을 지웁니다.` + (n||w ? `\n관찰 ${n}건과 문장 ${w}칸도 함께 사라집니다.` : "") + "\n되돌릴 수 없습니다.")) return;
+  S.classes = S.classes.filter(x => x.id !== id);
+  activate(S.classes[0]?.id || null);
+  S.ui.sid = S.students[0]?.id || null;
+  save(); render();
+}
+function demo(){
+  if(!S.klass) S.klass = {grade:4, room:"3", excluded:[], numbersOnly:false};
+  const base = S.students.length;
+  const made = ["강ㅇㅇ","김ㅇㅇ","박ㅇㅇ","이ㅇㅇ","정ㅇㅇ"].map((n,i)=>({id:uid(), no:base+i+1, name:n}));
+  S.students.push(...made);
+  const t1 = {id:uid(), name:"문단의 중심 생각 정리하기", subject:"국어", standards:["4국02-01","4국03-01"],
+              criteria:"문단의 중심 문장을 찾아 글의 내용을 요약하여 쓸 수 있다."};
+  S.tasks.push(t1);
+  const D = today(), add = (i,o) => S.notes.push(Object.assign({id:uid(), studentId:made[i].id, date:D, standards:[]}, o));
+  add(0,{axis:"subj",subject:"국어",source:"수업산출물",taskId:t1.id,standards:t1.standards.slice(),text:"문단의 중심 문장을 찾아 근거를 들어 설명함"});
+  add(0,{axis:"subj",subject:"국어",source:"자기평가서",text:"어려운 낱말을 스스로 표시해 두는 습관이 생겼다고 적음"});
+  add(0,{axis:"behavior",source:"직접관찰",text:"모둠에서 말이 적은 친구에게 먼저 역할을 나누어 줌"});
+  add(1,{axis:"subj",subject:"수학",source:"수업산출물",standards:["4수03-01"],text:"각도기를 정확히 맞추어 예각과 둔각을 구분해 그림"});
+  add(1,{axis:"cca",cca:"auto",source:"소감문",text:"학급 자치 회의에서 급식 잔반 줄이기 규칙을 제안하고 실천표를 만듦"});
+  add(2,{axis:"subj",subject:"과학",source:"동료평가서",text:"모둠 실험 결과를 표로 정리해 친구들이 이해하기 쉽게 설명했다는 평을 받음"});
+  add(2,{axis:"cca",cca:"career",source:"직접관찰",text:"직업 카드 놀이에서 관심 직업 세 가지를 고르고 이유를 말함"});
+  add(3,{axis:"subj",subject:"국어",source:"독후감",text:"읽은 책의 인물에게 편지 형식으로 생각을 씀"});
+  S.drafts[dkey(made[0].id,"subj:국어")] = {text:"문단의 중심 문장을 찾아 근거를 들어 설명하는 힘이 뛰어남. 어려운 낱말을 스스로 표시해 두는 습관이 자리 잡음.", gate:[false,false,false,false]};
+  S.drafts[dkey(made[1].id,"cca:auto")] = {text:"학급 자치 회의에서 급식 잔반 줄이기 규칙을 제안하고 실천표를 만들어 한 달 동안 관리함. 교내 환경 사랑 그리기 대회에 참가하여 3등을 하였고, 유튜브에서 찾은 자료로 캠페인 문구를 만들었다.", gate:[false,false,false,false]};
+  S.ui.tab = "check"; S.ui.sid = made[1].id; S.ui.slot = "cca:auto";
+  save(); render();
+}
+
+/* ── 부팅 ── */
+el("tab-prep").onclick  = () => { S.ui.tab = "prep";  save(); render(); };
+el("tab-write").onclick = () => { S.ui.tab = "write"; save(); render(); };
+el("tab-check").onclick = () => { S.ui.tab = "check"; save(); render(); };
+el("tab-ai").onclick = () => { S.ui.tab = "ai"; save(); render(); };
+el("klass").onchange = () => {
+  const v = el("klass").value;
+  if(v === "__new"){ el("klass").value = S.curId || ""; stashActive(); S.curId = null; S.klass = null; renderSetup(); return; }
+  switchClass(v);
+};
+el("btn-theme").onclick = () => {
+  const cur = document.documentElement.getAttribute("data-theme");
+  const next = cur === "dark" ? "light" : cur === "light" ? "" : "dark";
+  next ? document.documentElement.setAttribute("data-theme", next) : document.documentElement.removeAttribute("data-theme");
+  try{ localStorage.setItem(KEY+".theme", next); }catch(e){}
+};
+try{ const t = localStorage.getItem(KEY+".theme"); if(t) document.documentElement.setAttribute("data-theme", t); }catch(e){}
+load(); render();
+</script>

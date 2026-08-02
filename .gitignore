@@ -1,0 +1,7 @@
+# 개인정보가 들어갈 수 있는 것은 올리지 않는다
+*.pdf
+*.hwp
+*.hwpx
+*.xlsx
+trecord-*.json
+_test*
