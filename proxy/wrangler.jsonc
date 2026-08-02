@@ -1,0 +1,7 @@
+{
+  // 이 폴더에서 `npx wrangler deploy` 하면 worker.js가 올라간다.
+  // 키는 여기 두지 않는다 — `npx wrangler secret put GEMINI_KEY` 로 따로 넣는다.
+  "name": "trecord-ai",
+  "main": "worker.js",
+  "compatibility_date": "2026-08-01"
+}
