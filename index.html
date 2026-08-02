@@ -208,7 +208,36 @@ textarea{line-height:1.7}
 .memo .src{font-size:11.5px;color:var(--warm);background:var(--warm-soft);border:1px solid var(--warm-line);border-radius:999px;
            padding:1px 9px;justify-self:start;white-space:nowrap}
 .memo .body{word-break:break-word;line-height:1.65}
-.memo .code{font-family:var(--mono);font-size:11px;color:var(--accent);margin-right:6px}
+.memo .body{display:flex;flex-wrap:wrap;align-items:baseline;gap:6px}
+.memo .code{font-family:var(--mono);font-size:11px;color:var(--accent)}
+.memo .code.legacy{color:var(--warm)}
+.memo .code em{font-style:normal;font-size:10px;border:1px solid var(--warm-line);border-radius:999px;padding:0 5px}
+.memo .stdinline{font-size:11.5px;color:var(--ink-3)}
+.memo .obs{flex-basis:100%;line-height:1.6}
+.ic{width:15px;height:15px;flex:0 0 auto;vertical-align:-2px}
+.kwai{display:inline-flex;align-items:center;gap:5px;background:var(--accent);color:var(--on-accent);
+      border:1px solid var(--accent);border-radius:999px;padding:5px 13px;font-size:12.5px;font-weight:600}
+.kwai:hover{background:var(--accent-deep);border-color:var(--accent-deep)}
+.chip.std.legacy{border-color:var(--warm-line);background:var(--warm-soft);color:var(--warm)}
+.slot.sub{font-size:11.5px;padding:4px 10px}
+.log{margin-top:12px;border-top:1px solid var(--rule);padding-top:10px}
+.loghead{display:flex;align-items:baseline;gap:10px;margin-bottom:4px}
+.loghead .link{margin-left:auto}
+.logrow{display:grid;grid-template-columns:42px minmax(0,1fr) auto;gap:10px;align-items:baseline;
+        padding:5px 0;border-bottom:1px solid var(--rule);font-size:13px}
+.logrow:last-child{border-bottom:0}
+.logrow .dt{font-family:var(--mono);font-size:11.5px;color:var(--ink-3)}
+.logrow .t{line-height:1.6}
+.logrow .b{display:flex;gap:6px;opacity:0;transition:opacity .1s}
+.logrow:hover .b,.logrow:focus-within .b{opacity:1}
+.rub{display:flex;flex-direction:column;gap:6px}
+.rrow2{display:grid;grid-template-columns:88px minmax(0,1fr);gap:6px}
+.rubbox{flex-basis:100%;margin-top:6px;font-size:12.5px}
+.rubbox summary{color:var(--ink-3);font-size:12px}
+.rubbox>div{padding-top:6px}
+.rubbox p{margin:0 0 6px;color:var(--ink-2)}
+.rline{display:grid;grid-template-columns:64px minmax(0,1fr);gap:8px;padding:2px 0;color:var(--ink-2)}
+.rline b{color:var(--accent);font-weight:600;font-size:12px}
 .memo .task{font-size:11px;color:var(--ink-3);margin-right:6px}
 .memo .clip{background:none;border:0;padding:0 0 0 6px;font-size:12px;line-height:1;opacity:.75}
 .memo .clip:hover{opacity:1}
@@ -364,13 +393,21 @@ dialog::backdrop{background:rgba(8,12,20,.45)}
     <span class="mono" id="dlg-cnt" style="font-size:11px;color:var(--ink-3)"></span>
   </div>
   <div class="dtask" id="dlg-task" hidden>
-    <div class="field" style="margin-bottom:9px">
-      <span class="lab">평가과제 이름</span>
-      <input type="text" id="dlg-name" placeholder="예) 우리 지역의 문제 해결하기">
+    <div class="field" style="margin-bottom:10px">
+      <span class="lab">평가 요소</span>
+      <input type="text" id="dlg-name" placeholder="예) 문단의 중심 생각 정리하기">
+    </div>
+    <div class="field" style="margin-bottom:10px">
+      <span class="lab">평가 내용</span>
+      <textarea id="dlg-crit" rows="2" placeholder="학교 평가계획의 문장을 그대로 붙여 넣으세요"></textarea>
     </div>
     <div class="field" style="margin-bottom:0">
-      <span class="lab">평가기준 — 학교 평가계획 문장을 그대로</span>
-      <textarea id="dlg-crit" rows="2"></textarea>
+      <span class="lab">루브릭 — 수준별 서술 (비워 두어도 됩니다)</span>
+      <div class="rub" id="dlg-rub">
+        <div class="rrow2"><input type="text" class="rl" value="잘함"><input type="text" class="rt" placeholder="이 수준에서 보이는 모습"></div>
+        <div class="rrow2"><input type="text" class="rl" value="보통"><input type="text" class="rt" placeholder="이 수준에서 보이는 모습"></div>
+        <div class="rrow2"><input type="text" class="rl" value="노력요함"><input type="text" class="rt" placeholder="이 수준에서 보이는 모습"></div>
+      </div>
     </div>
   </div>
   <div class="dbody" id="dlg-body"></div>
@@ -482,6 +519,15 @@ function check(text){
   return out.sort((a,b) => a.at - b.at);
 }
 
+const SVG = (d, w) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${w||1.8}"
+  stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" class="ic">${d}</svg>`;
+const ICON = {
+  eye:   () => SVG('<path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12Z"/><circle cx="12" cy="12" r="3"/>'),
+  stop:  () => SVG('<path d="M8.7 3h6.6L21 8.7v6.6L15.3 21H8.7L3 15.3V8.7L8.7 3Z"/><path d="M12 7.5v5.5"/><path d="M12 16.4v.2"/>'),
+  lock:  () => SVG('<rect x="4.5" y="10.5" width="15" height="10" rx="2"/><path d="M8 10.5V7.8a4 4 0 0 1 8 0v2.7"/>'),
+  pen:   () => SVG('<path d="M4 20h4L19.5 8.5a2.1 2.1 0 0 0-3-3L5 17v3Z"/><path d="M14.5 6.5l3 3"/>'),
+  spark: () => SVG('<path d="M12 3.5 13.7 9l5.5 1.7-5.5 1.7L12 18l-1.7-5.6L4.8 10.7 10.3 9 12 3.5Z"/><path d="M18.5 16.5l.7 2.2 2.2.7-2.2.7-.7 2.2-.7-2.2-2.2-.7 2.2-.7.7-2.2Z"/>')
+};
 /* 지운 자리에 남는 쉼표·빈 괄호·겹공백을 정리한다 */
 function tidySentence(t){
   return String(t).replace(/\(\s*\)/g, "").replace(/\s*,\s*,/g, ",")
@@ -594,6 +640,7 @@ const slotOf = n => n.axis === "subj" ? "subj:"+n.subject : n.axis === "cca" ? "
 const notesOf = (sid, k) => S.notes.filter(n => n.studentId === sid && (!k || slotOf(n) === k));
 const dkey = (sid, k) => sid + "|" + k;
 const draftOf = (sid, k) => S.drafts[dkey(sid,k)] || {text:"", gate:[false,false,false,false]};
+function logCount(sid, k){ return (S.drafts[dkey(sid,k)]?.log || []).length; }
 function draftDone(sid, k){
   const d = S.drafts[dkey(sid,k)];
   return !!(d && d.text.trim() && d.gate.every(Boolean) && !check(d.text).some(f => f.lv === "block"));
@@ -876,13 +923,11 @@ function renderSetup(edit){
             ${subjOpts.map(s=>`<label class="${(k.excluded||[]).includes(s)?"on":""}">
               <input type="checkbox" value="${esc(s)}"${(k.excluded||[]).includes(s)?" checked":""}>${esc(subjShort(s))}</label>`).join("")}
           </div>
-          <div class="hint">체크한 교과는 화면에서 감춥니다.</div>
         </div>
 
         <div class="field">
           <span class="lab">학생 명렬</span>
           <textarea class="big" id="f-roster" placeholder="1 김ㅇㅇ&#10;2 이ㅇㅇ&#10;3 박ㅇㅇ">${esc(S.students.map(s=>`${s.no} ${s.name}`).join("\n"))}</textarea>
-          <div class="hint">한 줄에 한 명. 번호만 적어도 됩니다.</div>
           <label style="display:inline-flex;gap:6px;align-items:center;margin-top:8px;font-size:12.5px;color:var(--ink-2)">
             <input type="checkbox" id="f-numbers"${k.numbersOnly?" checked":""}> 이름 대신 번호로만 보기
           </label>
@@ -1039,9 +1084,19 @@ function detailHTML(){
   </div>
 
   <div class="slots" id="slots">
-    ${sl.map(x => { const c = notesOf(s.id,x.key).length;
-      return `<button class="slot" type="button" data-slot="${esc(x.key)}" aria-pressed="${x.key===cur.key}">
-        ${esc(x.label)}${c?`<b>${c}</b>`:""}${draftDone(s.id,x.key)?`<i class="ok"></i>`:""}</button>`;}).join("")}
+    ${[["subj","교과"],["cca","창체"],["behavior","행동특성"]].map(([ax,label])=>{
+      const mine = sl.filter(x => x.kind === ax);
+      const cnt = mine.reduce((a,x) => a + notesOf(s.id,x.key).length, 0);
+      const done = mine.filter(x => draftDone(s.id,x.key)).length;
+      return `<button class="slot" type="button" data-axis="${ax}" aria-pressed="${cur.kind===ax}">
+        ${label}${cnt?`<b>${cnt}</b>`:""}${done?`<i class="ok"></i>`:""}</button>`;}).join("")}
+    ${cur.kind==="subj" ? `<select id="slot-sub">${sl.filter(x=>x.kind==="subj").map(x=>{
+        const c = notesOf(s.id,x.key).length;
+        return `<option value="${esc(x.key)}"${x.key===cur.key?" selected":""}>${esc(x.label)}${c?` (${c})`:""}${draftDone(s.id,x.key)?" ✓":""}</option>`;}).join("")}</select>` : ``}
+    ${cur.kind==="cca" ? sl.filter(x=>x.kind==="cca").map(x=>{
+        const c = notesOf(s.id,x.key).length;
+        return `<button class="slot sub" type="button" data-slot="${esc(x.key)}" aria-pressed="${x.key===cur.key}">
+          ${esc(x.label.replace("창체 ",""))}${c?`<b>${c}</b>`:""}${draftDone(s.id,x.key)?`<i class="ok"></i>`:""}</button>`;}).join("") : ``}
   </div>
 
   <div class="sec">
@@ -1053,8 +1108,7 @@ function detailHTML(){
             <option value="">평가과제 없음</option>
             ${S.tasks.filter(t=>t.subject===cur.subject).map(t=>`<option value="${t.id}"${t.id===_taskId?" selected":""}>${esc(t.name)}</option>`).join("")}
           </select>
-          <button class="ghost" id="c-newtask" type="button">＋ 과제</button>
-          <button class="ghost" id="c-std" type="button">＋ 성취기준</button>` : ``}
+          <button class="ghost" id="c-newtask" type="button">＋ 평가 추가</button>` : ``}
       </div>
       <div class="catch-in">
         <input type="text" id="c-text" placeholder="오늘 본 것을 한 줄로" autocomplete="off">
@@ -1064,8 +1118,8 @@ function detailHTML(){
         const i = Math.min(_kwArea, bs.length-1);
         return `<div class="kw">
           <select id="kw-area">${bs.map((b,j)=>`<option value="${j}"${j===i?" selected":""}>${esc(b.a)}</option>`).join("")}</select>
-          ${aiOn() && cur.kind==="subj" ? `<button class="ghost tip" id="kw-ai" type="button"
-             data-tip="담은 성취기준·평가과제에 맞춰 지식·기능·태도 키워드를 AI가 뽑아 줍니다">AI 키워드</button>` : ``}
+          ${aiOn() && cur.kind==="subj" ? `<button class="kwai tip" id="kw-ai" type="button"
+             data-tip="담은 성취기준·평가과제에 맞춰 지식·기능·태도 키워드를 AI가 뽑아 줍니다">${ICON.spark()}AI 키워드 추천</button>` : ``}
           <div class="kwchips" id="kw-chips">${bs[i].k.map(w=>`<button class="kwc" type="button" data-kw="${esc(w)}">${esc(w)}</button>`).join("")}</div>
         </div>`; })()}
       <div class="tags" style="justify-content:flex-end">
@@ -1075,8 +1129,15 @@ function detailHTML(){
         ${aiOn() ? `` : `<span class="hint" style="margin:0">— <button class="link" id="c-shot-off" type="button">AI를 연결</button>하면 사진 속 글씨까지 읽어 줍니다</span>`}
       </div>
       <div id="c-shot-out"></div>
+      ${(() => { const t = S.tasks.find(x => x.id === _taskId);
+        if(!t || (!t.criteria && !(t.rubric||[]).length)) return "";
+        return `<details class="rubbox"><summary>평가 내용과 루브릭</summary><div>
+          ${t.criteria?`<p>${esc(t.criteria)}</p>`:""}
+          ${(t.rubric||[]).map(r=>`<div class="rline"><b>${esc(r.level)}</b><span>${esc(r.text)}</span></div>`).join("")}
+        </div></details>`; })()}
       ${(cur.kind==="subj" && (pendingStd.length || taskStd().length)) ? `<div class="tags" id="c-tags">
         ${taskStd().map(c=>`<span class="chip std" title="${esc(CODEMAP[c]?.text||"")}"><b>${esc(c)}</b>${esc(stdCut(c,26))}</span>`).join("")}
+        ${taskLegacy().map(c=>`<span class="chip std legacy" title="2015 개정 교육과정 코드"><b>${esc(c)}</b>2015 교육과정</span>`).join("")}
         ${pendingStd.map(c=>`<span class="chip std" title="${esc(CODEMAP[c]?.text||"")}"><b>${esc(c)}</b>${esc(stdCut(c,26))}<button type="button" data-drop="${esc(c)}">×</button></span>`).join("")}
       </div>` : ``}
     </div>
@@ -1088,7 +1149,13 @@ function detailHTML(){
     ${ns.length ? ns.map(n => `<div class="memo">
         <span class="dt" title="${esc(n.date)}">${esc(n.date.slice(5))}</span>
         <span class="src">${esc(n.source)}</span>
-        <span class="body">${taskOf(n)?`<span class="task">${esc(taskOf(n).name)}</span>`:""}${n.standards?.length?`<span class="code">${n.standards.map(esc).join(" ")}</span>`:""}${esc(n.text)}${n.standards?.length?`<div class="stdline">${n.standards.map(c=>esc(stdCut(c,60))).filter(Boolean).join(" / ")}</div>`:""}${n.fileId?`<button class="clip" type="button" data-open="${esc(n.fileId)}" title="붙어 있는 산출물 보기">📎</button>`:""}</span>
+        <span class="body">
+          ${(n.standards||[]).length?`<span class="code">${n.standards.map(esc).join(" ")}</span>`:""}
+          ${(n.legacy||[]).length?`<span class="code legacy">${n.legacy.map(esc).join(" ")} <em>2015</em></span>`:""}
+          ${(n.standards||[]).length?`<span class="stdinline">${n.standards.map(c=>esc(stdCut(c,52))).filter(Boolean).join(" / ")}</span>`:""}
+          <span class="obs">${esc(n.text)}</span>
+          ${taskOf(n)?`<span class="task">${esc(taskOf(n).name)}</span>`:""}
+          ${n.fileId?`<button class="clip" type="button" data-open="${esc(n.fileId)}" title="붙어 있는 산출물 보기">첨부</button>`:""}</span>
         <button class="del" type="button" data-del="${n.id}" title="지우기">×</button></div>`).join("")
       : `<div class="empty"><b>아직 담아 둔 것이 없습니다</b>위 칸에 한 줄 적고 Enter를 누르면 여기에 쌓입니다</div>`}
   </div>
@@ -1142,14 +1209,27 @@ function detailHTML(){
     <div class="gate">
       <span class="lab">확인하고 복사</span>
       <div class="row">
-        ${["허위·과장 없음","금지 항목 없음","개인정보 없음","교사 최종 확인"].map((t,i)=>
-          `<label class="${d.gate[i]?"on":""}"><input type="checkbox" data-gate="${i}"${d.gate[i]?" checked":""}>${t}</label>`).join("")}
+        ${[["허위·과장 없음",ICON.eye()],["금지 항목 없음",ICON.stop()],["개인정보 없음",ICON.lock()],["교사 최종 확인",ICON.pen()]].map(([t,ic],i)=>
+          `<label class="${d.gate[i]?"on":""}"><input type="checkbox" data-gate="${i}"${d.gate[i]?" checked":""}>${ic}${t}</label>`).join("")}
       </div>
       <div class="foot">
         <button class="primary" id="copy" type="button"${ok?"":" disabled"}>문장 복사</button>
+        <button class="ghost" id="keep" type="button"${d.text.trim()?"":" disabled"}
+                data-tip="지금 문장을 누가기록으로 남깁니다. 학기말에 모아 이어 붙일 수 있습니다">저장</button>
         <span class="msg${nb?" warn":""}">${nb?`위반 ${nb}건을 먼저 고쳐 주세요`
           : !d.text.trim()?"문장을 먼저 쓰세요" : ok?"복사할 수 있습니다":"네 항목을 확인해 주세요"}</span>
       </div>
+      ${(d.log||[]).length ? `<div class="log">
+        <div class="loghead"><span class="lab">누가기록 ${d.log.length}</span>
+          <button class="link" id="log-join" type="button">모두 이어 붙이기</button></div>
+        ${d.log.map((L,i)=>`<div class="logrow">
+          <span class="dt">${esc((L.at||"").slice(5,10))}</span>
+          <span class="t">${esc(L.text)}</span>
+          <span class="b">
+            <button class="fix" type="button" data-logload="${i}">불러오기</button>
+            <button class="fix" type="button" data-logdel="${i}">지우기</button></span>
+        </div>`).join("")}
+      </div>` : ``}
       <details class="help"><summary>이 네 가지가 무엇인가요</summary><div>
         <p>① 직접 관찰·평가한 사실에 근거하며 허위·과장이 없음을 <b>본인이 확인</b>했다는 뜻입니다.</p>
         <p>② 대회·수상·어학시험·자격증·점수·기관명 등이 없음을 확인했다는 뜻입니다.</p>
@@ -1172,7 +1252,9 @@ function stdCut(code, n){
   const t = CODEMAP[code]?.text || "";
   return t.length > n ? t.slice(0, n) + "…" : t;
 }
-function taskStd(){ const t = S.tasks.find(x => x.id === _taskId); return t ? t.standards : []; }
+function taskStd(){ const t = S.tasks.find(x => x.id === _taskId); return t ? (t.standards||[]) : []; }
+function taskLegacy(){ const t = S.tasks.find(x => x.id === _taskId); return t ? (t.legacy||[]) : []; }
+function taskOfId(id){ return S.tasks.find(x => x.id === id); }
 
 /* AI 검토 결과 — 고치기·확인함으로 하나씩 닫아 나간다 */
 function aiReviewHTML(k, text){
@@ -1218,8 +1300,16 @@ function bindDetail(){
   const s = student(S.ui.sid); if(!s) return;
   const wrap = el("detail"), sl = slots(), cur = sl.find(x => x.key === S.ui.slot);
 
-  el("slots").onclick = e => { const b = e.target.closest(".slot"); if(!b) return;
-    S.ui.slot = b.dataset.slot; pendingStd = []; pendingFile = null; _kwArea = 0; _aiKw = null; save(); repaint(); };
+  el("slots").onclick = e => {
+    const b = e.target.closest(".slot"); if(!b) return;
+    const sl2 = slots();
+    const key = b.dataset.slot || (sl2.find(x => x.kind === b.dataset.axis) || sl2[0]).key;
+    S.ui.slot = key; pendingStd = []; pendingFile = null; _kwArea = 0; _aiKw = null; _taskId = "";
+    save(); repaint();
+  };
+  const ss = el("slot-sub");
+  if(ss) ss.onchange = () => { S.ui.slot = ss.value; pendingStd = []; pendingFile = null;
+                               _kwArea = 0; _aiKw = null; _taskId = ""; save(); repaint(); };
 
   el("s-name").onclick = () => {
     const span = el("s-name");
@@ -1239,8 +1329,7 @@ function bindDetail(){
   if(tk) tk.onchange = () => { _taskId = tk.value; repaint(); };
   const nt = el("c-newtask");
   if(nt) nt.onclick = () => openTask(cur.subject, null, id => { _taskId = id; repaint(); });
-  const sb = el("c-std");
-  if(sb) sb.onclick = () => openStd(cur.subject, pendingStd, cs => { pendingStd = cs; repaint(); });
+
   const tg = el("c-tags");
   if(tg) tg.onclick = e => { const b = e.target.closest("[data-drop]"); if(!b) return;
     pendingStd = pendingStd.filter(c => c !== b.dataset.drop); repaint(); };
@@ -1406,6 +1495,11 @@ JSON만 출력한다: {"text":"옮겨 적은 글","memos":["메모1","메모2"],
     try{
       const r = await aiJSON(`아래 [근거]만 사용해 한국 초등학교 학교생활기록부 ‘${cur2.full}’에 넣을 문장 초안을 쓴다.
 근거에 없는 사실을 지어내지 않는다. 2~4문장. 학생의 특성과 성장이 드러나게 쓴다. ${AI_RULES}
+${(() => { const ts = [...new Set(notesOf(s.id, S.ui.slot).map(n => n.taskId).filter(Boolean))]
+      .map(id => S.tasks.find(t => t.id === id)).filter(t => t && (t.rubric||[]).length);
+    if(!ts.length) return "";
+    return "[루브릭] 아래 수준 서술을 참고해 표현을 고른다.\n" +
+      ts.map(t => t.name + ": " + t.rubric.map(r => r.level + " — " + r.text).join(" / ")).join("\n"); })()}
 ${_level ? `성취수준은 ‘${_level}’ 정도로 읽히게 서술한다. 다만 ‘${_level}’·점수·등급을 문장에 직접 쓰지 않는다.${_level==="노력요함"?" 부족한 점만 남기지 말고 변화 가능성을 함께 쓴다." : ""}` : ""}
 JSON만 출력한다: {"text":"초안"}
 [근거]
@@ -1462,6 +1556,31 @@ ${S.drafts[k].text}`);
   const closeAi = wrap.querySelector("[data-aiclose]");
   if(closeAi) closeAi.onclick = e => { e.preventDefault(); delete aiReview[k]; repaint(); };
 
+  const keep = el("keep");
+  if(keep) keep.onclick = () => {
+    const d2 = S.drafts[k]; if(!d2 || !d2.text.trim()) return;
+    d2.log = d2.log || [];
+    d2.log.push({id:uid(), text:d2.text.trim(), at:new Date().toISOString().slice(0,10)});
+    save(); repaint();
+  };
+  wrap.querySelectorAll("[data-logload]").forEach(b => b.onclick = () => {
+    const d2 = S.drafts[k]; const L = d2?.log?.[+b.dataset.logload]; if(!L) return;
+    d2.text = L.text; d2.gate = [false,false,false,false]; save(); repaint();
+  });
+  wrap.querySelectorAll("[data-logdel]").forEach(b => b.onclick = () => {
+    const d2 = S.drafts[k]; if(!d2?.log) return;
+    d2.log.splice(+b.dataset.logdel, 1); save(); repaint();
+  });
+  const lj = wrap.querySelector("#log-join");
+  if(lj) lj.onclick = () => {
+    const d2 = S.drafts[k]; if(!d2?.log?.length) return;
+    const seen = new Set(), parts = [];
+    d2.log.forEach(L => { const t = L.text.trim().replace(/[.\s]+$/, "");
+      if(t && !seen.has(t)){ seen.add(t); parts.push(t); } });
+    d2.text = tidySentence(parts.join(". ") + ".");
+    d2.gate = [false,false,false,false];
+    save(); repaint();
+  };
   const cp = el("copy");
   if(cp) cp.onclick = async () => {
     try{ await navigator.clipboard.writeText(S.drafts[k].text.trim()); }
@@ -1480,6 +1599,7 @@ function addNote(){
     n.axis = "subj"; n.subject = cur.subject;
     if(_taskId && S.tasks.find(t => t.id === _taskId && t.subject === cur.subject)) n.taskId = _taskId;
     n.standards = [...new Set([...taskStd(), ...pendingStd])];
+    n.legacy = taskLegacy().slice();
   } else if(cur.kind === "cca"){ n.axis = "cca"; n.cca = cur.cca; }
   else n.axis = "behavior";
   if(pendingFile) n.fileId = pendingFile.id;
@@ -2008,7 +2128,8 @@ ${upFile ? "[문서] 첨부한 PDF 파일" : "[문서]\n" + t.slice(0,12000)}`,
       const picked = upload.rows.filter(r => r.pick && r.subject && r.name);
       if(!picked.length){ el("up-msg").textContent = "등록할 줄이 없습니다. 교과를 알아본 줄만 등록됩니다."; return; }
       picked.forEach(r => S.tasks.push({id:uid(), name:r.name, subject:r.subject,
-                                        standards:rowCodes(r), criteria:r.criteria||""}));
+                                        standards:rowCodes(r), legacy:(r.doubt||[]).map(d=>d.code),
+                                        criteria:r.criteria||"", rubric:r.rubric||[]}));
       ta.value = ""; save(); renderCheck();
     };
   }
@@ -2042,9 +2163,9 @@ el("fdlg").addEventListener("close", () => { if(_furl){ URL.revokeObjectURL(_fur
 
 /* ── 성취기준 창 ── */
 function openTask(subject, task, onOK){
-  openStd(subject, task ? task.standards : [], null, {task, onSave(name, criteria, codes){
-    if(task){ Object.assign(task, {name, criteria, standards:codes, subject:dlgState.subject}); save(); onOK(task.id); }
-    else { const t = {id:uid(), name, subject:dlgState.subject, standards:codes, criteria};
+  openStd(subject, task ? task.standards : [], null, {task, onSave(name, criteria, codes, rubric){
+    if(task){ Object.assign(task, {name, criteria, standards:codes, rubric, subject:dlgState.subject}); save(); onOK(task.id); }
+    else { const t = {id:uid(), name, subject:dlgState.subject, standards:codes, criteria, rubric, legacy:[]};
            S.tasks.push(t); save(); onOK(t.id); }
   }});
 }
@@ -2054,15 +2175,26 @@ function openStd(subject, selected, onOK, taskMode){
   sel.innerHTML = subjects().map(s=>`<option value="${esc(s)}"${s===subject?" selected":""}>${esc(subjShort(s))}</option>`).join("");
   sel.onchange = () => { dlgState.subject = sel.value; paint(); };
   el("dlg-q").value = ""; el("dlg-q").oninput = paint;
-  el("dlg-title").textContent = taskMode ? "평가과제 등록" : "성취기준 고르기";
+  el("dlg-title").textContent = taskMode ? (taskMode.task ? "평가 고치기" : "평가 추가") : "성취기준 고르기";
   el("dlg-task").hidden = !taskMode;
-  if(taskMode){ el("dlg-name").value = taskMode.task?.name || ""; el("dlg-crit").value = taskMode.task?.criteria || ""; }
+  if(taskMode){
+    el("dlg-name").value = taskMode.task?.name || "";
+    el("dlg-crit").value = taskMode.task?.criteria || "";
+    const rb = taskMode.task?.rubric || [];
+    [...el("dlg-rub").querySelectorAll(".rrow2")].forEach((row,i) => {
+      row.querySelector(".rl").value = rb[i]?.level ?? ["잘함","보통","노력요함"][i];
+      row.querySelector(".rt").value = rb[i]?.text ?? "";
+    });
+  }
   el("dlg-cancel").onclick = () => el("dlg").close();
   el("dlg-ok").onclick = () => {
     if(dlgState.taskMode){
       const name = el("dlg-name").value.trim();
       if(!name){ el("dlg-name").focus(); return; }
-      dlgState.taskMode.onSave(name, el("dlg-crit").value.trim(), [...dlgState.sel]);
+      const rubric = [...el("dlg-rub").querySelectorAll(".rrow2")]
+        .map(row => ({level:row.querySelector(".rl").value.trim(), text:row.querySelector(".rt").value.trim()}))
+        .filter(r => r.level && r.text);
+      dlgState.taskMode.onSave(name, el("dlg-crit").value.trim(), [...dlgState.sel], rubric);
     } else dlgState.onOK([...dlgState.sel]);
     el("dlg").close();
   };
