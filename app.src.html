@@ -235,6 +235,14 @@ textarea{line-height:1.7}
 .lvc[aria-pressed="true"]{border-color:var(--rule-strong);color:var(--ink);font-weight:600;background:var(--raise)}
 .lvtag{font-size:11.5px;color:var(--ink-2);border:1px solid var(--rule);border-radius:999px;
        padding:1px 8px;white-space:nowrap}
+.lvc:disabled{opacity:.35}
+/* 결석·미제출은 수준이 아니다 — 칸을 갈라 두고 채워진 모양도 다르게 한다 */
+.lvsep{width:1px;align-self:stretch;background:var(--rule);margin:0 4px}
+.offc{background:none;border:1px dashed var(--rule-strong);border-radius:999px;
+      padding:3px 12px;font-size:12px;color:var(--ink-3)}
+.offc:hover{border-color:var(--ink-3);color:var(--ink-2)}
+.offc[aria-pressed="true"]{border-style:solid;border-color:var(--ink-3);
+      background:var(--sink);color:var(--ink);font-weight:600}
 
 /* 관찰 목록 */
 .memo{display:grid;grid-template-columns:42px 68px minmax(0,1fr) 22px;gap:10px;align-items:baseline;
@@ -648,6 +656,9 @@ const COMMON_KW = [
                    "발표를 조심스러워함","되돌아보기를 연습 중","꾸준함이 자라는 중","스스로 하려는 시도가 늘고 있음"]}
 ];
 const SOURCES = ["직접관찰","수업산출물","자기평가서","동료평가서","소감문","독후감"];
+/* 못 한 것은 판정이 아니라 사실이다 — 관찰(노트)이 아니라 과제의 t.off에 남는다.
+   노트로 적으면 관찰 수와 근거 스트림이 오염되고, 「관찰 0건」이 미기록과 미실시를 못 가른다. */
+const OFFS = ["결석","미제출"];
 const RECOGNIZED = ["수업산출물","자기평가서","동료평가서","소감문","독후감"];   // 기재요령이 인정하는 학생 산출 자료 5종
 const BAND_OF = {1:"1~2",2:"1~2",3:"3~4",4:"3~4",5:"5~6",6:"5~6"};
 const INTEGRATED = "통합교과", INTEGRATED_LABEL = "바른 생활·슬기로운 생활·즐거운 생활";
@@ -1474,6 +1485,7 @@ function removeStudent(id){
   }
   S.notes = S.notes.filter(x => x.studentId !== id);
   Object.keys(S.drafts).forEach(k => { if(k.startsWith(id + "|")) delete S.drafts[k]; });
+  S.tasks.forEach(t => { if(t.off) delete t.off[id]; });
   S.students = S.students.filter(x => x.id !== id);
   if(S.ui.sid === id) S.ui.sid = S.students[0]?.id || null;
   save(); sweepFiles(); renderWrite();
@@ -1552,12 +1564,24 @@ function detailHTML(){
         <span class="pl">${esc(task.name)}</span>
         ${task.criteria?`<span class="pc">${esc(task.criteria.slice(0,60))}</span>`:``}
         <button class="link r" id="c-edittask" type="button">고치기</button></div>` : ``}
-      ${ready && (task?.rubric||[]).length ? `<div class="lvhead">평가 기록</div>
-        <div class="lv" id="c-level">
-          ${task.rubric.map(r=>`<button class="lvc" type="button" data-lv="${esc(r.level)}" title="${esc(r.text)}"
-            aria-pressed="${_noteLevel===r.level}">${esc(r.level)}</button>`).join("")}
-        </div>
-        <div class="lvwhy">${esc((task.rubric.find(r=>r.level===_noteLevel)||{}).text || "수준을 고르면 그 서술이 여기 보입니다")}</div>` : ``}
+      ${ready && task ? (() => {
+        const off = (task.off||{})[s.id] || "";
+        const rb = task.rubric || [];
+        if(!rb.length && !off) return `<div class="lvhead">평가 기록</div>
+          <div class="lv" id="c-level">${OFFS.map(v=>`<button class="offc" type="button" data-off="${esc(v)}"
+            aria-pressed="false">${esc(v)}</button>`).join("")}</div>
+          <div class="lvwhy">수준 서술이 없는 평가입니다 — 아래에 본 것을 적어 두세요</div>`;
+        return `<div class="lvhead">평가 기록</div>
+          <div class="lv" id="c-level">
+            ${rb.map(r=>`<button class="lvc" type="button" data-lv="${esc(r.level)}" title="${esc(r.text)}"
+              aria-pressed="${_noteLevel===r.level}"${off?" disabled":""}>${esc(r.level)}</button>`).join("")}
+            ${rb.length?`<span class="lvsep"></span>`:``}
+            ${OFFS.map(v=>`<button class="offc" type="button" data-off="${esc(v)}"
+              aria-pressed="${off===v}">${esc(v)}</button>`).join("")}
+          </div>
+          <div class="lvwhy">${off
+            ? `이 평가는 <b>${esc(off)}</b>으로 표시해 두었습니다 — 다시 누르면 풀립니다`
+            : esc((rb.find(r=>r.level===_noteLevel)||{}).text || "수준을 고르면 그 서술이 여기 보입니다")}</div>`; })() : ``}
       ${ready ? `<div class="catch-in">
         ${(() => {
           /* 설계할 때 「무엇으로 확인할지」를 정해 두었으면 그것이 먼저 온다 */
@@ -1868,7 +1892,17 @@ function bindDetail(){
   const lv = el("lv-sel");
   if(lv) lv.onchange = () => { _level = lv.value; };
   const lvbox = el("c-level");
-  if(lvbox) lvbox.onclick = e => { const b = e.target.closest("[data-lv]"); if(!b) return;
+  if(lvbox) lvbox.onclick = e => {
+    /* 결석·미제출은 과제에 남는다 — 노트를 만들지 않는다 */
+    const o = e.target.closest("[data-off]");
+    if(o){
+      const t2 = S.tasks.find(x => x.id === _taskId); if(!t2) return;
+      t2.off = t2.off || {};
+      if(t2.off[s.id] === o.dataset.off) delete t2.off[s.id];
+      else { t2.off[s.id] = o.dataset.off; _noteLevel = ""; }
+      save(); repaint(); return;
+    }
+    const b = e.target.closest("[data-lv]"); if(!b || b.disabled) return;
     _noteLevel = (_noteLevel === b.dataset.lv) ? "" : b.dataset.lv;
     lvbox.querySelectorAll("[data-lv]").forEach(x =>
       x.setAttribute("aria-pressed", String(x.dataset.lv === _noteLevel)));
@@ -2256,7 +2290,12 @@ function renderPrep(){
               : `<div class="muted">수준 서술이 아직 없습니다 — 「고치기」에서 뼈대를 만들 수 있습니다.</div>`}
             ${rb.length ? `<div class="tcount mono">${rb.map(r=>
                 `${esc(r.level)} ${ns.filter(n=>n.level===r.level).length}`).join(" · ")}${
-                (() => { const no = ns.filter(n=>!n.level).length; return no ? ` · 판정 없음 ${no}` : ""; })()}</div>` : ``}
+                (() => { const no = ns.filter(n=>!n.level).length; return no ? ` · 판정 없음 ${no}` : ""; })()}${
+                (() => { /* 미실시는 판정이 아니므로 따로 센다 */
+                  const off = Object.entries(t.off||{}).filter(([sid]) => S.students.some(s=>s.id===sid));
+                  if(!off.length) return "";
+                  const by = {}; off.forEach(([,v]) => by[v] = (by[v]||0) + 1);
+                  return " · " + Object.entries(by).map(([v,c]) => `${v} ${c}`).join(" · "); })()}</div>` : ``}
           </td></tr>`;}).join("")
           || `<tr><td colspan="4" class="muted">가르치기 전에 평가부터 그립니다. ＋ 새 설계로 시작하세요.</td></tr>`}</tbody>
       </table></div>
