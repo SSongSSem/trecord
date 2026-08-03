@@ -965,8 +965,23 @@ function switchClass(id){
 }
 const klassName = c => `${c.klass.grade}학년 ${c.klass.room||""}반`.replace(/\s+반$/, "반");
 let S = blank(), pendingStd = [], pendingFile = null, _taskId = "", _src = "직접관찰", dlgState = null, upload = null;
-/* AI 검토 결과는 문장 칸별로 화면에 남겨 둔다(저장하지는 않는다) */
-let aiReview = {};
+/* AI 검토 결과는 초안 레코드(S.drafts[k].review)에 함께 저장한다.
+   문장과 근거가 그대로면 다시 부르지 않는다 — 무료 키의 병목은 토큰이 아니라 호출 횟수다. */
+const revOf = k => S.drafts[k]?.review || null;
+/* 문장+근거의 서명. 값이 같으면 같은 질문이므로 저장해 둔 답을 그대로 쓴다(FNV-1a) */
+function sig32(s){
+  let h = 2166136261;
+  for(let i = 0; i < s.length; i++){ h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); }
+  return (h >>> 0).toString(36);
+}
+const revSig = (text, ev) => sig32(String(text||"").trim() + "\n@@\n" + String(ev||""));
+/* 화면에 보여줄 시각은 이 컴퓨터의 시간으로 남긴다(ISO는 UTC라 아홉 시간이 어긋난다) */
+function stamp(){
+  const d = new Date(), p = n => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`;
+}
+/* 문장을 통째로 갈아 끼운다 — 확인 게이트와 앞선 AI 검토는 함께 비운다(다른 문장의 검토다) */
+function setDraft(d, text){ d.text = text; d.gate = [false,false,false,false]; delete d.review; }
 
 const el = id => document.getElementById(id);
 const esc = s => String(s??"").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
@@ -1033,6 +1048,11 @@ const notesOf = (sid, k) => S.notes.filter(n => n.studentId === sid && (!k || sl
 const dkey = (sid, k) => sid + "|" + k;
 const draftOf = (sid, k) => S.drafts[dkey(sid,k)] || {text:"", gate:[false,false,false,false]};
 function logCount(sid, k){ return (S.drafts[dkey(sid,k)]?.log || []).length; }
+/* AI에 넘기는 [근거] 본문 — 검토 캐시의 서명에도 같은 값을 쓴다(근거가 늘면 다시 검토해야 한다) */
+function evidOf(sid, k){
+  return notesOf(sid, k).map(n =>
+    `- (${n.source}) ${n.text}${n.level?` (수준: ${n.level} — ${levelText(n)})`:""}${n.standards?.length?` [${n.standards.join(" ")}: ${n.standards.map(c=>CODEMAP[c]?.text||"").join(" / ")}]`:""}`).join("\n");
+}
 function draftDone(sid, k){
   const d = S.drafts[dkey(sid,k)];
   return !!(d && d.text.trim() && d.gate.every(Boolean) && !check(d.text).some(f => f.lv === "block"));
@@ -1681,7 +1701,7 @@ function detailHTML(){
                  : `<button class="link" id="ai-go" type="button">AI 검토 켜기</button>`}
         <span class="meter"><b>${bytes(d.text)}</b> B<span>·</span><b>${[...d.text].length}</b>자</span></span></div>
     <textarea class="draft${nb?" block":""}" id="draft" placeholder="담아 둔 근거를 보며 문장을 씁니다. ‘~함’으로 끝맺습니다.">${esc(d.text)}</textarea>
-    <div id="ai-out">${aiReviewHTML(dkey(s.id, cur.key), d.text)}</div>
+    <div id="ai-out">${aiReviewHTML(dkey(s.id, cur.key), d.text, evidOf(s.id, cur.key))}</div>
 
     <div class="scan">
       <div class="scan-head">
@@ -1795,10 +1815,12 @@ function taskLegacy(){ const t = S.tasks.find(x => x.id === _taskId); return t ?
 function taskOfId(id){ return S.tasks.find(x => x.id === id); }
 
 /* AI 검토 결과 — 고치기·확인함으로 하나씩 닫아 나간다 */
-function aiReviewHTML(k, text){
-  const rv = aiReview[k];
-  if(!rv) return "";
-  const items = rv.items.map(it => {
+function aiReviewHTML(k, text, ev){
+  const rv = revOf(k);
+  if(!rv || rv.closed) return "";
+  /* 검토한 뒤에 문장이나 근거가 바뀌었다면 그 사실을 숨기지 않는다 */
+  const stale = rv.sig && rv.sig !== revSig(text, ev);
+  const items = (rv.items||[]).map(it => {
     const gone = it.hit && !text.includes(it.hit);
     const state = it.state || (gone ? "gone" : "");
     return Object.assign({}, it, {state});
@@ -1809,7 +1831,8 @@ function aiReviewHTML(k, text){
     <div class="scan-head"><span class="lab">AI 검토</span>
       <span class="tally">${items.length
         ? (left ? `${left}건 남음` : `<span class="none">모두 처리했습니다</span>`)
-        : `<span class="none">짚은 것 없음</span>`}</span>
+        : `<span class="none">짚은 것 없음</span>`}${stale
+        ? ` <span style="color:var(--low)">· 그 뒤 문장이 바뀌었습니다</span>` : ``}</span>
       <span class="r" style="margin-left:auto;display:flex;gap:8px">
         <button class="link" data-airedo="1" type="button">다시 검토</button>
         <button class="link" data-aiclose="1" type="button">닫기</button></span>
@@ -1830,7 +1853,7 @@ function aiReviewHTML(k, text){
         <div class="why">${esc(f.why||"")}${f.state==="ok"?`<br><span style="color:var(--good)">선생님이 확인해 그대로 두기로 한 항목입니다.</span>`:""}</div></details>`;
     }).join("")}
     ${rv.note?`<div class="hint">${esc(rv.note)}</div>`:""}
-    <div class="hint">참고 의견입니다.</div>
+    <div class="hint">참고 의견입니다.${rv.at?` · ${esc(rv.at.slice(5).replace("-","/"))} 검토`:""}</div>
   </div>`;
 }
 
@@ -1962,11 +1985,12 @@ function bindDetail(){
       const f = files[0];
       if(f.size > 25 * 1024 * 1024){ shotOut.innerHTML = `<div class="hint" style="color:var(--low)">파일이 너무 큽니다(25MB 넘음).</div>`; return; }
       shotOut.innerHTML = `<div class="hint">산출물을 보관하는 중…</div>`;
-      let blob;
+      let blob, fileRec;
       try{
         blob = await shrink(f);
         const id = uid();
-        await filePut(id, {blob, name:f.name, type:blob.type || f.type, size:blob.size, at:today()});
+        fileRec = {blob, name:f.name, type:blob.type || f.type, size:blob.size, at:today()};
+        await filePut(id, fileRec);
         pendingFile = {id, name:f.name, size:blob.size, type:blob.type || f.type};
       }catch(err){
         shotOut.innerHTML = `<div class="hint" style="color:var(--low)">보관하지 못했습니다 — ${esc(err.message)}</div>`;
@@ -1993,6 +2017,11 @@ function bindDetail(){
 JSON만 출력한다: {"text":"옮겨 적은 글","memos":["메모1","메모2"],"points":["지점1"]}`,
           {parts:[{inline_data:{mime_type:pendingFile.type || "image/jpeg", data:b64}}]});
         const memos = (r.memos||[]).map(String).filter(Boolean);
+        /* 읽은 것은 파일에 함께 남긴다 — 화면을 옮겨도 사라지지 않고, 되보려고 다시 부를 일이 없다 */
+        try{
+          await filePut(pendingFile.id, Object.assign(fileRec, {read:{
+            text:String(r.text||""), memos, points:(r.points||[]).map(String).filter(Boolean), at:stamp()}}));
+        }catch(err){}
         el("c-shot-out").innerHTML = `
           <div class="scan" style="margin-top:10px">
             <div class="scan-head"><span class="lab">사진에서 읽은 것</span>
@@ -2067,16 +2096,14 @@ JSON만 출력한다: {"text":"옮겨 적은 글","memos":["메모1","메모2"],
       if(t && !seen.has(t)){ seen.add(t); parts.push(toNominal(t) || t); }
     });
     const d2 = S.drafts[k] || (S.drafts[k] = {text:"", gate:[false,false,false,false]});
-    d2.text = tidySentence(parts.join(". ") + ".");
-    d2.gate = [false,false,false,false];
+    setDraft(d2, tidySentence(parts.join(". ") + "."));
     save(); repaint();
   };
   const go = el("ai-go");
   if(go) go.onclick = () => { S.ui.tab = "ai"; save(); render(); };
   const dr = el("ai-draft"), rv = el("ai-review"), out = el("ai-out");
   const cur2 = slots().find(x => x.key === S.ui.slot);
-  const evid = () => notesOf(s.id, S.ui.slot).map(n =>
-      `- (${n.source}) ${n.text}${n.level?` (수준: ${n.level} — ${levelText(n)})`:""}${n.standards?.length?` [${n.standards.join(" ")}: ${n.standards.map(c=>CODEMAP[c]?.text||"").join(" / ")}]`:""}`).join("\n");
+  const evid = () => evidOf(s.id, S.ui.slot);
   function busy(b, on, label){ b.disabled = on; b.textContent = on ? "…" : label; }
   if(dr) dr.onclick = async () => {
     busy(dr, true, "AI 초안");
@@ -2095,12 +2122,21 @@ JSON만 출력한다: {"text":"초안"}
 [근거]
 ${evid()}`);
       const d2 = S.drafts[k] || (S.drafts[k] = {text:"", gate:[false,false,false,false]});
-      d2.text = (r.text||"").trim(); d2.gate = [false,false,false,false];
+      setDraft(d2, (r.text||"").trim());
       save(); repaint();
       el("ai-out").innerHTML = `<div class="hint" style="color:var(--mid)">AI 초안입니다. 사실과 표현을 반드시 손본 뒤 아래 네 항목을 확인해 주세요.</div>`;
     }catch(e){ out.innerHTML = `<div class="hint" style="color:var(--low)">${esc(e.message)}</div>`; busy(dr, false, "AI 초안"); }
   };
-  if(rv) rv.onclick = async () => {
+  if(rv) rv.onclick = async (ev0) => {
+    const dNow = S.drafts[k];
+    /* 같은 문장·같은 근거를 두 번 묻지 않는다. ‘다시 검토’(force)만 이 문을 통과한다 */
+    const sigNow = revSig(dNow?.text || "", evid());
+    const cached = revOf(k);
+    if(!ev0?.force && cached && cached.sig === sigNow){
+      cached.closed = false;
+      save(); repaint();
+      return;
+    }
     busy(rv, true, "AI 검토");
     out.innerHTML = `<div class="hint">문장을 검토하는 중…</div>`;
     try{
@@ -2114,16 +2150,17 @@ level은 "위반" 또는 "확인" 중 하나. 문제가 없으면 findings는 �
 ${evid() || "(없음)"}
 [문장]
 ${S.drafts[k].text}`);
-      aiReview[k] = {items:(r.findings||[]).map(f => ({level:f.level||"확인", hit:String(f.hit||""),
-                       why:String(f.why||""), fix:String(f.fix||""), state:""})),
-                     note:String(r.note||"")};
-      repaint();
+      const dSave = S.drafts[k] || (S.drafts[k] = {text:"", gate:[false,false,false,false]});
+      dSave.review = {items:(r.findings||[]).map(f => ({level:f.level||"확인", hit:String(f.hit||""),
+                        why:String(f.why||""), fix:String(f.fix||""), state:""})),
+                      note:String(r.note||""), sig:sigNow, at:stamp(), closed:false};
+      save(); repaint();
     }catch(e){ out.innerHTML = `<div class="hint" style="color:var(--low)">${esc(e.message)}</div>`; busy(rv, false, "AI 검토"); }
   };
   /* AI 검토 항목 처리 — 고치기 / 확인함 */
   wrap.querySelectorAll("[data-aifix]").forEach(b => b.onclick = e => {
     e.preventDefault();
-    const it = aiReview[k]?.items[+b.dataset.aifix]; const d = S.drafts[k];
+    const it = revOf(k)?.items[+b.dataset.aifix]; const d = S.drafts[k];
     if(!it || !d) return;
     if(!d.text.includes(it.hit)){
       b.outerHTML = `<span class="basis" style="color:var(--low)">문장에서 그 부분을 찾지 못했습니다</span>`;
@@ -2133,18 +2170,25 @@ ${S.drafts[k].text}`);
     const drop = !it.fix || /^[\s(（'"‘“]*(해당\s*부분\s*)?(전체\s*)?(삭제|제거|빼기|생략)[^가-힣]*$/.test(it.fix.trim());
     d.text = tidySentence(d.text.replace(it.hit, drop ? "" : it.fix));
     it.state = "applied";
+    /* 이 수정은 검토가 시킨 것이므로 서명을 함께 옮긴다 — ‘문장이 바뀌었다’고 알릴 일이 아니다 */
+    d.review.sig = revSig(d.text, evid());
     d.gate = [false,false,false,false];      // 문장이 바뀌었으니 확인은 다시 받는다
     save(); repaint();
   });
   wrap.querySelectorAll("[data-aiok]").forEach(b => b.onclick = e => {
     e.preventDefault();
-    const it = aiReview[k]?.items[+b.dataset.aiok];
-    if(it){ it.state = "ok"; repaint(); }
+    const it = revOf(k)?.items[+b.dataset.aiok];
+    if(it){ it.state = "ok"; save(); repaint(); }
   });
   const redo = wrap.querySelector("[data-airedo]");
-  if(redo) redo.onclick = e => { e.preventDefault(); delete aiReview[k]; repaint(); el("ai-review")?.click(); };
+  if(redo) redo.onclick = e => { e.preventDefault(); el("ai-review")?.onclick({force:true}); };
   const closeAi = wrap.querySelector("[data-aiclose]");
-  if(closeAi) closeAi.onclick = e => { e.preventDefault(); delete aiReview[k]; repaint(); };
+  if(closeAi) closeAi.onclick = e => {
+    e.preventDefault();
+    /* 닫아도 결과는 남긴다 — 다시 열 때 같은 문장이면 부르지 않고 그대로 보여준다 */
+    const rvc = revOf(k); if(rvc) rvc.closed = true;
+    save(); repaint();
+  };
 
   const keep = el("keep");
   if(keep) keep.onclick = () => {
@@ -2155,7 +2199,7 @@ ${S.drafts[k].text}`);
   };
   wrap.querySelectorAll("[data-logload]").forEach(b => b.onclick = () => {
     const d2 = S.drafts[k]; const L = d2?.log?.[+b.dataset.logload]; if(!L) return;
-    d2.text = L.text; d2.gate = [false,false,false,false]; save(); repaint();
+    setDraft(d2, L.text); save(); repaint();
   });
   wrap.querySelectorAll("[data-logdel]").forEach(b => b.onclick = () => {
     const d2 = S.drafts[k]; if(!d2?.log) return;
@@ -2167,8 +2211,7 @@ ${S.drafts[k].text}`);
     const seen = new Set(), parts = [];
     d2.log.forEach(L => { const t = L.text.trim().replace(/[.\s]+$/, "");
       if(t && !seen.has(t)){ seen.add(t); parts.push(t); } });
-    d2.text = tidySentence(parts.join(". ") + ".");
-    d2.gate = [false,false,false,false];
+    setDraft(d2, tidySentence(parts.join(". ") + "."));
     save(); repaint();
   };
   const cp = el("copy");
@@ -2996,9 +3039,20 @@ async function openFile(id){
     _furl = URL.createObjectURL(rec.blob);
     el("fdlg-name").textContent = rec.name || "산출물";
     el("fdlg-size").textContent = `${kb(rec.size||rec.blob.size)} · ${rec.at||""}`;
-    body.innerHTML = /^image\//.test(rec.type)
+    /* 담을 때 AI가 읽어 둔 것이 있으면 그대로 보여준다 — 다시 부르지 않는다 */
+    const rd = rec.read;
+    body.innerHTML = (/^image\//.test(rec.type)
       ? `<img src="${_furl}" alt="${esc(rec.name||"산출물")}">`
-      : `<embed src="${_furl}" type="${esc(rec.type||"application/pdf")}" style="width:100%;height:70vh">`;
+      : `<embed src="${_furl}" type="${esc(rec.type||"application/pdf")}" style="width:100%;height:70vh">`)
+      + (rd ? `
+        <div class="scan" style="margin-top:10px">
+          <div class="scan-head"><span class="lab">담을 때 사진에서 읽은 것</span>
+            <span class="tally">${rd.at?esc(rd.at.slice(5).replace("-","/")):""}</span></div>
+          ${(rd.memos||[]).map(m=>`<div class="pt mid" style="padding:7px 0;border-bottom:1px solid var(--rule)">
+              <span class="mk">·</span><span>${esc(m)}</span></div>`).join("")}
+          ${(rd.points||[]).length?`<div class="hint" style="margin-top:8px">${rd.points.map(p=>"· "+esc(p)).join("<br>")}</div>`:""}
+          ${rd.text?`<details class="help"><summary>옮겨 적은 글 보기</summary><div style="white-space:pre-wrap">${esc(rd.text)}</div></details>`:""}
+        </div>` : ``);
     el("fdlg-save").onclick = () => {
       const a = document.createElement("a");
       a.href = _furl; a.download = rec.name || "산출물"; a.click();
