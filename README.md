@@ -66,4 +66,4 @@ python build.py     # app.src.html + 성취기준·키워드 JSON  →  index.ht
 
 ## 만든 이
 
-서천초 송근상. 문의·제안은 Issues로.
+초등 담임교사. 문의·제안은 Issues로.
