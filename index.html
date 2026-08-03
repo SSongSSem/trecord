@@ -201,6 +201,16 @@ textarea{line-height:1.7}
 .kw{display:flex;gap:8px;align-items:flex-start;margin-top:8px}
 .kw select{flex:0 0 auto;max-width:170px}
 .kw button{flex:0 0 auto;white-space:nowrap}
+/* 낱말 여닫이 — 접힌 자리는 한 줄만 차지한다 */
+.kwbar{display:flex;gap:8px;align-items:center;margin-top:7px}
+.kwcol{display:flex;flex-direction:column;gap:6px;align-items:flex-start;min-width:0;flex:1}
+.kwtog{background:none;border:0;padding:0;font-size:12px;color:var(--ink-3);
+       display:inline-flex;gap:5px;align-items:center;white-space:nowrap}
+.kwtog:hover{color:var(--accent)}
+.kwtog .cnt{font-family:var(--mono);font-size:11px;color:var(--ink-3)}
+.kwtog::after{content:"▾";font-size:9px;transition:transform .12s}
+.kwtog[aria-expanded="true"]::after{transform:rotate(180deg)}
+@media (prefers-reduced-motion:reduce){.kwtog::after{transition:none}}
 .kwchips{display:flex;flex-wrap:wrap;gap:5px;max-height:62px;overflow-y:auto;padding-right:2px}
 .kwc{background:var(--surface);border:1px solid var(--rule);border-radius:999px;
      padding:2px 10px;font-size:12px;color:var(--ink-2);white-space:nowrap}
@@ -383,6 +393,8 @@ textarea.big{width:100%;min-height:120px;font-family:var(--mono);font-size:13px}
 /* 성취기준 창 */
 dialog{border:1px solid var(--rule-strong);border-radius:16px;box-shadow:var(--shadow-pop);background:var(--surface);color:var(--ink);
        padding:0;width:min(700px,94vw);max-height:86vh}
+/* 설계는 원문·증거·관점을 함께 놓고 하는 작업이다 — 그만큼 상이 넓어야 한다 */
+dialog:has(#dlg-task:not([hidden])){width:min(860px,94vw)}
 dialog::backdrop{background:rgba(8,12,20,.45)}
 .dh{display:flex;gap:10px;align-items:center;padding:11px 14px;border-bottom:1px solid var(--rule)}
 .dh strong{font-size:13px}
@@ -396,6 +408,19 @@ dialog::backdrop{background:rgba(8,12,20,.45)}
 /* 고른 성취기준과 그 영역 — 영역은 고르는 것이 아니라 따라 나온다(읽기 전용) */
 #dlg-picked{display:flex;flex-wrap:wrap;gap:5px;align-items:center;margin-bottom:10px}
 #dlg-picked .subj{font-size:12.5px;font-weight:600;color:var(--ink-2);margin-right:2px}
+/* 고른 성취기준 원문 — 읽는 것이지 고치는 것이 아니다 */
+#dlg-full{margin:-4px 0 10px;padding:9px 12px;background:var(--surface);border:1px solid var(--rule);
+          border-radius:8px;font-size:12.5px;line-height:1.7;color:var(--ink-2);max-height:132px;overflow-y:auto}
+#dlg-full .one{display:flex;gap:8px}
+#dlg-full .one+.one{margin-top:5px;padding-top:5px;border-top:1px solid var(--rule)}
+#dlg-full .c{font-family:var(--mono);font-size:11.5px;color:var(--accent);flex:0 0 auto}
+/* 근거유형은 살구 계열 — 근거의 색이다(§4-3) */
+.srcpick{display:flex;flex-wrap:wrap;gap:5px}
+.srcpick button{background:var(--surface);border:1px solid var(--rule);border-radius:999px;
+                padding:3px 11px;font-size:12px;color:var(--ink-2);display:inline-flex;gap:5px;align-items:center}
+.srcpick button .ic{width:14px;height:14px}
+.srcpick button:hover{border-color:var(--warm);color:var(--warm)}
+.srcpick button[aria-pressed="true"]{background:var(--warm-soft);border-color:var(--warm);color:var(--warm);font-weight:600}
 .abadge{background:var(--accent-soft);border:1px solid var(--accent-line);color:var(--accent);
         border-radius:999px;padding:2px 10px;font-size:11.5px;font-weight:600}
 .abadge.none{background:var(--sink);border-color:var(--rule);color:var(--ink-3);font-weight:400}
@@ -468,6 +493,8 @@ dialog::backdrop{background:rgba(8,12,20,.45)}
   </div>
   <div class="dtask" id="dlg-task" hidden>
     <div id="dlg-picked"></div>
+    <!-- 설계는 원문과의 대조 작업이다 — 22자로 자른 배지로는 대조가 되지 않는다 -->
+    <div id="dlg-full"></div>
     <div class="field" style="margin-bottom:10px">
       <span class="lab">평가 요소</span>
       <input type="text" id="dlg-name" placeholder="예) 문단의 중심 생각 정리하기">
@@ -475,6 +502,12 @@ dialog::backdrop{background:rgba(8,12,20,.45)}
     <div class="field" style="margin-bottom:10px">
       <span class="lab">평가 내용</span>
       <textarea id="dlg-crit" rows="2" placeholder="학교 평가계획의 문장을 그대로 붙여 넣으세요"></textarea>
+    </div>
+    <!-- 무엇을 증거로 인정할지는 그날 정할 일이 아니라 설계할 일이다 -->
+    <div class="field" style="margin-bottom:10px">
+      <div class="fieldhead"><span class="lab">무엇으로 확인하나요</span>
+        <span class="r muted" id="dlg-srcmsg"></span></div>
+      <div class="srcpick" id="dlg-src"></div>
     </div>
     <div class="field" style="margin-bottom:10px">
       <div class="fieldhead"><span class="lab">관찰 관점</span><span class="r" id="dlg-kwai-slot"></span></div>
@@ -494,6 +527,12 @@ dialog::backdrop{background:rgba(8,12,20,.45)}
       </div>
       <div id="dlg-lint"></div>
     </div>
+    <!-- 거울이지 서식이 아니다 — 답을 저장하지 않고 체크도 잠금도 없다 -->
+    <details class="help" id="dlg-ask"><summary>이 평가면 배움이 보일까요</summary><div>
+      <p>1. 이 과제를 잘 해내면 <b>이 성취기준에 도달했다</b>고 말할 수 있습니까?</p>
+      <p>2. 배우지 않고도 잘할 수 있는 과제는 아닙니까?</p>
+      <p>3. 수준을 가르는 축이 <b>이 기준의 핵심 능력</b>입니까?</p>
+    </div></details>
   </div>
   <div class="dbody" id="dlg-body"></div>
   <div class="dfoot">
@@ -796,6 +835,8 @@ function toNominal(s){
 /* 자동 검사에서 교사가 ‘확인함’으로 넘긴 항목 (화면에만 남는다) */
 let ackScan = {}, upFile = null;
 let _kwArea = 0, _level = '', _noteLevel = '', _rubOpen = false;
+/* 낱말 칩은 접어 둔다 — 한번 편 사람에게는 계속 펴 준다(슬롯을 옮겨도 유지) */
+let _kwOpen = false, _kwMore = false;
 const ackKey = f => f.id + "|" + f.hit;
 
 /* ══ 상태 ══ */
@@ -1113,13 +1154,20 @@ function pointers(){
       who: miss.map(sname).join(" · "), go:{s:miss[0], x}});
   }
 
-  // 6. 관찰이 없는 교과
+  /* 6. 아직 평가를 설계하지 않은 교과 — 교과 단위까지만 센다.
+     성취기준 611건 전수 커버리지 표는 만들지 않는다(초등은 전 기준 평가 의무가 없다). */
+  const noPlan = sl.filter(x => x.kind === "subj" && !S.tasks.some(t => t.subject === x.subject));
+  if(noPlan.length && noPlan.length < sl.length)
+    out.push({sev:"mid", title:`평가를 아직 설계하지 않은 교과 ${noPlan.length}개`,
+      who: noPlan.map(x => x.label).join(" · ") + " — 준비 탭 「평가 설계」에서 만들 수 있습니다", go:null});
+
+  // 7. 관찰이 없는 교과
   const emptySubj = sl.filter(x => x.kind === "subj" && !S.notes.some(n => slotOf(n) === x.key));
   if(emptySubj.length && emptySubj.length < sl.length)
     out.push({sev:"low", title:`관찰이 한 건도 없는 교과 ${emptySubj.length}개`,
       who: emptySubj.map(x => x.label).join(" · "), go:{s:S.students[0], x:emptySubj[0]}});
 
-  // 7. 남은 문장 칸
+  // 8. 남은 문장 칸
   const left = S.students.reduce((a,s) => a + sl.filter(x => !draftDone(s.id,x.key)).length, 0);
   if(left) out.push({sev:"low", title:`아직 확인이 끝나지 않은 문장 칸 ${left}개`,
     who:`전체 ${N*sl.length}칸 가운데 ${N*sl.length-left}칸 완료`, go:null});
@@ -1373,29 +1421,54 @@ function detailHTML(){
     <div class="catch">
       <div class="catch-top">
         <span class="where">${esc(cur.label)}</span>
-        <select id="c-src">${SOURCES.map(v=>`<option value="${esc(v)}"${v===_src?" selected":""}>${esc(v)}</option>`).join("")}</select>
+        ${(() => {
+          /* 설계할 때 「무엇으로 확인할지」를 정해 두었으면 그것이 먼저 온다 */
+          const t = S.tasks.find(x => x.id === _taskId && x.subject === cur.subject);
+          const plan = (t?.sources || []).filter(v => SOURCES.includes(v));
+          const opt = v => `<option value="${esc(v)}"${v===_src?" selected":""}>${esc(v)}</option>`;
+          if(!plan.length) return `<select id="c-src">${SOURCES.map(opt).join("")}</select>`;
+          const rest = SOURCES.filter(v => !plan.includes(v));
+          return `<select id="c-src">
+            <optgroup label="이 평가에서 보기로 한 것">${plan.map(opt).join("")}</optgroup>
+            <optgroup label="그 밖">${rest.map(opt).join("")}</optgroup></select>`; })()}
         ${cur.kind==="subj" ? `<select id="c-task">
             <option value="">평가과제 없음</option>
             ${S.tasks.filter(t=>t.subject===cur.subject).map(t=>`<option value="${t.id}"${t.id===_taskId?" selected":""}>${esc(t.name)}</option>`).join("")}
           </select>
-          <button class="ghost" id="c-newtask" type="button">＋ 평가 추가</button>` : ``}
+          <button class="ghost" id="c-newtask" type="button">＋ 평가 설계</button>` : ``}
       </div>
       <div class="catch-in">
         <input type="text" id="c-text" placeholder="무엇이 보였나요? 한 줄이면 됩니다." autocomplete="off">
         <button class="primary" id="c-add" type="button">담기</button>
       </div>
       ${(() => {
+        /* 낱말은 관찰을 쓰려는 순간에만 필요하다 — 접어 두고 입력칸에 들어오면 저절로 편다.
+           칩 자체를 없애지는 않는다(§10-3: 칩 클릭이 가장 빠른 입력 경로다). */
+        const chip = w => `<button class="kwc" type="button" data-kw="${esc(w)}">${esc(w)}</button>`;
         if(cur.kind === "subj"){
-          const words = subjKwWords(cur);
-          return words.length ? `<div class="kw"><div class="kwchips" id="kw-chips">${
-            words.map(w=>`<button class="kwc" type="button" data-kw="${esc(w)}">${esc(w)}</button>`).join("")}</div></div>` : "";
+          const words = subjKwWords(cur), more = moreKwWords(cur);
+          if(!words.length && !more.length) return "";
+          return `<div class="kwbar">
+              <button class="kwtog" id="kw-tog" type="button" aria-expanded="${_kwOpen}"
+                >낱말 도움<span class="cnt">${words.length}</span></button></div>
+            <div class="kw" id="kw-box"${_kwOpen?"":" hidden"}>
+              <div class="kwcol">
+                ${words.length?`<div class="kwchips" id="kw-chips">${words.map(chip).join("")}</div>`:``}
+                ${more.length?`<button class="kwtog" id="kw-more" type="button" aria-expanded="${_kwMore}"
+                    >다른 낱말<span class="cnt">${more.length}</span></button>
+                  <div class="kwchips" id="kw-common"${_kwMore?"":" hidden"}>${more.map(chip).join("")}</div>`:``}
+              </div>
+            </div>`;
         }
         const bs = baseKw(cur).concat(COMMON_KW); if(!bs.length) return "";
         const i = Math.min(_kwArea, bs.length-1);
-        return `<div class="kw">
-          <select id="kw-area">${bs.map((b,j)=>`<option value="${j}"${j===i?" selected":""}>${esc(b.a)}</option>`).join("")}</select>
-          <div class="kwchips" id="kw-chips">${bs[i].k.map(w=>`<button class="kwc" type="button" data-kw="${esc(w)}">${esc(w)}</button>`).join("")}</div>
-        </div>`; })()}
+        return `<div class="kwbar">
+            <button class="kwtog" id="kw-tog" type="button" aria-expanded="${_kwOpen}"
+              >낱말 도움<span class="cnt">${bs.reduce((a,b)=>a+b.k.length,0)}</span></button></div>
+          <div class="kw" id="kw-box"${_kwOpen?"":" hidden"}>
+            <select id="kw-area">${bs.map((b,j)=>`<option value="${j}"${j===i?" selected":""}>${esc(b.a)}</option>`).join("")}</select>
+            <div class="kwchips" id="kw-chips">${bs[i].k.map(chip).join("")}</div>
+          </div>`; })()}
       ${(() => { const t = S.tasks.find(x => x.id === _taskId);
         const rb = (t && t.rubric) || [];
         if(cur.kind !== "subj" || !rb.length) return "";
@@ -1523,13 +1596,23 @@ function detailHTML(){
 }
 /* 교과 관찰 담기의 키워드 — 개발 단계에서 고른 관점이 맨 앞에 온다 (§10-3).
    영역 select와 AI 버튼은 평가 추가 창으로 갔다. 여기 남는 것은 재료(칩)뿐이다. */
+/* 설계할 때 고른 관점이 있으면 그것만 내놓는다 — 개발한 대로 관찰하게 되는 고리다(§10-3).
+   관점을 정해 둔 과제일수록 기록 화면이 깨끗해진다. 나머지 낱말은 「다른 낱말」 뒤에 있다. */
 function subjKwWords(cur){
+  const t = S.tasks.find(x => x.id === _taskId && x.subject === cur.subject);
+  if(t?.kw?.length) return [...new Set(t.kw)];
+  return (((KW.subj[cur.subject]||{})[band()] || []).slice(0,1)).flatMap(b => b.k);
+}
+/* 기본에서 빠진 낱말 — 그 과제 영역의 나머지와 공통 태도·성장 */
+function moreKwWords(cur){
   const t = S.tasks.find(x => x.id === _taskId && x.subject === cur.subject);
   const areas = t ? [...new Set((t.standards||[]).map(c => CODEMAP[c]?.area).filter(Boolean))] : [];
   const blocks = t ? kwOfAreas(cur.subject, areas).blocks
-                   : ((KW.subj[cur.subject]||{})[band()] || []).slice(0,1);
-  return [...new Set([...(t?.kw || []), ...blocks.flatMap(b => b.k), ...COMMON_KW.flatMap(b => b.k)])];
+                   : ((KW.subj[cur.subject]||{})[band()] || []);
+  const base = new Set(subjKwWords(cur));
+  return [...new Set([...blocks.flatMap(b => b.k), ...COMMON_KW.flatMap(b => b.k)])].filter(w => !base.has(w));
 }
+const commonKwWords = () => COMMON_KW.flatMap(b => b.k);
 function baseKw(cur){
   if(cur.kind === "subj") return (KW.subj[cur.subject] || {})[band()] || [];
   if(cur.kind === "cca")  return KW.cca[cur.cca] || [];
@@ -1635,7 +1718,12 @@ function bindDetail(){
   el("c-src").onchange = () => { _src = el("c-src").value; };
   const tk = el("c-task");
   /* 과제를 바꿔 고르면 그 기준을 한 번 펼쳐 보인다 — 읽고 관찰을 시작하라는 신호 */
-  if(tk) tk.onchange = () => { _taskId = tk.value; _noteLevel = ""; _rubOpen = true; repaint(); };
+  if(tk) tk.onchange = () => { _taskId = tk.value; _noteLevel = ""; _rubOpen = true;
+    /* 설계할 때 정해 둔 근거유형이 있으면 그것부터 고르게 한다 */
+    const nt2 = S.tasks.find(x => x.id === _taskId);
+    const plan = (nt2?.sources || []).filter(v => SOURCES.includes(v));
+    if(plan.length && !plan.includes(_src)) _src = plan[0];
+    repaint(); };
   const nt = el("c-newtask");
   if(nt) nt.onclick = () => openTask(cur.subject, null, id => {
     _taskId = id; _noteLevel = ""; _rubOpen = true; repaint(); });
@@ -1653,14 +1741,25 @@ function bindDetail(){
       x.setAttribute("aria-pressed", String(x.dataset.lv === _noteLevel))); };
   const ka = el("kw-area");
   if(ka) ka.onchange = () => { _kwArea = +ka.value; repaint(); };
-  const kc = el("kw-chips");
-  if(kc) kc.onclick = e => {
+  const pickKw = e => {
     const b = e.target.closest("[data-kw]"); if(!b) return;
     const t = el("c-text"), v = t.value.trim();
     t.value = v ? v.replace(/[\s,·]+$/, "") + ", " + b.dataset.kw : b.dataset.kw;
     t.focus();
   };
+  const kc = el("kw-chips"); if(kc) kc.onclick = pickKw;
+  const kcm = el("kw-common"); if(kcm) kcm.onclick = pickKw;
+  /* 여닫이는 다시 그리지 않는다 — 입력 중에 재렌더가 끼면 커서가 튄다 */
+  const kbox = el("kw-box"), ktog = el("kw-tog");
+  const openKw = on => { _kwOpen = on; if(kbox) kbox.hidden = !on;
+                         if(ktog) ktog.setAttribute("aria-expanded", String(on)); };
+  if(ktog) ktog.onclick = () => openKw(!_kwOpen);
+  const kmore = el("kw-more"), kcom = el("kw-common");
+  if(kmore) kmore.onclick = () => { _kwMore = !_kwMore;
+    if(kcom) kcom.hidden = !_kwMore; kmore.setAttribute("aria-expanded", String(_kwMore)); };
   const ti = el("c-text");
+  /* 관찰을 쓰려고 들어온 순간이 낱말이 필요한 순간이다 */
+  ti.onfocus = () => { if(!_kwOpen) openKw(true); };
   ti.onkeydown = e => { if(e.key === "Enter"){ e.preventDefault(); addNote(); } };
   el("c-add").onclick = addNote;
 
@@ -1930,30 +2029,9 @@ function renderPrep(){
     </div>
 
     <div class="panel">
-      <div class="ph"><h2>평가 문서에서 가져오기</h2>
-        <span class="r muted">파일은 이 기기 안에서만 읽습니다</span></div>
-      <div class="pb">
-        <div class="drop" id="drop">
-          <b>학교 평가계획을 끌어다 놓거나 붙여넣으세요</b>
-          한글(HWPX) · PDF · txt · csv 파일, 또는 표를 복사해서 아래 칸에 붙여넣기
-        </div>
-        <textarea class="big" id="up-text" style="margin-top:10px;min-height:96px"
-          placeholder="한글·엑셀 파일은 표를 선택해 복사한 뒤 여기에 붙여넣으세요."></textarea>
-        <div class="rowbtns" style="margin-top:8px">
-          <button class="primary" id="up-pick2" type="button">파일 선택</button>
-          <button class="ghost" id="up-run" type="button">붙여넣은 표 읽기</button>
-          ${aiOn()?`<button class="ghost" id="up-ai" type="button">AI로 읽기</button>`:``}
-          <input type="file" id="up-file" accept=".hwpx,.hwp,.txt,.csv,.md,.tsv,.pdf,text/plain,application/pdf" style="display:none">
-        </div>
-        <div id="up-out"></div>
-      </div>
-    </div>
-
-
-    <div class="panel">
-      <div class="ph"><h2>평가과제</h2>
+      <div class="ph"><h2>평가 설계</h2>
         <span class="r"><span class="muted">${S.tasks.length}개</span>
-          <button class="ghost" id="p-newtask" type="button">＋ 새 과제</button></span></div>
+          <button class="primary" id="p-newtask" type="button">＋ 새 설계</button></span></div>
       <div class="scroll"><table>
         <thead><tr><th>과제</th><th>성취기준</th><th class="n">관찰</th><th></th></tr></thead>
         <tbody>${S.tasks.map(t=>{
@@ -1975,8 +2053,29 @@ function renderPrep(){
                 `${esc(r.level)} ${ns.filter(n=>n.level===r.level).length}`).join(" · ")}${
                 (() => { const no = ns.filter(n=>!n.level).length; return no ? ` · 판정 없음 ${no}` : ""; })()}</div>` : ``}
           </td></tr>`;}).join("")
-          || `<tr><td colspan="4" class="muted">아직 없습니다. ＋ 새 과제로 만들거나 평가계획을 가져옵니다.</td></tr>`}</tbody>
+          || `<tr><td colspan="4" class="muted">가르치기 전에 평가부터 그립니다. ＋ 새 설계로 시작하세요.</td></tr>`}</tbody>
       </table></div>
+    </div>
+
+
+    <div class="panel">
+      <div class="ph"><h2>이미 있는 평가 가져오기</h2>
+        <span class="r muted">파일은 이 기기 안에서만 읽습니다</span></div>
+      <div class="pb">
+        <div class="drop" id="drop">
+          <b>학교 평가계획을 끌어다 놓거나 붙여넣으세요</b>
+          한글(HWPX) · PDF · txt · csv 파일, 또는 표를 복사해서 아래 칸에 붙여넣기
+        </div>
+        <textarea class="big" id="up-text" style="margin-top:10px;min-height:96px"
+          placeholder="한글·엑셀 파일은 표를 선택해 복사한 뒤 여기에 붙여넣으세요."></textarea>
+        <div class="rowbtns" style="margin-top:8px">
+          <button class="ghost" id="up-pick2" type="button">파일 선택</button>
+          <button class="ghost" id="up-run" type="button">붙여넣은 표 읽기</button>
+          ${aiOn()?`<button class="ghost" id="up-ai" type="button">AI로 읽기</button>`:``}
+          <input type="file" id="up-file" accept=".hwpx,.hwp,.txt,.csv,.md,.tsv,.pdf,text/plain,application/pdf" style="display:none">
+        </div>
+        <div id="up-out"></div>
+      </div>
     </div>
 
   </div>`;
@@ -2675,11 +2774,11 @@ function openTask(subject, task, onOK){
   openStd(subject, task ? task.standards : [], null, {task, onSave(v){
     if(task){
       Object.assign(task, {name:v.name, criteria:v.criteria, standards:v.codes, rubric:v.rubric,
-                           kw:v.kw, axis:v.axis, subject:dlgState.subject});
+                           kw:v.kw, sources:v.sources, axis:v.axis, subject:dlgState.subject});
       save(); onOK(task.id);
     } else {
       const t = {id:uid(), name:v.name, subject:dlgState.subject, standards:v.codes, criteria:v.criteria,
-                 rubric:v.rubric, kw:v.kw, axis:v.axis, legacy:[]};
+                 rubric:v.rubric, kw:v.kw, sources:v.sources, axis:v.axis, legacy:[]};
       S.tasks.push(t); save(); onOK(t.id);
     }
   }});
@@ -2689,7 +2788,8 @@ function openTask(subject, task, onOK){
 function openStd(subject, selected, onOK, taskMode){
   dlgState = {subject, sel:new Set(selected), onOK, taskMode,
               step: (taskMode && taskMode.task) ? 2 : 1,
-              kw:new Set(taskMode?.task?.kw || []), axis:taskMode?.task?.axis || "", msg:""};
+              kw:new Set(taskMode?.task?.kw || []), src:new Set(taskMode?.task?.sources || []),
+              axis:taskMode?.task?.axis || "", msg:""};
   const subjSel = el("dlg-subj"), q = el("dlg-q"), rubBox = el("dlg-rub");
   subjSel.innerHTML = subjects().map(s=>`<option value="${esc(s)}"${s===subject?" selected":""}>${esc(subjShort(s))}</option>`).join("");
   subjSel.onchange = () => {
@@ -2727,7 +2827,7 @@ function openStd(subject, selected, onOK, taskMode){
         .map(row => ({level:row.querySelector(".rl").value.trim(), text:row.querySelector(".rt").value.trim()}))
         .filter(r => r.level && r.text);
       dlgState.taskMode.onSave({name, criteria:el("dlg-crit").value.trim(), codes:[...dlgState.sel],
-                                rubric, kw:[...dlgState.kw], axis:dlgState.axis});
+                                rubric, kw:[...dlgState.kw], sources:[...dlgState.src], axis:dlgState.axis});
     } else dlgState.onOK([...dlgState.sel]);
     el("dlg").close();
   };
@@ -2770,7 +2870,7 @@ function openStd(subject, selected, onOK, taskMode){
 
   function paintDlg(){
     const tm = dlgState.taskMode, one = !tm || dlgState.step === 1;
-    el("dlg-title").textContent = tm ? (tm.task ? "평가 고치기" : "평가 추가") : "성취기준 고르기";
+    el("dlg-title").textContent = tm ? (tm.task ? "평가 고치기" : "평가 설계") : "성취기준 고르기";
     subjSel.hidden = !one; q.hidden = !one; el("dlg-cnt").hidden = !one; el("dlg-body").hidden = !one;
     el("dlg-task").hidden = !tm || one;
     el("dlg-back").hidden = !tm || one;
@@ -2803,8 +2903,12 @@ function openStd(subject, selected, onOK, taskMode){
       + (dlgAreas().length
           ? dlgAreas().map(a=>`<span class="abadge">${esc(a)}</span>`).join("")
           : `<span class="abadge none">영역 없음</span>`);
+    /* 평가 요소·루브릭을 쓰는 내내 원문이 눈앞에 있어야 '이 과제가 이 기준을 재는가'를 판단한다 */
+    el("dlg-full").innerHTML = codes.map(c =>
+      `<div class="one"><span class="c">${esc(c)}</span><span>${esc(CODEMAP[c]?.text || "원문을 찾지 못했습니다")}</span></div>`).join("");
     el("dlg-sel").textContent = codes.length ? `성취기준 ${codes.length}건` : "";
     el("dlg-skel").disabled = !skelKey();
+    paintSrc();
     /* AI 버튼 둘은 연결돼 있을 때만 */
     el("dlg-kwai-slot").innerHTML = aiOn()
       ? `<button class="kwai" id="dlg-kwai" type="button">${ICON.spark()}AI 추천</button>` : "";
@@ -2813,6 +2917,23 @@ function openStd(subject, selected, onOK, taskMode){
     const kai = el("dlg-kwai"); if(kai) kai.onclick = aiKeywords;
     const arb = el("dlg-airub"); if(arb) arb.onclick = aiRubric;
     paintKw(); paintLint();
+  }
+  /* 증거 계획 — 관찰 한 번으로 판정하는 평가를 설계 시점에 거른다.
+     짚어주기의 「근거가 직접관찰뿐인 학생」은 사후 경보인데, 이 줄은 같은 점검을 앞으로 당긴다.
+     고른 것이 없어도 담기는 눌린다 — 설계를 강제하는 잠금은 만들지 않는다(§10-2). */
+  function paintSrc(){
+    el("dlg-src").innerHTML = SOURCES.map(v =>
+      `<button type="button" data-src="${esc(v)}" aria-pressed="${dlgState.src.has(v)}"
+        >${ICON[SRC_ICON[v]] ? ICON[SRC_ICON[v]]() : ""}${esc(v)}</button>`).join("");
+    const n = dlgState.src.size, direct = n === 1 && dlgState.src.has("직접관찰");
+    el("dlg-srcmsg").textContent = !n ? "고르지 않아도 됩니다"
+      : direct ? "직접관찰 하나뿐입니다 — 남는 자료가 있으면 함께 고르세요"
+               : `${n}가지`;
+    el("dlg-src").querySelectorAll("[data-src]").forEach(b => b.onclick = () => {
+      const v = b.dataset.src;
+      dlgState.src.has(v) ? dlgState.src.delete(v) : dlgState.src.add(v);
+      paintSrc();
+    });
   }
   function paintKw(){
     const r = kwOfAreas(dlgState.subject, dlgAreas());
