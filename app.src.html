@@ -98,6 +98,7 @@ details[open]>summary::after{content:"⌃"}
 .ghost{background:var(--surface);border:1px solid var(--rule-strong);
        padding:6px 12px;font-size:12.5px;color:var(--ink-2);border-radius:12px}
 .ghost:hover{border-color:var(--accent);color:var(--accent)}
+.ghost.on{border-color:var(--accent);background:var(--accent-soft);color:var(--accent);font-weight:600}
 .primary{background:var(--accent);color:var(--on-accent);border:1px solid var(--accent);
          border-radius:12px;padding:7px 18px;font-size:13.5px;font-weight:600}
 .primary:hover:not(:disabled){background:var(--accent-deep);border-color:var(--accent-deep)}
@@ -267,6 +268,33 @@ textarea{line-height:1.7}
 .memo .del{background:none;border:0;color:var(--ink-3);font-size:13px;padding:0;opacity:0}
 .memo:hover .del{opacity:1}
 .memo .del:hover{color:var(--low)}
+.memo .mv{background:none;border:0;color:var(--ink-3);font-size:11.5px;padding:0 4px 0 0;opacity:0;white-space:nowrap}
+.memo:hover .mv,.memo:focus-within .mv{opacity:1}
+.memo .mv:hover{color:var(--accent)}
+/* 산출물 나눠 담기 — 왼쪽에 사진(근거), 오른쪽에 번호. 요약은 건수만 센다 */
+#adlg{width:min(940px,96vw)}
+.abody{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:0;max-height:64vh}
+.ashot{padding:14px 16px;border-right:1px solid var(--rule);min-width:0;display:flex;flex-direction:column;gap:8px}
+.apic{background:var(--sink);border:1px solid var(--rule);border-radius:8px;height:340px;
+      display:flex;align-items:center;justify-content:center;overflow:hidden}
+.apic img{max-width:100%;max-height:100%;object-fit:contain}
+.apic .none{color:var(--ink-3);font-size:12.5px}
+.ameta{font-size:11.5px;color:var(--ink-3);font-family:var(--mono)}
+.aside{display:flex;flex-direction:column;min-width:0}
+.aside .nogrid{flex:1;align-content:flex-start}
+.ahint{padding:0 16px 12px;font-size:11.5px;color:var(--ink-3);line-height:1.6}
+.nogrid button .got{font-family:var(--mono);font-size:10.5px;color:var(--accent)}
+@media (max-width:760px){.abody{grid-template-columns:1fr}.ashot{border-right:0;border-bottom:1px solid var(--rule)}.apic{height:210px}}
+/* 학생 고르기 격자 — 번호와 이름만. 수준은 여기 오지 않는다 */
+.nogrid{display:flex;flex-wrap:wrap;gap:6px;padding:14px 16px;max-height:52vh;overflow-y:auto}
+.nogrid button{display:inline-flex;gap:6px;align-items:baseline;background:var(--surface);
+  border:1px solid var(--rule);border-radius:8px;padding:6px 10px;font-size:13px;color:var(--ink-2)}
+.nogrid button .no{font-family:var(--mono);font-size:11.5px;color:var(--ink-3)}
+.nogrid button:hover{border-color:var(--accent-line);color:var(--accent)}
+.nogrid button[aria-pressed="true"]{border-color:var(--accent);background:var(--accent-soft);
+  color:var(--accent);font-weight:600}
+.nogrid button[aria-pressed="true"] .no{color:var(--accent)}
+.nogrid button[disabled]{opacity:.4}
 .empty{color:var(--ink-3);font-size:12.5px;padding:14px 0;text-align:center}
 .empty b{display:block;color:var(--ink-2);font-weight:600;margin-bottom:2px}
 
@@ -508,6 +536,15 @@ dialog::backdrop{background:rgba(8,12,20,.45)}
       <div class="fieldhead"><span class="lab">무엇으로 확인하나요</span>
         <span class="r muted" id="dlg-srcmsg"></span></div>
       <div class="srcpick" id="dlg-src"></div>
+      <!-- 시기는 자유 한 줄로 묶는다 — 차시·주간계획 구조로 번지지 않게 -->
+      <input type="text" id="dlg-when" maxlength="20" style="margin-top:7px"
+             placeholder="언제 하나요 — 예: 10월 2주 (안 적어도 됩니다)">
+    </div>
+    <!-- 평가는 반을 기준으로 계획한다 — 대상은 설계에서 정하고, 기록 화면에서는 고르기만 한다 -->
+    <div class="field" style="margin-bottom:10px">
+      <div class="fieldhead"><span class="lab">누구에게</span>
+        <span class="r"><button class="fix" id="dlg-who" type="button">고르기</button></span></div>
+      <div class="muted" id="dlg-whotxt"></div>
     </div>
     <div class="field" style="margin-bottom:10px">
       <div class="fieldhead"><span class="lab">관찰 관점</span><span class="r" id="dlg-kwai-slot"></span></div>
@@ -541,6 +578,45 @@ dialog::backdrop{background:rgba(8,12,20,.45)}
     <button class="ghost" id="dlg-cancel" type="button">취소</button>
     <button class="primary" id="dlg-next" type="button" hidden>다음</button>
     <button class="primary" id="dlg-ok" type="button">담기</button>
+  </div>
+</dialog>
+
+<!-- 산출물 나눠 담기 — 사진 한 장을 크게 보며 그 학생에게 준다.
+     수준 칩이 여기 살아 있는 것은 근거(사진)가 화면에 함께 있기 때문이다(§5-5 근거 동반). -->
+<dialog id="adlg">
+  <div class="dh"><strong>산출물 나눠 담기</strong>
+    <span class="r muted" id="adlg-cnt"></span></div>
+  <div class="abody">
+    <div class="ashot"><div class="apic" id="adlg-pic"></div>
+      <div class="ameta" id="adlg-meta"></div>
+      <input type="text" id="adlg-text" placeholder="이 산출물에서 보인 것 — 안 적어도 됩니다" autocomplete="off">
+      <div class="lv" id="adlg-lv"></div>
+    </div>
+    <div class="aside">
+      <div class="nogrid" id="adlg-grid"></div>
+      <div class="ahint" id="adlg-msg"></div>
+    </div>
+  </div>
+  <div class="dfoot">
+    <span class="muted" id="adlg-sum"></span>
+    <button class="ghost" id="adlg-skip" type="button">뒤로 미룸</button>
+    <button class="ghost danger" id="adlg-drop" type="button">이 장 빼기</button>
+    <button class="primary" id="adlg-done" type="button">마치기</button>
+  </div>
+</dialog>
+
+<!-- 학생 고르기 — 옮기기·함께 담기가 함께 쓴다.
+     여기에는 수준을 두지 않는다: 학생이 여럿 보이는 자리에 수준 선택지가 함께 놓이면
+     그것이 곧 채점 매트릭스다(§5-5 근거 동반·§10-5 학생 단위 집계 금지). -->
+<dialog id="sdlg">
+  <div class="dh"><strong id="sdlg-title">누구에게</strong>
+    <span class="r muted" id="sdlg-cnt"></span></div>
+  <div class="nogrid" id="sdlg-grid"></div>
+  <div class="dfoot">
+    <span class="muted" id="sdlg-msg"></span>
+    <button class="ghost" id="sdlg-all" type="button" hidden>전체</button>
+    <button class="ghost" id="sdlg-cancel" type="button">취소</button>
+    <button class="primary" id="sdlg-ok" type="button">고르기</button>
   </div>
 </dialog>
 
@@ -837,6 +913,8 @@ let ackScan = {}, upFile = null;
 let _kwArea = 0, _level = '', _noteLevel = '', _rubOpen = false;
 /* 낱말 칩은 접어 둔다 — 한번 편 사람에게는 계속 펴 준다(슬롯을 옮겨도 유지) */
 let _kwOpen = false, _kwMore = false;
+/* 훑어 적기 — 수업 직후 명렬 순서로 한 바퀴 돈다. 세션에만 산다(저장하지 않는다) */
+let _sweep = false, _sweepMsg = "";
 const ackKey = f => f.id + "|" + f.hit;
 
 /* ══ 상태 ══ */
@@ -1307,7 +1385,7 @@ function renderWrite(){
     const x = e.target.closest("[data-del-stu]");
     if(x){ e.stopPropagation(); removeStudent(x.dataset.delStu); return; }
     const b = e.target.closest(".rrow"); if(!b) return;
-    S.ui.sid = b.dataset.id; pendingStd = []; pendingFile = null; save();
+    S.ui.sid = b.dataset.id; pendingStd = []; pendingFile = null; _noteLevel = ""; save();
     el("roster").innerHTML = rosterHTML();
     el("detail").innerHTML = detailHTML(); bindDetail();
   };
@@ -1349,12 +1427,14 @@ function renderWrite(){
   bindDetail();
 }
 function rosterHTML(){
-  const sl = slots();
+  const sl = slots(), D = today();
   return S.students.map(s => {
     const c = notesOf(s.id).length, done = sl.filter(x => draftDone(s.id,x.key)).length;
+    /* 훑는 동안에는 「오늘 이 칸에 담았는가」만 표시한다 — 사실이지 수준이 아니다 */
+    const hit = _sweep && S.notes.some(n => n.studentId === s.id && n.date === D && slotOf(n) === S.ui.slot);
     return `<div class="rrow" role="button" tabindex="0" data-id="${s.id}" aria-current="${s.id===S.ui.sid}">
       <span class="no">${esc(String(s.no).padStart(2,"0"))}</span><span>${esc(sname(s))}</span>
-      <span class="cnt">${c||"·"}${done?` <span style="color:var(--good)">✓${done}</span>`:""}</span>
+      <span class="cnt">${hit?`<span style="color:var(--accent)">●</span> `:""}${c||"·"}${done?` <span style="color:var(--good)">✓${done}</span>`:""}</span>
       <button class="x" type="button" data-del-stu="${s.id}"
               title="${esc(sname(s))} 지우기" aria-label="${esc(sname(s))} 지우기">×</button></div>`;
   }).join("");
@@ -1431,16 +1511,29 @@ function detailHTML(){
           return `<select id="c-src">
             <optgroup label="이 평가에서 보기로 한 것">${plan.map(opt).join("")}</optgroup>
             <optgroup label="그 밖">${rest.map(opt).join("")}</optgroup></select>`; })()}
-        ${cur.kind==="subj" ? `<select id="c-task">
+        ${cur.kind==="subj" ? (() => {
+          /* 개인 화면에서는 계획된 평가를 고르기만 한다 — 설계는 학급 단위 행위라
+             준비 탭에 산다. 여기 만들기 버튼을 두면 '이 학생을 위한 평가'로 읽힌다. */
+          const mine = S.tasks.filter(t => t.subject === cur.subject);
+          const forMe = t => !(t.targets||[]).length || t.targets.includes(s.id);
+          const on = mine.filter(forMe), off = mine.filter(t => !forMe(t));
+          const opt = t => `<option value="${t.id}"${t.id===_taskId?" selected":""}>${esc(t.name)}${t.when?` — ${esc(t.when)}`:""}</option>`;
+          return `<select id="c-task">
             <option value="">평가과제 없음</option>
-            ${S.tasks.filter(t=>t.subject===cur.subject).map(t=>`<option value="${t.id}"${t.id===_taskId?" selected":""}>${esc(t.name)}</option>`).join("")}
-          </select>
-          <button class="ghost" id="c-newtask" type="button">＋ 평가 설계</button>` : ``}
+            ${on.map(opt).join("")}
+            ${off.length?`<optgroup label="이 학생이 대상이 아닌 평가">${off.map(opt).join("")}</optgroup>`:``}
+          </select>`; })() : ``}
+        <span class="r"><button class="ghost tip${_sweep?" on":""}" id="c-sweep" type="button" aria-pressed="${_sweep}"
+          data-tip="수업 직후 명렬 순서로 한 바퀴 — 담으면 다음 학생으로 저절로 넘어갑니다">훑어 적기</button></span>
       </div>
       <div class="catch-in">
         <input type="text" id="c-text" placeholder="무엇이 보였나요? 한 줄이면 됩니다." autocomplete="off">
         <button class="primary" id="c-add" type="button">담기</button>
+        ${_sweep ? `<button class="ghost" id="c-skip" type="button">넘김</button>`
+                 : `<button class="ghost tip" id="c-many" type="button"
+                data-tip="같은 장면을 여럿이 겪었을 때 — 모둠 활동이나 현장학습. 수준 판정은 함께 담기지 않습니다">함께 담기</button>`}
       </div>
+      ${_sweepMsg ? `<div class="hint" id="c-sweepmsg">${esc(_sweepMsg)}</div>` : ``}
       ${(() => {
         /* 낱말은 관찰을 쓰려는 순간에만 필요하다 — 접어 두고 입력칸에 들어오면 저절로 편다.
            칩 자체를 없애지는 않는다(§10-3: 칩 클릭이 가장 빠른 입력 경로다). */
@@ -1479,7 +1572,7 @@ function detailHTML(){
       <div class="tags" style="justify-content:flex-end">
         ${pendingFile ? `<span class="chip" title="${esc(pendingFile.name)} · ${kb(pendingFile.size)}">${ICON.paper()}${esc(pendingFile.name.slice(0,18))}<button type="button" data-dropfile>×</button></span>` : ``}
         <button class="link" id="c-shot" type="button">${aiOn()?"산출물 첨부하고 읽기":"산출물 첨부"}</button>
-        <input type="file" id="c-file" accept="image/*,application/pdf" style="display:none">
+        <input type="file" id="c-file" accept="image/*,application/pdf" multiple style="display:none">
       </div>
       <div id="c-shot-out"></div>
       ${(() => { const t = S.tasks.find(x => x.id === _taskId);
@@ -1506,11 +1599,14 @@ function detailHTML(){
           ${(n.standards||[]).length?`<span class="code">${n.standards.map(esc).join(" ")}</span>`:""}
           ${(n.legacy||[]).length?`<span class="code legacy">${n.legacy.map(esc).join(" ")} <em>2015</em></span>`:""}
           ${(n.standards||[]).length?`<span class="stdinline">${n.standards.map(c=>esc(stdCut(c,52))).filter(Boolean).join(" / ")}</span>`:""}
-          <span class="obs">${esc(n.text)}</span>
+          <span class="obs">${n.text ? esc(n.text)
+            : `<span class="muted">${n.fileId?"산출물만 담김 — 눌러서 볼 수 있습니다":"(빈 관찰)"}</span>`}</span>
           ${n.level?`<span class="lvtag" title="${esc(levelText(n))}">${esc(n.level)}</span>`:""}
           ${taskOf(n)?`<span class="task">${esc(taskOf(n).name)}</span>`:""}
           ${n.fileId?`<button class="clip" type="button" data-open="${esc(n.fileId)}" title="붙어 있는 산출물 보기">첨부</button>`:""}</span>
-        <button class="del" type="button" data-del="${n.id}" title="지우기">×</button></div>`).join("")
+        <span style="display:flex;gap:2px;align-items:baseline;justify-content:flex-end">
+          <button class="mv" type="button" data-mv="${n.id}" title="다른 학생에게 옮기기">옮기기</button>
+          <button class="del" type="button" data-del="${n.id}" title="지우기">×</button></span></div>`).join("")
       : `<div class="empty"><b>아직 담아 둔 것이 없습니다</b>위 칸에 한 줄 적고 Enter를 누르면 여기에 쌓입니다</div>`}
   </div>
 
@@ -1724,9 +1820,7 @@ function bindDetail(){
     const plan = (nt2?.sources || []).filter(v => SOURCES.includes(v));
     if(plan.length && !plan.includes(_src)) _src = plan[0];
     repaint(); };
-  const nt = el("c-newtask");
-  if(nt) nt.onclick = () => openTask(cur.subject, null, id => {
-    _taskId = id; _noteLevel = ""; _rubOpen = true; repaint(); });
+  /* 여기에는 평가를 만드는 버튼이 없다 — 설계는 준비 탭의 일이다 */
 
   const tg = el("c-tags");
   if(tg) tg.onclick = e => { const b = e.target.closest("[data-drop]"); if(!b) return;
@@ -1760,8 +1854,17 @@ function bindDetail(){
   const ti = el("c-text");
   /* 관찰을 쓰려고 들어온 순간이 낱말이 필요한 순간이다 */
   ti.onfocus = () => { if(!_kwOpen) openKw(true); };
-  ti.onkeydown = e => { if(e.key === "Enter"){ e.preventDefault(); addNote(); } };
+  ti.onkeydown = e => { if(e.key === "Enter"){ e.preventDefault();
+    /* 훑어 적기 중 빈 칸에서 Enter는 「넘김」이다 */
+    if(_sweep && !ti.value.trim()) sweepNext(); else addNote(); } };
   el("c-add").onclick = addNote;
+  const many = el("c-many"); if(many) many.onclick = addNoteMany;
+  const skip = el("c-skip"); if(skip) skip.onclick = () => sweepNext();
+  el("c-sweep").onclick = () => {
+    _sweep = !_sweep; _sweepMsg = "";
+    if(_sweep && S.students.length) S.ui.sid = S.students[0].id;
+    renderWrite(); el("c-text")?.focus();
+  };
 
   /* 산출물 사진·PDF → 글자 읽기 → 관찰 메모 후보 */
   const off = el("c-shot-off");
@@ -1772,8 +1875,11 @@ function bindDetail(){
   if(shot){
     shot.onclick = () => el("c-file").click();
     el("c-file").onchange = async e => {
-      const f = e.target.files[0]; if(!f) return;
+      const files = [...e.target.files]; if(!files.length) return;
       e.target.value = "";
+      /* 여러 장이면 배정 화면으로 — 한 장은 지금까지처럼 이 학생의 다음 관찰에 붙는다 */
+      if(files.length > 1){ openAssign(files); return; }
+      const f = files[0];
       if(f.size > 25 * 1024 * 1024){ shotOut.innerHTML = `<div class="hint" style="color:var(--low)">파일이 너무 큽니다(25MB 넘음).</div>`; return; }
       shotOut.innerHTML = `<div class="hint">산출물을 보관하는 중…</div>`;
       let blob;
@@ -1828,8 +1934,18 @@ JSON만 출력한다: {"text":"옮겨 적은 글","memos":["메모1","메모2"],
   }
 
   wrap.querySelectorAll("[data-del]").forEach(b => b.onclick = () => {
-    S.notes = S.notes.filter(n => n.id !== b.dataset.del);
+    const n = S.notes.find(x => x.id === b.dataset.del);
+    /* 사진이 딸린 관찰을 지우면 사진도 함께 사라진다 — 되돌릴 수 없으니 한 번 묻는다 */
+    if(n?.fileId && !confirm("이 관찰에 붙은 산출물도 함께 지워집니다. 계속할까요?")) return;
+    S.notes = S.notes.filter(x => x.id !== b.dataset.del);
     save(); sweepFiles(); renderWrite(); });
+  /* 옮기기 — 사진·수준·성취기준이 실린 채 통째로 간다. 모든 일괄 입력의 되돌리기 수단이다 */
+  wrap.querySelectorAll("[data-mv]").forEach(b => b.onclick = () => {
+    const n = S.notes.find(x => x.id === b.dataset.mv); if(!n) return;
+    pickStudents({title:"누구에게 옮길까요", exclude:[n.studentId],
+      msg: n.text ? n.text.slice(0, 28) : "산출물",
+      onOK(ids){ if(!ids[0]) return; n.studentId = ids[0]; save(); renderWrite(); }});
+  });
   wrap.querySelectorAll("[data-open]").forEach(b => b.onclick = () => openFile(b.dataset.open));
 
   const ta = el("draft"), k = dkey(s.id, S.ui.slot);
@@ -1984,11 +2100,10 @@ ${S.drafts[k].text}`);
   function repaint(){ wrap.innerHTML = detailHTML(); bindDetail(); }
 }
 
-function addNote(){
-  const ti = el("c-text"), text = ti.value.trim();
-  if(!text){ ti.focus(); return; }
-  const cur = slots().find(x => x.key === S.ui.slot);
-  const n = {id:uid(), studentId:S.ui.sid, date:today(), source:_src, text, standards:[]};
+/* 관찰 한 건을 짓는다. 학생만 다르고 나머지는 같다 —
+   withLevel이 false면 수준을 붙이지 않는다(함께 담기에서 쓴다, §일괄의 경계). */
+function buildNote(sid, text, cur, withLevel){
+  const n = {id:uid(), studentId:sid, date:today(), source:_src, text, standards:[]};
   if(cur.kind === "subj"){
     n.axis = "subj"; n.subject = cur.subject;
     if(_taskId && S.tasks.find(t => t.id === _taskId && t.subject === cur.subject)) n.taskId = _taskId;
@@ -1996,12 +2111,52 @@ function addNote(){
     n.legacy = taskLegacy().slice();
     /* 수준은 그 과제 루브릭에 있는 값일 때만 붙는다 */
     const t = S.tasks.find(x => x.id === n.taskId);
-    if(_noteLevel && (t?.rubric || []).some(r => r.level === _noteLevel)) n.level = _noteLevel;
+    if(withLevel && _noteLevel && (t?.rubric || []).some(r => r.level === _noteLevel)) n.level = _noteLevel;
   } else if(cur.kind === "cca"){ n.axis = "cca"; n.cca = cur.cca; }
   else n.axis = "behavior";
+  return n;
+}
+function addNote(){
+  const ti = el("c-text"), text = ti.value.trim();
+  if(!text){ ti.focus(); return; }
+  const cur = slots().find(x => x.key === S.ui.slot);
+  const n = buildNote(S.ui.sid, text, cur, true);
   if(pendingFile) n.fileId = pendingFile.id;
-  S.notes.push(n); pendingStd = []; save();
+  /* 수준은 한 건에 한 번이다 — 비우지 않으면 다음 학생에게 판정이 조용히 따라간다(§10-5) */
+  S.notes.push(n); pendingStd = []; _noteLevel = ""; save();
+  if(_sweep){ sweepNext(); return; }
   renderWrite(); el("c-text").focus();
+}
+/* 다음 학생으로. 명렬 끝에 닿으면 스스로 멈춘다 — 되돌아 처음부터 돌지 않는다 */
+function sweepNext(){
+  const i = S.students.findIndex(s => s.id === S.ui.sid);
+  const next = S.students[i + 1];
+  if(next){ S.ui.sid = next.id; _sweepMsg = ""; }
+  else { _sweep = false; _sweepMsg = "한 바퀴 돌았습니다."; }
+  pendingStd = []; pendingFile = null; _noteLevel = ""; save();
+  renderWrite(); el("c-text")?.focus();
+}
+/* 함께 담기 — 같은 장면을 여럿이 실제로 겪었을 때. 사실은 복제할 수 있다.
+   그러나 수준 판정은 복제하지 않는다: 한 클릭이 N명의 수준을 정하면
+   그중 N−1명은 근거를 마주하지 않고 판정된 것이고, 그것이 채점 매트릭스의 최소 단위다. */
+function addNoteMany(){
+  const ti = el("c-text"), text = ti.value.trim();
+  if(!text){ ti.focus(); return; }
+  const cur = slots().find(x => x.key === S.ui.slot);
+  const hadLevel = !!_noteLevel;
+  _noteLevel = "";
+  pickStudents({
+    title:"누구에게 함께 담을까요", multi:true, preset:[S.ui.sid], okLabel:"담기",
+    msg: hadLevel ? "수준은 함께 담기지 않습니다 — 담은 뒤 학생마다 붙이세요" : text.slice(0, 30),
+    onOK(ids){
+      if(!ids.length) return;
+      ids.forEach(sid => {
+        const n = buildNote(sid, text, cur, false);
+        if(pendingFile) n.fileId = pendingFile.id;   // 같은 산출물을 함께 참조한다
+        S.notes.push(n);
+      });
+      pendingStd = []; save(); renderWrite();
+    }});
 }
 
 /* ── 점검 ── */
@@ -2039,7 +2194,8 @@ function renderPrep(){
           const rb = t.rubric||[];
           return `<tr class="trow" data-topen="${t.id}">
           <td${t.criteria?` title="${esc(t.criteria)}"`:""}>${esc(t.name)}
-            <div style="font-size:12px;color:var(--ink-3)">${esc(subjShort(t.subject))}</div></td>
+            <div style="font-size:12px;color:var(--ink-3)">${esc(subjShort(t.subject))}${t.when?` · ${esc(t.when)}`:""}${
+              (t.targets||[]).length?` · ${t.targets.length}명만`:""}</div></td>
           <td style="font-size:11.5px"><span class="mono" style="color:var(--accent)">${t.standards.map(esc).join(" ")||"—"}</span>
             ${t.standards.length?`<div class="muted" style="font-size:11.5px;line-height:1.5">${t.standards.map(c=>esc(stdCut(c,44))).filter(Boolean).join("<br>")}</div>`:""}</td>
           <td class="n">${ns.length}</td>
@@ -2769,16 +2925,151 @@ async function openFile(id){
 el("fdlg-close").onclick = () => el("fdlg").close();
 el("fdlg").addEventListener("close", () => { if(_furl){ URL.revokeObjectURL(_furl); _furl = null; } });
 
+/* ── 산출물 나눠 담기 ──
+   사진을 크게 띄우고 번호를 누르면 그 학생의 관찰로 담기고 다음 장으로 넘어간다.
+   번호를 누르는 즉시 노트가 생기므로 중간에 닫아도 담은 것은 남는다.
+   수준 칩을 여기 두는 것은 근거(사진)가 같은 화면에 있어서다 — 명단만 보고 판정하는
+   화면은 만들지 않는다(§일괄의 경계 규칙 1). */
+let assign = null, _aurl = null;
+async function openAssign(files){
+  const cur = slots().find(x => x.key === S.ui.slot);
+  assign = {items:[], i:0, cur, made:[], level:""};
+  el("adlg-cnt").textContent = `${files.length}장 줄이는 중…`;
+  el("adlg-pic").innerHTML = `<span class="none">받는 중…</span>`;
+  el("adlg-grid").innerHTML = ""; el("adlg-sum").textContent = "";
+  el("adlg").showModal();
+  for(const f of files){
+    if(f.size > 25 * 1024 * 1024) continue;
+    try{
+      const blob = await shrink(f), id = uid();
+      await filePut(id, {blob, name:f.name, type:blob.type || f.type, size:blob.size, at:today()});
+      assign.items.push({id, name:f.name, size:blob.size, blob, noteId:null});
+      el("adlg-cnt").textContent = `${assign.items.length}/${files.length}장 준비`;
+    }catch(e){}
+  }
+  if(!assign.items.length){ el("adlg-pic").innerHTML = `<span class="none">받지 못했습니다</span>`; return; }
+  paintAssign();
+}
+function paintAssign(){
+  const a = assign; if(!a) return;
+  const it = a.items[a.i];
+  el("adlg-cnt").textContent = `${a.i + 1} / ${a.items.length}장`;
+  if(_aurl){ URL.revokeObjectURL(_aurl); _aurl = null; }
+  if(it && /^image\//.test(it.blob.type || "")){
+    _aurl = URL.createObjectURL(it.blob);
+    el("adlg-pic").innerHTML = `<img src="${_aurl}" alt="">`;
+  } else el("adlg-pic").innerHTML = `<span class="none">${it ? esc(it.name) : "남은 장이 없습니다"}</span>`;
+  el("adlg-meta").textContent = it ? `${it.name} · ${kb(it.size)}` : "";
+  el("adlg-text").value = "";
+  /* 수준은 장마다 새로 고른다 — 앞 장의 판정이 따라가지 않게 */
+  a.level = "";
+  const t = S.tasks.find(x => x.id === _taskId && a.cur?.kind === "subj");
+  el("adlg-lv").innerHTML = (t?.rubric || []).map(r =>
+    `<button class="lvc" type="button" data-alv="${esc(r.level)}" title="${esc(r.text)}" aria-pressed="false">${esc(r.level)}</button>`).join("");
+  const got = {};
+  a.made.forEach(m => { got[m.sid] = (got[m.sid] || 0) + 1; });
+  el("adlg-grid").innerHTML = S.students.map(s =>
+    `<button type="button" data-asid="${s.id}">
+      <span class="no">${esc(String(s.no).padStart(2,"0"))}</span>${S.klass.numbersOnly?"":esc(s.name||"")}
+      ${got[s.id]?`<span class="got">${got[s.id]}</span>`:""}</button>`).join("");
+  const none = S.students.filter(s => !got[s.id]).length;
+  el("adlg-msg").textContent = it ? "번호를 누르면 그 학생에게 담기고 다음 장으로 넘어갑니다"
+                                  : "남은 장이 없습니다 — 마치기를 누르세요";
+  el("adlg-sum").textContent = `담은 것 ${a.made.length}장 · 아직 없는 학생 ${none}명`;
+  el("adlg-skip").disabled = !it; el("adlg-drop").disabled = !it;
+}
+el("adlg-lv").onclick = e => {
+  const b = e.target.closest("[data-alv]"); if(!b || !assign) return;
+  assign.level = assign.level === b.dataset.alv ? "" : b.dataset.alv;
+  el("adlg-lv").querySelectorAll("[data-alv]").forEach(x =>
+    x.setAttribute("aria-pressed", String(x.dataset.alv === assign.level)));
+};
+el("adlg-grid").onclick = e => {
+  const b = e.target.closest("[data-asid]"); if(!b || !assign) return;
+  const a = assign, it = a.items[a.i]; if(!it) return;
+  const text = el("adlg-text").value.trim();
+  const keep = _noteLevel; _noteLevel = a.level;
+  const n = buildNote(b.dataset.asid, text, a.cur, true);
+  _noteLevel = keep;
+  n.fileId = it.id;
+  S.notes.push(n); it.noteId = n.id;
+  a.made.push({sid:b.dataset.asid, fileId:it.id, noteId:n.id});
+  a.items.splice(a.i, 1);
+  if(a.i >= a.items.length) a.i = Math.max(0, a.items.length - 1);
+  save(); paintAssign();
+};
+el("adlg-skip").onclick = () => { const a = assign; if(!a || a.items.length < 2) return;
+  a.i = (a.i + 1) % a.items.length; paintAssign(); };
+el("adlg-drop").onclick = async () => {
+  const a = assign, it = a?.items[a.i]; if(!it) return;
+  a.items.splice(a.i, 1);
+  if(a.i >= a.items.length) a.i = Math.max(0, a.items.length - 1);
+  try{ await fileDel(it.id); }catch(e){}
+  paintAssign();
+};
+el("adlg-done").onclick = async () => {
+  const a = assign;
+  if(a?.items.length && !confirm(`아직 나누지 않은 ${a.items.length}장이 있습니다.\n그 장들은 지워집니다. 마칠까요?`)) return;
+  for(const it of (a?.items || [])){ try{ await fileDel(it.id); }catch(e){} }
+  el("adlg").close();
+};
+el("adlg").addEventListener("close", () => {
+  if(_aurl){ URL.revokeObjectURL(_aurl); _aurl = null; }
+  assign = null; renderWrite();
+});
+
+/* ── 학생 고르기 창 ──
+   옮기기(단일)와 함께 담기(다중)가 함께 쓴다. 수준은 이 창에 들어오지 않는다. */
+let sdlgState = null;
+function pickStudents({title, multi, preset, exclude, okLabel, msg, allowEmpty, onOK}){
+  sdlgState = {multi:!!multi, sel:new Set(preset||[]), exclude:new Set(exclude||[]),
+               allowEmpty:!!allowEmpty, onOK};
+  el("sdlg-title").textContent = title;
+  el("sdlg-msg").textContent = msg || "";
+  el("sdlg-all").hidden = !multi;
+  el("sdlg-ok").textContent = okLabel || "고르기";
+  paintSdlg(okLabel);
+  el("sdlg").showModal();
+}
+function paintSdlg(okLabel){
+  const st = sdlgState;
+  el("sdlg-grid").innerHTML = S.students.map(s => {
+    const off = st.exclude.has(s.id);
+    return `<button type="button" data-sid="${s.id}" aria-pressed="${st.sel.has(s.id)}"${off?" disabled":""}>
+      <span class="no">${esc(String(s.no).padStart(2,"0"))}</span>${S.klass.numbersOnly?"":esc(s.name||"")}</button>`;
+  }).join("") || `<div class="empty">학생이 없습니다</div>`;
+  el("sdlg-cnt").textContent = st.multi ? (st.sel.size ? `${st.sel.size}명 선택` : "") : "";
+  el("sdlg-ok").disabled = !st.sel.size && !st.allowEmpty;
+  if(st.multi && okLabel !== undefined && !st.allowEmpty)
+    el("sdlg-ok").textContent = st.sel.size ? `${st.sel.size}명에게 담기` : (okLabel || "담기");
+}
+el("sdlg-grid").onclick = e => {
+  const b = e.target.closest("[data-sid]"); if(!b || b.disabled) return;
+  const st = sdlgState, id = b.dataset.sid;
+  if(st.multi){ st.sel.has(id) ? st.sel.delete(id) : st.sel.add(id); paintSdlg(""); }
+  else { st.sel = new Set([id]); el("sdlg").close(); st.onOK([id]); }
+};
+el("sdlg-all").onclick = () => {
+  const st = sdlgState;
+  const all = S.students.filter(s => !st.exclude.has(s.id)).map(s => s.id);
+  st.sel = st.sel.size === all.length ? new Set() : new Set(all);
+  paintSdlg("");
+};
+el("sdlg-cancel").onclick = () => el("sdlg").close();
+el("sdlg-ok").onclick = () => { const st = sdlgState; el("sdlg").close(); st.onOK([...st.sel]); };
+
 /* ── 성취기준 창 ── */
 function openTask(subject, task, onOK){
   openStd(subject, task ? task.standards : [], null, {task, onSave(v){
     if(task){
       Object.assign(task, {name:v.name, criteria:v.criteria, standards:v.codes, rubric:v.rubric,
-                           kw:v.kw, sources:v.sources, axis:v.axis, subject:dlgState.subject});
+                           kw:v.kw, sources:v.sources, when:v.when, targets:v.targets,
+                           axis:v.axis, subject:dlgState.subject});
       save(); onOK(task.id);
     } else {
       const t = {id:uid(), name:v.name, subject:dlgState.subject, standards:v.codes, criteria:v.criteria,
-                 rubric:v.rubric, kw:v.kw, sources:v.sources, axis:v.axis, legacy:[]};
+                 rubric:v.rubric, kw:v.kw, sources:v.sources, when:v.when, targets:v.targets,
+                 axis:v.axis, legacy:[], off:{}};
       S.tasks.push(t); save(); onOK(t.id);
     }
   }});
@@ -2789,6 +3080,8 @@ function openStd(subject, selected, onOK, taskMode){
   dlgState = {subject, sel:new Set(selected), onOK, taskMode,
               step: (taskMode && taskMode.task) ? 2 : 1,
               kw:new Set(taskMode?.task?.kw || []), src:new Set(taskMode?.task?.sources || []),
+              /* 빈 배열은 「우리 반 전체」다 — 기본이 전원이므로 빈칸을 강요하지 않는다 */
+              targets:(taskMode?.task?.targets || []).slice(),
               axis:taskMode?.task?.axis || "", msg:""};
   const subjSel = el("dlg-subj"), q = el("dlg-q"), rubBox = el("dlg-rub");
   subjSel.innerHTML = subjects().map(s=>`<option value="${esc(s)}"${s===subject?" selected":""}>${esc(subjShort(s))}</option>`).join("");
@@ -2806,6 +3099,7 @@ function openStd(subject, selected, onOK, taskMode){
   if(taskMode){
     el("dlg-name").value = taskMode.task?.name || "";
     el("dlg-crit").value = taskMode.task?.criteria || "";
+    el("dlg-when").value = taskMode.task?.when || "";
     const rb = taskMode.task?.rubric || [];
     [...rubBox.querySelectorAll(".rrow2")].forEach((row,i) => {
       row.querySelector(".rl").value = rb[i]?.level ?? ["잘함","보통","노력요함"][i];
@@ -2827,7 +3121,9 @@ function openStd(subject, selected, onOK, taskMode){
         .map(row => ({level:row.querySelector(".rl").value.trim(), text:row.querySelector(".rt").value.trim()}))
         .filter(r => r.level && r.text);
       dlgState.taskMode.onSave({name, criteria:el("dlg-crit").value.trim(), codes:[...dlgState.sel],
-                                rubric, kw:[...dlgState.kw], sources:[...dlgState.src], axis:dlgState.axis});
+                                rubric, kw:[...dlgState.kw], sources:[...dlgState.src],
+                                when:el("dlg-when").value.trim(), targets:dlgState.targets.slice(),
+                                axis:dlgState.axis});
     } else dlgState.onOK([...dlgState.sel]);
     el("dlg").close();
   };
@@ -2908,7 +3204,7 @@ function openStd(subject, selected, onOK, taskMode){
       `<div class="one"><span class="c">${esc(c)}</span><span>${esc(CODEMAP[c]?.text || "원문을 찾지 못했습니다")}</span></div>`).join("");
     el("dlg-sel").textContent = codes.length ? `성취기준 ${codes.length}건` : "";
     el("dlg-skel").disabled = !skelKey();
-    paintSrc();
+    paintSrc(); paintWho();
     /* AI 버튼 둘은 연결돼 있을 때만 */
     el("dlg-kwai-slot").innerHTML = aiOn()
       ? `<button class="kwai" id="dlg-kwai" type="button">${ICON.spark()}AI 추천</button>` : "";
@@ -2935,6 +3231,19 @@ function openStd(subject, selected, onOK, taskMode){
       paintSrc();
     });
   }
+  /* 대상 — 비워 두면 우리 반 전체다. 일부만 고른 경우에만 명단이 생긴다 */
+  function paintWho(){
+    const t = dlgState.targets, n = t.length;
+    el("dlg-whotxt").textContent = !n ? "우리 반 전체"
+      : `${n}명 — ` + S.students.filter(s => t.includes(s.id))
+          .map(s => String(s.no).padStart(2,"0")).join(" ");
+    el("dlg-who").textContent = n ? "다시 고르기" : "일부만 고르기";
+  }
+  el("dlg-who").onclick = () => pickStudents({
+    title:"이 평가를 누구에게", multi:true, preset:dlgState.targets, okLabel:"정하기",
+    msg:"비워서 정하면 우리 반 전체가 됩니다", allowEmpty:true,
+    onOK(ids){ dlgState.targets = ids.length === S.students.length ? [] : ids; paintWho(); }});
+
   function paintKw(){
     const r = kwOfAreas(dlgState.subject, dlgAreas());
     const words = [...new Set([...dlgState.kw, ...r.blocks.flatMap(b => b.k)])];
