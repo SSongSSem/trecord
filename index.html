@@ -262,6 +262,8 @@ textarea{line-height:1.7}
 
 /* 문장 */
 textarea.draft{width:100%;min-height:132px;resize:vertical;font-size:15px;line-height:1.9}
+/* 등급1 위반이 있으면 문장 칸 자체가 붉어진다 — 검사 목록까지 내려보지 않아도 보인다 */
+textarea.draft.block{border:1.5px solid var(--low)}
 .meter{display:flex;gap:14px;align-items:baseline;margin-top:7px;font-size:11.5px;color:var(--ink-3)}
 .meter b{font-family:var(--mono);font-size:12.5px;color:var(--ink-2);font-weight:600}
 
@@ -275,8 +277,12 @@ textarea.draft{width:100%;min-height:132px;resize:vertical;font-size:15px;line-h
 .f{border-top:1px solid var(--rule)}
 .f summary{display:flex;align-items:baseline;gap:8px;padding:6px 2px;font-size:13px}
 .f summary:hover{background:var(--raise)}
-.f .mk{font-size:9px;line-height:1.9}
+/* 위반·주의는 도로 표지다(§8-10·11) — 본문 아이콘(1.8)보다 굵고 색이 고정이다 */
+.f .mk{font-size:9px;line-height:1.9;display:inline-flex;align-items:center}
+.f .mk .ic,td.mk .ic{width:16px;height:16px;stroke-width:2;vertical-align:0}
 .f.block .mk{color:var(--low)} .f.warn .mk{color:var(--mid)}
+/* 검사 기준표는 같은 표지를 쓰는 범례다 */
+td.mk{text-align:center;line-height:1} td.mk.block{color:var(--low)} td.mk.warn{color:var(--mid)}
 .f .hit{font-family:var(--mono);font-size:12px;padding:0 4px;border-radius:2px}
 .f.block .hit{background:var(--low-soft);color:var(--low)}
 .f.warn .hit{background:var(--mid-soft);color:var(--mid)}
@@ -311,6 +317,17 @@ textarea.draft{width:100%;min-height:132px;resize:vertical;font-size:15px;line-h
 .pt .go{white-space:nowrap}
 .clear{padding:16px 14px;font-size:13px;color:var(--good);display:flex;gap:8px;align-items:baseline}
 .clear span{color:var(--ink-3);font-size:12px}
+
+/* 쓰기 전 확인 — 체크는 ui.ethics에 남는다. 확인해도 사라지지 않고 흐려질 뿐이다 */
+.eth{list-style:none;margin:0;padding:0}
+.eth li{border-bottom:1px solid var(--rule)}
+.eth li:last-child{border-bottom:0}
+.eth label{display:grid;grid-template-columns:16px minmax(0,1fr);gap:11px;align-items:start;
+           padding:12px 16px;cursor:pointer;font-size:13.5px}
+.eth input{margin:3px 0 0;accent-color:var(--accent)}
+.eth b{font-weight:600}
+.eth em{display:block;font-style:normal;font-size:12px;color:var(--ink-3);margin-top:3px;line-height:1.65}
+.eth li.on b{color:var(--ink-3);font-weight:400}
 
 /* 표 */
 table{width:100%;border-collapse:collapse;font-size:13px}
@@ -1387,7 +1404,7 @@ function detailHTML(){
             aria-pressed="${_noteLevel===r.level}">${esc(r.level)}</button>`).join("")}
         </div>`; })()}
       <div class="tags" style="justify-content:flex-end">
-        ${pendingFile ? `<span class="chip" title="${esc(pendingFile.name)} · ${kb(pendingFile.size)}">📎 ${esc(pendingFile.name.slice(0,18))}<button type="button" data-dropfile>×</button></span>` : ``}
+        ${pendingFile ? `<span class="chip" title="${esc(pendingFile.name)} · ${kb(pendingFile.size)}">${ICON.paper()}${esc(pendingFile.name.slice(0,18))}<button type="button" data-dropfile>×</button></span>` : ``}
         <button class="link" id="c-shot" type="button">${aiOn()?"산출물 첨부하고 읽기":"산출물 첨부"}</button>
         <input type="file" id="c-file" accept="image/*,application/pdf" style="display:none">
       </div>
@@ -1427,7 +1444,7 @@ function detailHTML(){
   <div class="sec">
     <div class="sechead"><span class="lab">기록 문장</span>
       <span class="r">
-        <button class="ghost" id="mk-draft" type="button"${ns.length?"":" disabled"}
+        <button class="ghost tip" id="mk-draft" type="button"${ns.length?"":" disabled"}
                 data-tip="담아 둔 근거를 명사형 문장으로 이어 붙여 초안을 만듭니다">근거로 초안</button>
         ${aiOn() ? (() => {
           /* 옵션은 이 칸 관찰이 참조한 과제의 루브릭에서, 기본값은 담긴 수준의 최빈값에서 온다 */
@@ -1441,7 +1458,7 @@ function detailHTML(){
                     <button class="ghost" id="ai-review" type="button"${d.text.trim()?"":" disabled"}>AI 검토</button>`
                  : `<button class="link" id="ai-go" type="button">AI 검토 켜기</button>`}
         <span class="meter"><b>${bytes(d.text)}</b> B<span>·</span><b>${[...d.text].length}</b>자</span></span></div>
-    <textarea class="draft" id="draft" placeholder="담아 둔 근거를 보며 문장을 씁니다. ‘~함’으로 끝맺습니다.">${esc(d.text)}</textarea>
+    <textarea class="draft${nb?" block":""}" id="draft" placeholder="담아 둔 근거를 보며 문장을 씁니다. ‘~함’으로 끝맺습니다.">${esc(d.text)}</textarea>
     <div id="ai-out">${aiReviewHTML(dkey(s.id, cur.key), d.text)}</div>
 
     <div class="scan">
@@ -1456,7 +1473,7 @@ function detailHTML(){
         const acked = (ackScan[dkey(s.id,cur.key)]||new Set()).has(ackKey(f));
         const nom = f.id === "ending" ? toNominal(f.hit) : null;
         return `<details class="f ${acked?"done":f.lv}">
-        <summary><span class="mk">${acked?"✓":f.lv==="block"?"●":"▲"}</span>
+        <summary><span class="mk">${acked?"✓":f.lv==="block"?ICON.stop():ICON.warn()}</span>
           <span class="hit">${esc(f.hit)}</span>
           ${acked?`<span class="to" style="color:var(--good)">선생님이 확인함</span>`
             : f.swap!==undefined?`<span class="to">→ ${esc(f.swap||"삭제")}</span>`
@@ -1479,7 +1496,7 @@ function detailHTML(){
       <div class="note">자동 검사는 일부 유형만 찾습니다. 최종 확인은 교사가 합니다.</div>
       <div class="foot">
         <button class="primary" id="copy" type="button"${ok?"":" disabled"}>문장 복사</button>
-        <button class="ghost" id="keep" type="button"${d.text.trim()?"":" disabled"}
+        <button class="ghost tip" id="keep" type="button"${d.text.trim()?"":" disabled"}
                 data-tip="지금 문장을 누가기록으로 남깁니다. 학기말에 모아 이어 붙일 수 있습니다">저장</button>
         <span class="msg${nb?" warn":""}">${nb?`위반 ${nb}건을 먼저 고쳐 주세요`
           : !d.text.trim()?"문장을 먼저 쓰세요" : ok?"복사할 수 있습니다":"네 항목을 확인해 주세요"}</span>
@@ -1670,7 +1687,8 @@ function bindDetail(){
         shotOut.innerHTML = `<div class="hint" style="color:var(--low)">보관하지 못했습니다 — ${esc(err.message)}</div>`;
         return;
       }
-      const keep = `<div class="hint">📎 ${esc(pendingFile.name)} (${kb(pendingFile.size)}) 보관했습니다. 이제 담는 관찰에 이 산출물이 붙습니다.</div>`;
+      /* 첨부 칩이 이미 파일 이름을 보여주므로 여기서는 결과만 알린다(§7-2 40자) */
+      const keep = `<div class="hint">보관했습니다 — 지금 담는 관찰에 붙습니다.</div>`;
       repaint();
       if(!aiOn()){ el("c-shot-out").innerHTML = keep; el("c-text").focus(); return; }
       el("c-shot-out").innerHTML = `<div class="hint">사진에서 글자를 읽는 중… 잠시 기다려 주세요.</div>`;
@@ -1981,10 +1999,34 @@ function renderPrep(){
   bindUpload();
 }
 
+/* 과제 양식이 요구하는 윤리 점검 3항목. 줄이거나 순서를 바꾸지 말 것 —
+   ‘알고 있다’는 확인이므로 체크해도 항목은 화면에 남는다. */
+const ETHICS = [
+  {t:"학생 개인정보를 넣지 않았습니다",
+   d:"생년월일·주소·연락처·가정 형편은 어느 칸에도 넣지 않습니다. 이름조차 필요 없다면 <b>우리 반 고치기</b>에서 " +
+     "‘번호만 쓰기’를 켜세요. AI 검토를 쓸 때는 담은 글이 그대로 전송됩니다."},
+  {t:"교과서·평가지 원문을 그대로 올리지 않았습니다",
+   d:"올리는 것은 직접 작성한 요약본·발췌까지입니다. 평가계획 파일을 읽힐 때도 같습니다."},
+  {t:"실제 학급 운영 전 학교 IT 담당·학교장과 상의가 필요함을 알고 있습니다",
+   d:"기록은 이 기기의 브라우저에만 저장되지만, 학급 자료를 다루는 도구를 쓰는 일 자체는 학교의 판단이 필요합니다."}
+];
+const ethList = () => { const v = S.ui.ethics; return [0,1,2].map(i => !!(Array.isArray(v) && v[i])); };
+
 function renderCheck(){
   const sl = slots(), pts = pointers();
   const done = S.students.reduce((a,s) => a + sl.filter(x => draftDone(s.id,x.key)).length, 0);
+  const eth = ethList(), ethN = eth.filter(Boolean).length;
   el("main").innerHTML = `<div class="stack">
+
+    <div class="panel">
+      <div class="ph"><h2>쓰기 전 확인</h2>
+        <span class="r" id="eth-n" style="color:${ethN===3?"var(--good)":"var(--mid)"};font-size:12px">${ethN}/3 확인</span></div>
+      <ul class="eth">
+        ${ETHICS.map((e,i)=>`<li class="${eth[i]?"on":""}"><label>
+            <input type="checkbox" data-eth="${i}"${eth[i]?" checked":""}>
+            <span><b>${esc(e.t)}</b><em>${e.d}</em></span></label></li>`).join("")}
+      </ul>
+    </div>
 
     <div class="panel">
       <div class="ph"><h2>짚어주기</h2></div>
@@ -2034,6 +2076,12 @@ function renderCheck(){
           <span id="fstat">— 보관된 산출물을 세는 중…</span>
         </div>
         <div class="hint">주 1회 백업하세요 — 이 파일에는 학생 기록이 들어 있습니다.</div>
+        <div class="rowbtns" style="margin-top:14px;padding-top:12px;border-top:1px solid var(--rule)">
+          <button class="ghost tip" id="csv-s" type="button"
+                  data-tip="학생별 문장을 엑셀 표(CSV)로 받습니다. 옮겨 적기용이고, 다시 불러오지는 못합니다">문장 표</button>
+          <button class="ghost tip" id="csv-n" type="button"
+                  data-tip="담은 관찰을 날짜·근거유형까지 엑셀 표(CSV)로 받습니다. 기기를 옮길 때는 위의 백업을 쓰세요">관찰 표</button>
+        </div>
       </div>
     </div>
 
@@ -2049,7 +2097,8 @@ function renderCheck(){
                ["●","상표·앱 실명 13종 → 치환","유의사항 p.6"],["●","특수문자·번호기호·이모지","유의사항 p.2"],
                ["▲","대회·경시·입상","기재요령 p.18"],["▲","점수·등급·석차","기재요령 p.18"],
                ["▲","명사형 종결이 아닌 문장","기재요령 p.30"],["▲","주어가 있는 문장","질의회신 p.114"]]
-              .map(([m,n,b])=>`<tr><td style="color:${m==="●"?"var(--low)":"var(--mid)"};text-align:center">${m}</td>
+              /* 이 표는 검사 줄의 범례다 — 표시가 다르면 무엇을 가리키는지 이어지지 않는다(§8-10·11 예외) */
+              .map(([m,n,b])=>`<tr><td class="mk ${m==="●"?"block":"warn"}">${m==="●"?ICON.stop():ICON.warn()}</td>
                 <td>${n}</td><td class="mono" style="font-size:11.5px;color:var(--ink-3)">${b}</td></tr>`).join("")}
           </tbody></table></div>
         <details class="help"><summary>찾지 못하는 것</summary><div>
@@ -2073,8 +2122,17 @@ function renderCheck(){
     S.ui.tab = "write"; S.ui.sid = p.go.s.id; S.ui.slot = p.go.x.key; save(); render();
     window.scrollTo(0,0);
   });
+  el("main").querySelectorAll("[data-eth]").forEach(b => b.onchange = () => {
+    const v = ethList(); v[+b.dataset.eth] = b.checked;
+    S.ui.ethics = v; save();
+    b.closest("li").classList.toggle("on", b.checked);
+    const n = v.filter(Boolean).length, tag = el("eth-n");
+    if(tag){ tag.textContent = `${n}/3 확인`; tag.style.color = n===3 ? "var(--good)" : "var(--mid)"; }
+  });
   fileStat();
   el("ex").onclick = exportJSON;
+  el("csv-s").onclick = exportSentenceCSV;
+  el("csv-n").onclick = exportNoteCSV;
   el("im").onclick = () => el("imf").click();
   el("imf").onchange = e => importJSON(e.target.files[0]);
   el("setup").onclick = () => renderSetup(true);
@@ -2771,6 +2829,50 @@ async function exportJSON(){
   a.href = URL.createObjectURL(blob);
   a.download = `trecord-${S.klass?.grade||""}학년${S.klass?.room||""}반-${today()}${withFiles?"-사진포함":""}.json`;
   a.click(); setTimeout(()=>URL.revokeObjectURL(a.href), 2000);
+}
+/* ── 표(CSV) 내보내기 ──
+   백업(JSON)과 목적이 다르다. 백업은 기기를 옮기는 것이고, 표는 엑셀에서 보고 옮겨 적는 것이다.
+   되돌려 읽지 않으므로 사람이 읽기 좋은 값(코드가 아니라 이름)으로 쓴다. */
+function csvCell(v){
+  const s = String(v ?? "").replace(/\r?\n/g, " ");        /* 줄바꿈은 칸을 깨므로 공백으로 */
+  return /[",;\t]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+}
+function csvDown(rows, tail){
+  if(rows.length < 2){ alert("내보낼 내용이 아직 없습니다."); return; }
+  /* 엑셀은 BOM이 없으면 UTF-8을 알아보지 못해 한글이 깨진다 */
+  const blob = new Blob(["\uFEFF" + rows.map(r => r.map(csvCell).join(",")).join("\r\n")],
+                        {type:"text/csv;charset=utf-8"});
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = `trecord-${S.klass?.grade||""}학년${S.klass?.room||""}반-${tail}-${today()}.csv`;
+  a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+}
+function exportSentenceCSV(){
+  const sl = slots(), rows = [["번호","이름","항목","문장","글자수(바이트)","확인","담긴 근거"]];
+  for(const s of S.students) for(const x of sl){
+    const t = (S.drafts[dkey(s.id, x.key)]?.text || "").trim();
+    if(!t) continue;                                        /* 빈 칸까지 내보내면 표가 빈 행으로 덮인다 */
+    rows.push([s.no, s.name || "", x.label, t, bytes(t),
+               draftDone(s.id, x.key) ? "완료" : "미완", notesOf(s.id, x.key).length]);
+  }
+  csvDown(rows, "문장");
+}
+function exportNoteCSV(){
+  const AX = {subj:"교과", cca:"창체", behavior:"행동특성"};
+  const stu = id => S.students.find(s => s.id === id);
+  const rows = [["번호","이름","날짜","축","교과·창체","평가과제","성취기준","2015 코드","수준","근거유형","내용","사진"]];
+  const sorted = S.notes.slice().sort((a,b) =>
+    (stu(a.studentId)?.no ?? 999) - (stu(b.studentId)?.no ?? 999) ||
+    String(a.date||"").localeCompare(String(b.date||"")));
+  for(const n of sorted){
+    const s = stu(n.studentId); if(!s) continue;
+    rows.push([s.no, s.name || "", n.date || "", AX[n.axis] || "",
+               n.axis === "subj" ? (n.subject || "") : n.axis === "cca" ? (CCA[n.cca]?.label || "") : "",
+               S.tasks.find(t => t.id === n.taskId)?.name || "",
+               (n.standards||[]).join(" "), (n.legacy||[]).join(" "),
+               n.level || "", n.source || "", n.text || "", n.fileId ? "있음" : ""]);
+  }
+  csvDown(rows, "관찰");
 }
 async function fileStat(){
   const box = el("fstat"); if(!box) return;
