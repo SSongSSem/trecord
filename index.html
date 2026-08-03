@@ -216,6 +216,16 @@ textarea{line-height:1.7}
 .kwc{background:var(--surface);border:1px solid var(--rule);border-radius:999px;
      padding:2px 10px;font-size:12px;color:var(--ink-2);white-space:nowrap}
 .kwc:hover{border-color:var(--accent-line);color:var(--accent);background:var(--accent-soft)}
+/* 평가를 고르기 전 — 여기서 화면이 끝난다 */
+.pickfirst{padding:14px 2px 4px;font-size:13px;color:var(--ink-3)}
+/* 고른 평가 — 무엇을 기록하는 중인지 한 줄로 */
+.pickhead{display:flex;gap:10px;align-items:baseline;flex-wrap:wrap;margin-top:10px;
+          padding-bottom:9px;border-bottom:1px solid var(--rule)}
+.pickhead .pl{font-size:13.5px;font-weight:600;color:var(--ink)}
+.pickhead .pc{font-size:12px;color:var(--ink-3);min-width:0}
+.pickhead .r{margin-left:auto}
+.lvhead{font-size:10.5px;letter-spacing:.06em;color:var(--ink-3);font-weight:600;margin-top:11px}
+.lvwhy{font-size:12px;color:var(--ink-2);margin-top:5px;line-height:1.6;min-height:1.6em}
 /* 수준 — 축(파랑)도 근거(살구)도 경고(의미색)도 아니다. 중성으로 남긴다.
    의미색·게이지·정렬을 여기 쓰면 §5 색 전용권이 무너진다. */
 .lv{display:flex;flex-wrap:wrap;gap:5px;align-items:center;margin-top:7px}
@@ -1077,7 +1087,9 @@ const AIKEY = KEY + ".ai";
    비워 두면 예전처럼 각자 키로만 동작한다. 본인 키가 있으면 언제나 그쪽이 우선이다
    (공용 한도와 무관하게 쓰고, 그 호출은 프록시를 거치지 않는다). */
 const AI_PROXY = "https://proxy-vercel-red.vercel.app";
-let AI = {key:"", model:"gemini-3.5-flash", agreed:false, models:null};
+/* 기본은 한도가 가장 넉넉한 안정판이다 — lite 계열이 무료 한도가 크고,
+   `-latest` 별칭은 구글이 안정판을 갈아 끼워도 이름이 살아 있어 어느 날 404가 나지 않는다. */
+let AI = {key:"", model:"gemini-flash-lite-latest", agreed:false, models:null};
 try{ Object.assign(AI, JSON.parse(localStorage.getItem(AIKEY) || "{}")); }catch(e){}
 const aiShared = () => !AI.key && !!AI_PROXY;
 const aiBase = () => aiShared() ? AI_PROXY.replace(/\/+$/,"") : "https://generativelanguage.googleapis.com";
@@ -1085,18 +1097,20 @@ const aiHead = () => AI.key ? {"x-goog-api-key":AI.key} : {};
 const aiOn = () => !!((AI.key || AI_PROXY) && AI.agreed);
 function aiSave(){ try{ localStorage.setItem(AIKEY, JSON.stringify(AI)); }catch(e){} }
 /* 기본 후보. 실제 목록은 ‘모델 목록 가져오기’로 키에서 직접 받아온다. */
-const AI_MODELS = ["gemini-3.5-flash","gemini-3-flash","gemini-flash-latest","gemini-2.5-flash"];
+const AI_MODELS = ["gemini-flash-lite-latest","gemini-flash-latest","gemini-3.5-flash","gemini-2.5-flash"];
 const aiModelList = () => {
   const seen = [...(AI.models||[]), ...AI_MODELS, AI.model].filter(Boolean);
-  return [...new Set(seen)];
+  return [...new Set(seen)].sort(modelRank);
 };
+/* 이름만으로는 무엇이 넉넉한지 알기 어렵다 — 한 마디씩 붙인다 */
+const modelNote = n => /lite/.test(n) ? "한도 넉넉" : /pro/.test(n) ? "한도 적음 · 어려운 판단" : "";
 async function aiFetchModels(){
   if(!AI.key && !AI_PROXY) throw new Error("먼저 키를 넣어 주세요.");
   let res;
   try{
     res = await fetch(aiBase() + "/v1beta/models?pageSize=200", {headers:aiHead()});
   }catch(e){
-    throw new Error("바깥으로 연결하지 못했습니다. 공개 주소(claude.ai)에서 연 페이지는 외부 호출이 막혀 있습니다.");
+    throw new Error("바깥으로 연결하지 못했습니다. 인터넷 연결을 확인해 주세요.");
   }
   if(!res.ok) throw new Error(res.status === 400 || res.status === 403
     ? "키가 올바르지 않거나 권한이 없습니다." : "목록을 받지 못했습니다 (" + res.status + ")");
@@ -1104,13 +1118,22 @@ async function aiFetchModels(){
   const names = (j.models||[])
     .filter(m => (m.supportedGenerationMethods||[]).includes("generateContent"))
     .map(m => String(m.name||"").replace(/^models\//,""))
-    .filter(n => /gemini/.test(n) && !/embedding|aqa|vision-latest/.test(n));
+    .filter(n => /gemini/.test(n) && !AI_DROP.test(n));
   if(!names.length) throw new Error("쓸 수 있는 모델이 없습니다.");
-  // 최신(숫자가 큰) 순으로
-  names.sort((a,b) => (parseFloat((b.match(/[\d.]+/)||[0])[0]) - parseFloat((a.match(/[\d.]+/)||[0])[0])));
+  names.sort(modelRank);
   AI.models = names; aiSave();
   return names;
 }
+/* 이 앱이 시키는 일은 글·사진·PDF를 읽고 글을 쓰는 것뿐이다.
+   음성 합성·이미지 생성·로보틱스·컴퓨터 조작·실시간 대화 모델은 목록에 올리지 않는다.
+   preview·exp는 예고 없이 사라지거나 동작이 바뀌므로 안정판만 남긴다.
+   (실측 2026-08-03: 키가 주는 58개 중 generateContent 42개 → 이 규칙으로 12개) */
+const AI_DROP = /embedding|aqa|tts|audio|image|robotics|computer|omni|live|vision|learnlm|gemma|customtools|preview|-exp|latest-\d|-\d{3}$/;
+/* `-latest` 별칭이 맨 위 — 구글이 안정판을 갈아 끼워도 이름이 살아 있어 가장 오래 간다.
+   그다음은 최신 세대순, 같은 세대면 lite → flash → pro(한도가 넉넉한 쪽이 먼저). */
+const modelGen = n => /latest/.test(n) ? 999 : (parseFloat((String(n).match(/\d+(\.\d+)?/) || ["0"])[0]) || 0);
+const modelTier = n => /lite/.test(n) ? 0 : /pro/.test(n) ? 2 : 1;
+const modelRank = (a, b) => modelGen(b) - modelGen(a) || modelTier(a) - modelTier(b) || a.localeCompare(b);
 
 async function aiCall(prompt, opt){
   opt = opt || {};
@@ -1126,7 +1149,7 @@ async function aiCall(prompt, opt){
       body:JSON.stringify({contents:[{parts:[{text:prompt}, ...(opt.parts||[])]}], generationConfig:cfg})
     });
   }catch(e){
-    throw new Error("바깥으로 연결하지 못했습니다. 공개 주소(claude.ai)에서 연 페이지는 보안 정책으로 외부 호출이 막혀 있습니다. AI 연결 탭의 안내를 읽어 주세요.");
+    throw new Error("바깥으로 연결하지 못했습니다. 인터넷 연결을 확인해 주세요.");
   }
   if(res.status === 400 || res.status === 401 || res.status === 403) throw new Error(aiShared()
     ? "공용 연결이 요청을 거절했습니다. AI 연결 탭에서 본인 키를 넣으면 이어서 쓸 수 있습니다."
@@ -1467,6 +1490,10 @@ function detailHTML(){
   const nok = fs.filter(f => ack.has(ackKey(f))).length;
   const ok = d.gate.every(Boolean) && !nb && d.text.trim();
   const openRub = _rubOpen; _rubOpen = false;   // 과제를 바꾼 직후 한 번만 펼친다
+  /* 교과 기록은 「어떤 평가인가」를 고르는 데서 시작한다 — 고르기 전에는 그 줄만 보인다.
+     창체·행동특성에는 평가과제가 없으므로 바로 열린다. */
+  const task = S.tasks.find(x => x.id === _taskId && x.subject === cur.subject);
+  const ready = cur.kind !== "subj" || !!_taskId;
 
   return `
   <div class="shead">
@@ -1499,18 +1526,9 @@ function detailHTML(){
 
   <div class="sec">
     <div class="catch">
+      <!-- 2. 평가 선택 — 교과 기록은 평가를 고르는 데서 시작한다 -->
       <div class="catch-top">
         <span class="where">${esc(cur.label)}</span>
-        ${(() => {
-          /* 설계할 때 「무엇으로 확인할지」를 정해 두었으면 그것이 먼저 온다 */
-          const t = S.tasks.find(x => x.id === _taskId && x.subject === cur.subject);
-          const plan = (t?.sources || []).filter(v => SOURCES.includes(v));
-          const opt = v => `<option value="${esc(v)}"${v===_src?" selected":""}>${esc(v)}</option>`;
-          if(!plan.length) return `<select id="c-src">${SOURCES.map(opt).join("")}</select>`;
-          const rest = SOURCES.filter(v => !plan.includes(v));
-          return `<select id="c-src">
-            <optgroup label="이 평가에서 보기로 한 것">${plan.map(opt).join("")}</optgroup>
-            <optgroup label="그 밖">${rest.map(opt).join("")}</optgroup></select>`; })()}
         ${cur.kind==="subj" ? (() => {
           /* 개인 화면에서는 계획된 평가를 고르기만 한다 — 설계는 학급 단위 행위라
              준비 탭에 산다. 여기 만들기 버튼을 두면 '이 학생을 위한 평가'로 읽힌다. */
@@ -1519,22 +1537,45 @@ function detailHTML(){
           const on = mine.filter(forMe), off = mine.filter(t => !forMe(t));
           const opt = t => `<option value="${t.id}"${t.id===_taskId?" selected":""}>${esc(t.name)}${t.when?` — ${esc(t.when)}`:""}</option>`;
           return `<select id="c-task">
-            <option value="">평가과제 없음</option>
+            <option value=""${_taskId?"":" selected"}>어떤 평가인가요</option>
             ${on.map(opt).join("")}
             ${off.length?`<optgroup label="이 학생이 대상이 아닌 평가">${off.map(opt).join("")}</optgroup>`:``}
+            <option value="none"${_taskId==="none"?" selected":""}>평가 없이 그냥 관찰만</option>
           </select>`; })() : ``}
         <span class="r"><button class="ghost tip${_sweep?" on":""}" id="c-sweep" type="button" aria-pressed="${_sweep}"
           data-tip="수업 직후 명렬 순서로 한 바퀴 — 담으면 다음 학생으로 저절로 넘어갑니다">훑어 적기</button></span>
       </div>
-      <div class="catch-in">
-        <input type="text" id="c-text" placeholder="무엇이 보였나요? 한 줄이면 됩니다." autocomplete="off">
+      ${!ready ? `<div class="pickfirst">${S.tasks.some(t=>t.subject===cur.subject)
+          ? "위에서 평가를 고르면 기록을 시작합니다"
+          : `${esc(subjShort(cur.subject))} 평가가 아직 없습니다 — <button class="link" id="c-goprep" type="button">준비 탭에서 설계하기</button>`}</div>` : ``}
+      ${ready && task ? `<div class="pickhead">
+        <span class="pl">${esc(task.name)}</span>
+        ${task.criteria?`<span class="pc">${esc(task.criteria.slice(0,60))}</span>`:``}
+        <button class="link r" id="c-edittask" type="button">고치기</button></div>` : ``}
+      ${ready && (task?.rubric||[]).length ? `<div class="lvhead">평가 기록</div>
+        <div class="lv" id="c-level">
+          ${task.rubric.map(r=>`<button class="lvc" type="button" data-lv="${esc(r.level)}" title="${esc(r.text)}"
+            aria-pressed="${_noteLevel===r.level}">${esc(r.level)}</button>`).join("")}
+        </div>
+        <div class="lvwhy">${esc((task.rubric.find(r=>r.level===_noteLevel)||{}).text || "수준을 고르면 그 서술이 여기 보입니다")}</div>` : ``}
+      ${ready ? `<div class="catch-in">
+        ${(() => {
+          /* 설계할 때 「무엇으로 확인할지」를 정해 두었으면 그것이 먼저 온다 */
+          const plan = (task?.sources || []).filter(v => SOURCES.includes(v));
+          const opt = v => `<option value="${esc(v)}"${v===_src?" selected":""}>${esc(v)}</option>`;
+          if(!plan.length) return `<select id="c-src">${SOURCES.map(opt).join("")}</select>`;
+          const rest = SOURCES.filter(v => !plan.includes(v));
+          return `<select id="c-src">
+            <optgroup label="이 평가에서 보기로 한 것">${plan.map(opt).join("")}</optgroup>
+            <optgroup label="그 밖">${rest.map(opt).join("")}</optgroup></select>`; })()}
+        <input type="text" id="c-text" placeholder="${(task?.rubric||[]).length?"본 것을 한 줄 더 적어도 됩니다":"무엇이 보였나요? 한 줄이면 됩니다."}" autocomplete="off">
         <button class="primary" id="c-add" type="button">담기</button>
         ${_sweep ? `<button class="ghost" id="c-skip" type="button">넘김</button>`
                  : `<button class="ghost tip" id="c-many" type="button"
                 data-tip="같은 장면을 여럿이 겪었을 때 — 모둠 활동이나 현장학습. 수준 판정은 함께 담기지 않습니다">함께 담기</button>`}
-      </div>
+      </div>` : ``}
       ${_sweepMsg ? `<div class="hint" id="c-sweepmsg">${esc(_sweepMsg)}</div>` : ``}
-      ${(() => {
+      ${!ready ? `` : (() => {
         /* 낱말은 관찰을 쓰려는 순간에만 필요하다 — 접어 두고 입력칸에 들어오면 저절로 편다.
            칩 자체를 없애지는 않는다(§10-3: 칩 클릭이 가장 빠른 입력 경로다). */
         const chip = w => `<button class="kwc" type="button" data-kw="${esc(w)}">${esc(w)}</button>`;
@@ -1562,26 +1603,13 @@ function detailHTML(){
             <select id="kw-area">${bs.map((b,j)=>`<option value="${j}"${j===i?" selected":""}>${esc(b.a)}</option>`).join("")}</select>
             <div class="kwchips" id="kw-chips">${bs[i].k.map(chip).join("")}</div>
           </div>`; })()}
-      ${(() => { const t = S.tasks.find(x => x.id === _taskId);
-        const rb = (t && t.rubric) || [];
-        if(cur.kind !== "subj" || !rb.length) return "";
-        return `<div class="lv" id="c-level">
-          ${rb.map(r=>`<button class="lvc" type="button" data-lv="${esc(r.level)}" title="${esc(r.text)}"
-            aria-pressed="${_noteLevel===r.level}">${esc(r.level)}</button>`).join("")}
-        </div>`; })()}
-      <div class="tags" style="justify-content:flex-end">
+      ${ready ? `<div class="tags" style="justify-content:flex-end">
         ${pendingFile ? `<span class="chip" title="${esc(pendingFile.name)} · ${kb(pendingFile.size)}">${ICON.paper()}${esc(pendingFile.name.slice(0,18))}<button type="button" data-dropfile>×</button></span>` : ``}
         <button class="link" id="c-shot" type="button">${aiOn()?"산출물 첨부하고 읽기":"산출물 첨부"}</button>
         <input type="file" id="c-file" accept="image/*,application/pdf" multiple style="display:none">
       </div>
-      <div id="c-shot-out"></div>
-      ${(() => { const t = S.tasks.find(x => x.id === _taskId);
-        if(!t || (!t.criteria && !(t.rubric||[]).length)) return "";
-        return `<details class="rubbox"${openRub?" open":""}><summary>평가 내용과 루브릭</summary><div>
-          ${t.criteria?`<p>${esc(t.criteria)}</p>`:""}
-          ${(t.rubric||[]).map(r=>`<div class="rline"><b>${esc(r.level)}</b><span>${esc(r.text)}</span></div>`).join("")}
-        </div></details>`; })()}
-      ${(cur.kind==="subj" && (pendingStd.length || taskStd().length)) ? `<div class="tags" id="c-tags">
+      <div id="c-shot-out"></div>` : ``}
+      ${ready && (cur.kind==="subj" && (pendingStd.length || taskStd().length)) ? `<div class="tags" id="c-tags">
         ${taskStd().map(c=>`<span class="chip std" title="${esc(CODEMAP[c]?.text||"")}"><b>${esc(c)}</b>${esc(stdCut(c,26))}</span>`).join("")}
         ${taskLegacy().map(c=>`<span class="chip std legacy" title="2015 개정 교육과정 코드"><b>${esc(c)}</b>2015 교육과정</span>`).join("")}
         ${pendingStd.map(c=>`<span class="chip std" title="${esc(CODEMAP[c]?.text||"")}"><b>${esc(c)}</b>${esc(stdCut(c,26))}<button type="button" data-drop="${esc(c)}">×</button></span>`).join("")}
@@ -1600,7 +1628,8 @@ function detailHTML(){
           ${(n.legacy||[]).length?`<span class="code legacy">${n.legacy.map(esc).join(" ")} <em>2015</em></span>`:""}
           ${(n.standards||[]).length?`<span class="stdinline">${n.standards.map(c=>esc(stdCut(c,52))).filter(Boolean).join(" / ")}</span>`:""}
           <span class="obs">${n.text ? esc(n.text)
-            : `<span class="muted">${n.fileId?"산출물만 담김 — 눌러서 볼 수 있습니다":"(빈 관찰)"}</span>`}</span>
+            : `<span class="muted">${n.level ? esc(levelText(n) || "수준만 담김")
+                : n.fileId ? "산출물만 담김 — 눌러서 볼 수 있습니다" : "(빈 관찰)"}</span>`}</span>
           ${n.level?`<span class="lvtag" title="${esc(levelText(n))}">${esc(n.level)}</span>`:""}
           ${taskOf(n)?`<span class="task">${esc(taskOf(n).name)}</span>`:""}
           ${n.fileId?`<button class="clip" type="button" data-open="${esc(n.fileId)}" title="붙어 있는 산출물 보기">첨부</button>`:""}</span>
@@ -1811,7 +1840,17 @@ function bindDetail(){
     inp.onkeydown = e => { if(e.key === "Enter"){ e.preventDefault(); done(); } if(e.key === "Escape") repaint(); };
   };
 
-  el("c-src").onchange = () => { _src = el("c-src").value; };
+  const srcSel = el("c-src");
+  if(srcSel) srcSel.onchange = () => { _src = srcSel.value; };
+  /* 고칠 일이 생기면 설계가 사는 곳으로 되돌아간다 — 여기서 고치지 않는다 */
+  const goPrep = el("c-goprep");
+  if(goPrep) goPrep.onclick = () => { S.ui.tab = "prep"; save(); render(); };
+  const editTask = el("c-edittask");
+  if(editTask) editTask.onclick = () => {
+    const t = S.tasks.find(x => x.id === _taskId); if(!t) return;
+    S.ui.tab = "prep"; save(); render();
+    openTask(t.subject, t, () => renderPrep());
+  };
   const tk = el("c-task");
   /* 과제를 바꿔 고르면 그 기준을 한 번 펼쳐 보인다 — 읽고 관찰을 시작하라는 신호 */
   if(tk) tk.onchange = () => { _taskId = tk.value; _noteLevel = ""; _rubOpen = true;
@@ -1832,7 +1871,12 @@ function bindDetail(){
   if(lvbox) lvbox.onclick = e => { const b = e.target.closest("[data-lv]"); if(!b) return;
     _noteLevel = (_noteLevel === b.dataset.lv) ? "" : b.dataset.lv;
     lvbox.querySelectorAll("[data-lv]").forEach(x =>
-      x.setAttribute("aria-pressed", String(x.dataset.lv === _noteLevel))); };
+      x.setAttribute("aria-pressed", String(x.dataset.lv === _noteLevel)));
+    /* 수준을 고르면 그 서술이 바로 아래 뜬다 — 판정에는 언제나 서술어가 붙는다(§5-5) */
+    const why = wrap.querySelector(".lvwhy");
+    if(why){ const t2 = S.tasks.find(x => x.id === _taskId);
+      why.textContent = (t2?.rubric || []).find(r => r.level === _noteLevel)?.text
+        || "수준을 고르면 그 서술이 여기 보입니다"; } };
   const ka = el("kw-area");
   if(ka) ka.onchange = () => { _kwArea = +ka.value; repaint(); };
   const pickKw = e => {
@@ -1852,12 +1896,14 @@ function bindDetail(){
   if(kmore) kmore.onclick = () => { _kwMore = !_kwMore;
     if(kcom) kcom.hidden = !_kwMore; kmore.setAttribute("aria-expanded", String(_kwMore)); };
   const ti = el("c-text");
-  /* 관찰을 쓰려고 들어온 순간이 낱말이 필요한 순간이다 */
-  ti.onfocus = () => { if(!_kwOpen) openKw(true); };
-  ti.onkeydown = e => { if(e.key === "Enter"){ e.preventDefault();
-    /* 훑어 적기 중 빈 칸에서 Enter는 「넘김」이다 */
-    if(_sweep && !ti.value.trim()) sweepNext(); else addNote(); } };
-  el("c-add").onclick = addNote;
+  if(ti){
+    /* 관찰을 쓰려고 들어온 순간이 낱말이 필요한 순간이다 */
+    ti.onfocus = () => { if(!_kwOpen) openKw(true); };
+    ti.onkeydown = e => { if(e.key === "Enter"){ e.preventDefault();
+      /* 훑어 적기 중 빈 칸에서 Enter는 「넘김」이다 */
+      if(_sweep && !ti.value.trim()) sweepNext(); else addNote(); } };
+  }
+  const addBtn = el("c-add"); if(addBtn) addBtn.onclick = addNote;
   const many = el("c-many"); if(many) many.onclick = addNoteMany;
   const skip = el("c-skip"); if(skip) skip.onclick = () => sweepNext();
   el("c-sweep").onclick = () => {
@@ -2117,8 +2163,10 @@ function buildNote(sid, text, cur, withLevel){
   return n;
 }
 function addNote(){
-  const ti = el("c-text"), text = ti.value.trim();
-  if(!text){ ti.focus(); return; }
+  const ti = el("c-text"); if(!ti) return;
+  const text = ti.value.trim();
+  /* 수준이나 산출물만 있어도 기록이다 — 평가 결과가 곧 기록이고 관찰 문장은 덧붙임이다 */
+  if(!text && !_noteLevel && !pendingFile){ ti.focus(); return; }
   const cur = slots().find(x => x.key === S.ui.slot);
   const n = buildNote(S.ui.sid, text, cur, true);
   if(pendingFile) n.fileId = pendingFile.id;
@@ -2140,8 +2188,9 @@ function sweepNext(){
    그러나 수준 판정은 복제하지 않는다: 한 클릭이 N명의 수준을 정하면
    그중 N−1명은 근거를 마주하지 않고 판정된 것이고, 그것이 채점 매트릭스의 최소 단위다. */
 function addNoteMany(){
-  const ti = el("c-text"), text = ti.value.trim();
-  if(!text){ ti.focus(); return; }
+  const ti = el("c-text"); if(!ti) return;
+  const text = ti.value.trim();
+  if(!text && !pendingFile){ ti.focus(); return; }
   const cur = slots().find(x => x.key === S.ui.slot);
   const hadLevel = !!_noteLevel;
   _noteLevel = "";
@@ -2412,12 +2461,6 @@ function renderAI(){
         <p style="margin:0 0 10px"><b>AI 없이도 모든 기능이 동작</b>합니다. AI는 보조 검토입니다.</p>
         ${AI_PROXY ? `<p style="margin:0 0 10px">이 도구에는 <b>공용 연결</b>이 있어 키 없이도 쓸 수 있습니다.
           공용 연결이 하루 한도에 닿으면 아래에 본인 키를 넣어 이어서 쓰면 됩니다.</p>` : ``}
-        <div class="pt mid" style="border:0;padding:10px 0">
-          <span class="mk">▲</span>
-          <span><b style="font-weight:600">공개 주소(claude.ai)에서 연 화면이라면 아래 ‘연결 확인’이 실패합니다</b>
-          <div class="who">그 페이지는 보안 정책상 바깥 서버로 연결하지 못합니다. 두 가지 방법 중 하나로 열면 그대로 동작합니다 —
-            ① 이 화면에서 <b>Ctrl+S</b>로 저장한 뒤 그 파일을 열기, ② 학교·개인 웹 공간이나 GitHub Pages에 올려서 열기.
-            어느 쪽이든 기록은 그 기기에만 남습니다.</div></span><span></span></div>
       </div>
     </div>
 
@@ -2450,7 +2493,8 @@ function renderAI(){
         <div class="field">
           <span class="lab">모델</span><br>
           <span style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-            <select id="ai-model">${aiModelList().map(m=>`<option value="${m}"${m===AI.model?" selected":""}>${m}</option>`).join("")}</select>
+            <select id="ai-model">${aiModelList().map(m=>{ const note = modelNote(m);
+              return `<option value="${m}"${m===AI.model?" selected":""}>${m}${note?` — ${note}`:""}</option>`;}).join("")}</select>
             <button class="ghost" id="ai-list" type="button">모델 목록 가져오기</button>
             <span class="hint" id="ai-list-msg" style="margin:0">${AI.models?`키에서 받아온 ${AI.models.length}개`:""}</span>
           </span>
