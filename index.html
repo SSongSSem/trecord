@@ -786,6 +786,12 @@ function lcsLen(a, b){
 /* 세 서술이 정도 차이만 갖는지 본다. 막지 않는다 — 루브릭은 생기부 문장이 아니다.
    정도의 역전(잘함이 노력요함보다 약하게 읽힘)은 기계가 못 잡는다. 잡는 척하지 않는다. */
 const RUB_COPY_MIN = 12;
+/* 수준을 가르는 말로 쓰면 채점이 인상으로 흐르는 것들.
+   「할 말」(fb)은 검사하지 않는다 — 거기서 "끝까지 잘 들어 보자"는 판정이 아니라 권유다. */
+const RUB_DEGREE = /(자세히|적절히|적절하게|충분히|열심히|성실히|꼼꼼히|제대로|정확히|깊이 있게|잘 (?=[가-힣]))/;
+const RUB_COUNT  = /(\d+|한|두|세|네|다섯|여러)\s*(가지|개|번|줄|문장|항목)\s*이상/;
+const RUB_ATTEND = /((적극적으로|성실히|열심히|꾸준히|빠짐없이|끝까지)\s*(참여|참가|활동|수행)|참여도|성실성|참여 태도)/;
+const RUB_VAGUE  = /(어려움이 있|어려워하|힘들어하|하지 못한|이르지 못)/;
 function rubricLint(rows, stdTexts){
   const out = [], filled = rows.map((r,i) => ({i, level:r.level||`${i+1}수준`, text:(r.text||"").trim()}))
                               .filter(r => r.text);
@@ -803,12 +809,26 @@ function rubricLint(rows, stdTexts){
                 why:"성취기준 문구가 그대로 들어 있습니다. 수업 장면에서 보이는 모습으로 바꿔 주세요"});
     if((r.text.match(/\./g)||[]).length > 2 || [...r.text].length > 90)
       out.push({id:"rub-long", hit:r.level, why:"한 수준은 한두 문장이면 됩니다"});
+    const deg = r.text.match(RUB_DEGREE);
+    if(deg)
+      out.push({id:"rub-degree", hit:`${r.level} · ${deg[0].trim()}`,
+                why:"'얼마나 잘하는가'로 가르면 채점이 인상에 기댑니다. 그 수준에서 무엇을 하는지로 바꿔 주세요"});
+    if(RUB_COUNT.test(r.text))
+      out.push({id:"rub-count", hit:r.level,
+                why:"개수로 가르면 하나 더 쓴 학생이 더 나은 것이 됩니다. 근거를 대는가로 바꿔 주세요"});
+    if(RUB_ATTEND.test(r.text))
+      out.push({id:"rub-attend", hit:r.level,
+                why:"참여하는 태도는 성취와 따로 봅니다 — 여기 넣으면 조용한 학생이 성취와 무관하게 등급을 잃습니다"});
   }
   const last = filled[filled.length-1];
   if(last && /(못함|못 함|안 됨|없음|모름|미흡함|부족함)$/.test(last.text) &&
      !/(도움|안내|함께|시도|연습|배우|늘|자라)/.test(last.text))
     out.push({id:"rub-deficit", hit:last.level,
               why:"무엇을 못 하는지 대신, 어떤 도움에서 무엇을 해내는지로 써 주세요"});
+  /* 맨 아래 칸은 그 자리에서 손쓰는 데 쓰인다 — 무엇이 안 되는지 모르면 손쓸 데를 못 찾는다 */
+  if(last && RUB_VAGUE.test(last.text) && !/(도움|안내|함께|시도|연습|배우)/.test(last.text))
+    out.push({id:"rub-vague", hit:last.level,
+              why:"'어려움이 있다' 대신 실제로 자주 나오는 모습을 적어 주세요 — 그래야 그 자리에서 손쓸 수 있습니다"});
   return out;
 }
 /* 수준 서술과 「할 말」을 한 덩어리로 보인다.
