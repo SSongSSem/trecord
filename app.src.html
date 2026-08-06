@@ -669,6 +669,10 @@ const OFFS = ["결석","미제출"];
 const RECOGNIZED = ["수업산출물","자기평가서","동료평가서","소감문","독후감"];   // 기재요령이 인정하는 학생 산출 자료 5종
 const BAND_OF = {1:"1~2",2:"1~2",3:"3~4",4:"3~4",5:"5~6",6:"5~6"};
 const INTEGRATED = "통합교과", INTEGRATED_LABEL = "바른 생활·슬기로운 생활·즐거운 생활";
+/* 진로 성취기준은 학년군이 갈리지 않는다 — 초등 6년이 한 벌이다.
+   교과처럼 band()로 찾으면 언제나 빈 결과가 나오므로 조회를 여기로 모은다. */
+const CAREER = "진로", BAND_FREE = {[CAREER]:"1~6"};
+const stdAreas = (subj, g) => (STD[subj] || {})[BAND_FREE[subj] || g || band()] || [];
 
 /* ── 코드 사전 ── */
 const CODEMAP = {};
@@ -1043,7 +1047,7 @@ function save(){
 
 /* ══ 계산 ══ */
 const band = () => BAND_OF[S.klass?.grade] || "3~4";
-const allSubjects = () => Object.keys(STD).filter(s => STD[s][band()]);
+const allSubjects = () => Object.keys(STD).filter(s => stdAreas(s).length);
 const subjects = () => allSubjects().filter(s => !(S.klass?.excluded||[]).includes(s));
 const subjShort = s => s === INTEGRATED ? "바·슬·즐" : s;
 const subjLabel = s => s === INTEGRATED ? INTEGRATED_LABEL : s;
@@ -1355,7 +1359,7 @@ function render(){
 /* ── 설정 ── */
 function renderSetup(edit){
   const k = S.klass || {grade:4, room:"", excluded:[], numbersOnly:false};
-  const subjOpts = Object.keys(STD).filter(s => STD[s][BAND_OF[k.grade]]);
+  const subjOpts = Object.keys(STD).filter(s => stdAreas(s, BAND_OF[k.grade]).length);
   el("main").innerHTML = `
   <div class="setup">
     ${edit ? "" : `<div class="steps">
@@ -2679,7 +2683,7 @@ function simText(a, b){
 }
 /* 교과·학년군 안에서 가장 비슷한 성취기준을 찾는다 */
 function guessStd(text, subject, n){
-  const areas = (STD[subject] || {})[band()] || [];
+  const areas = stdAreas(subject);
   const cand = [];
   for(const a of areas) for(const [c,t] of a.s) cand.push({code:c, text:t, score:simText(text, t)});
   cand.sort((x,y) => y.score - x.score);
@@ -2779,7 +2783,8 @@ function readPlan(text){
     for(const c of codes){
       if(!CODEMAP[c]) notes.push({sev:"mid", t:`2022 개정에 없는 코드 ${c}`, d:"2015 개정 코드이거나 오타일 수 있습니다. 아래 표에서 추정 성취기준을 확인하세요"});
       else{
-        if(CODEMAP[c].grade !== band()) notes.push({sev:"mid", t:`${c}는 ${CODEMAP[c].grade}학년군`, d:`우리 반은 ${band()}학년군입니다`});
+        if(!BAND_FREE[CODEMAP[c].subject] && CODEMAP[c].grade !== band())
+          notes.push({sev:"mid", t:`${c}는 ${CODEMAP[c].grade}학년군`, d:`우리 반은 ${band()}학년군입니다`});
         if((S.klass.excluded||[]).includes(CODEMAP[c].subject)) notes.push({sev:"low", t:`${c}는 전담으로 뺀 ${subjShort(CODEMAP[c].subject)}`, d:"기록은 전담 교사가 입력합니다"});
         if(seen.has(c)) notes.push({sev:"low", t:`${c}가 여러 줄에 있습니다`, d:"같은 성취기준을 여러 과제가 나눠 쓰는지 확인하세요"});
         seen.add(c);
@@ -2997,7 +3002,7 @@ ${upFile ? "[문서] 첨부한 PDF 파일" : "[문서]\n" + t.slice(0,12000)}`,
     let hit = 0, fail = [];
     for(const [subject, list] of Object.entries(bySubj)){
       const pool = [];
-      for(const a of (STD[subject]||{})[band()] || []) for(const [c,t] of a.s) pool.push(`${c} ${t}`);
+      for(const a of stdAreas(subject)) for(const [c,t] of a.s) pool.push(`${c} ${t}`);
       if(!pool.length) continue;
       const ask = list.map((x,k) => `${k}. 과제: ${x.r.name}\n   평가기준: ${(x.r.criteria||"").slice(0,160)}\n   문서에 적힌 2015 코드: ${(x.r.doubt||[]).map(d=>d.code).join(", ")||"없음"}`).join("\n");
       try{
@@ -3240,7 +3245,16 @@ function openStd(subject, selected, onOK, taskMode){
     /* 다른 교과의 코드는 남겨 둘 수 없다 — 뺀 것을 숨기지 않는다 */
     const before = dlgState.sel.size;
     dlgState.subject = subjSel.value;
-    for(const c of [...dlgState.sel]) if(CODEMAP[c]?.subject !== subjSel.value) dlgState.sel.delete(c);
+    /* 교과↔교과 전환에서만 지운다. 진로가 한쪽에 끼면 둘 다 남긴다 —
+       교과 성취기준과 진로 성취기준을 함께 걸어 두는 것이 진로 융합 수업이다. */
+    const to = subjSel.value;
+    for(const c of [...dlgState.sel]){
+      const s = CODEMAP[c]?.subject;
+      if(s === to || s === CAREER || to === CAREER) continue;
+      dlgState.sel.delete(c);
+    }
+    /* 교과를 바꿨는데 앞의 검색어가 남아 목록이 비면, 성취기준이 없는 줄 안다 */
+    q.value = "";
     const dropped = before - dlgState.sel.size;
     dlgState.msg = dropped ? `다른 교과의 성취기준 ${dropped}건을 뺐습니다` : "";
     dlgState.kw = new Set(); paintDlg();
@@ -3331,7 +3345,7 @@ function openStd(subject, selected, onOK, taskMode){
   }
   function paintList(){
     const qq = q.value.trim();
-    const areas = (STD[dlgState.subject]||{})[band()] || [];
+    const areas = stdAreas(dlgState.subject);
     let n = 0;
     const html = areas.map(a => {
       const rows = a.s.filter(([c,t]) => !qq || c.includes(qq) || t.includes(qq));
