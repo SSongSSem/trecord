@@ -464,6 +464,11 @@ dialog::backdrop{background:rgba(8,12,20,.45)}
 .elrow{display:flex;gap:7px;align-items:flex-start}
 .elcat{flex:0 0 56px;font-size:11px;color:var(--ink-3);padding-top:5px;text-align:right;line-height:1.3}
 .elrow .kwchips{max-height:none;flex:1;min-width:0}
+/* 성취기준에 없는 갈래도 자리를 비워 두지 않는다 — 여기로 직접 적는다 */
+.kwc.add{border-style:dashed;color:var(--ink-3);font-weight:400;padding-left:9px;padding-right:9px}
+.kwc.add:hover{border-style:solid}
+input.elnew{border:1px solid var(--accent-line);border-radius:999px;padding:3px 10px;font-size:12px;
+          font-family:inherit;color:var(--ink);background:var(--surface);width:130px}
 /* 고른 성취기준 원문 — 읽는 것이지 고치는 것이 아니다 */
 #dlg-full,#dlg-chosen{margin:-4px 0 10px;padding:9px 12px;background:var(--surface);border:1px solid var(--rule);
           border-radius:8px;font-size:12.5px;line-height:1.7;color:var(--ink-2);max-height:132px;overflow-y:auto}
@@ -3285,7 +3290,7 @@ function openStd(subject, selected, onOK, taskMode){
               /* 올라온 낱말은 꺼도 목록에 남는다 — 껐다고 지우면 다시 부르는 수밖에 없다 */
               kwPool:new Set(taskMode?.task?.kw || []),
               /* 평가 요소 갈래 — 창을 닫으면 사라진다. 남는 것은 이어 붙인 한 줄뿐이다 */
-              elem:{pool:{}, sel:new Set()},
+              elem:{pool:{}, sel:new Set(), adding:null},
               src:new Set(taskMode?.task?.sources || []),
               /* 빈 배열은 「우리 반 전체」다 — 기본이 전원이므로 빈칸을 강요하지 않는다 */
               targets:(taskMode?.task?.targets || []).slice(),
@@ -3350,12 +3355,28 @@ function openStd(subject, selected, onOK, taskMode){
     dlgState.msg = ""; paintDlg(); };
   /* 고를 때마다 이어 붙여 평가 요소 한 줄을 만든다.
      다 꺼도 입력칸은 비우지 않는다 — 손으로 쓴 것이 있을 수 있다 */
-  el("dlg-elem").onclick = e => { const b = e.target.closest("[data-el]"); if(!b) return;
+  const elemToName = () => { const j = joinElem();
+    if(j){ const n = el("dlg-name"); n.value = j; n.dispatchEvent(new Event("input",{bubbles:true})); } };
+  el("dlg-elem").onclick = e => {
+    const add = e.target.closest("[data-add]");
+    if(add){ dlgState.elem.adding = add.dataset.add; paintElem(); return; }
+    const b = e.target.closest("[data-el]"); if(!b) return;
     const w = b.dataset.el, sel = dlgState.elem.sel;
     sel.has(w) ? sel.delete(w) : sel.add(w);
-    const joined = joinElem();
-    if(joined){ const n = el("dlg-name"); n.value = joined; n.dispatchEvent(new Event("input",{bubbles:true})); }
-    paintElem(); };
+    elemToName(); paintElem(); };
+  /* 직접 적은 것도 고른 것과 같이 다룬다 — 적는 순간 켜진다 */
+  el("dlg-elem").onkeydown = e => {
+    const inp = e.target.closest(".elnew"); if(!inp) return;
+    if(e.key === "Escape"){ dlgState.elem.adding = null; paintElem(); return; }
+    if(e.key !== "Enter") return;
+    e.preventDefault();
+    const w = inp.value.trim(), c = inp.dataset.cat, {pool, sel} = dlgState.elem;
+    if(w){
+      pool[c] = pool[c] || [];
+      if(!pool[c].includes(w)) pool[c].push(w);
+      sel.add(w); elemToName();
+    }
+    dlgState.elem.adding = null; paintElem(); };
   el("dlg-kw").onclick = e => { const b = e.target.closest("[data-kw]"); if(!b) return;
     const w = b.dataset.kw;
     dlgState.kw.has(w) ? dlgState.kw.delete(w) : dlgState.kw.add(w);
@@ -3482,14 +3503,20 @@ function openStd(subject, selected, onOK, taskMode){
     msg:"비워서 정하면 우리 반 전체가 됩니다", allowEmpty:true,
     onOK(ids){ dlgState.targets = ids.length === S.students.length ? [] : ids; paintWho(); }});
 
-  /* 평가 요소를 갈래로 고른다 — 빈칸을 마주보는 대신 고르고, 고른 것이 이어져 한 줄이 된다 */
+  /* 평가 요소를 갈래로 고른다 — 빈칸을 마주보는 대신 고르고, 고른 것이 이어져 한 줄이 된다.
+     세 갈래는 비어 있어도 늘 보인다. 성취기준에 없어도 가르치면서 보는 것이 있고,
+     그것을 적을 자리가 없으면 교사는 결국 아무 데나 적는다. ＋로 직접 적는다. */
   function paintElem(){
-    const {pool, sel} = dlgState.elem;
-    el("dlg-elem").innerHTML = ELEM_CATS.filter(c => (pool[c]||[]).length).map(c =>
-      `<div class="elrow"><span class="elcat">${esc(c)}</span><div class="kwchips">`
-      + pool[c].map(w=>`<button class="kwc" type="button" data-el="${esc(w)}"
-          aria-pressed="${sel.has(w)}">${esc(w)}</button>`).join("")
-      + `</div></div>`).join("");
+    const {pool, sel, adding} = dlgState.elem;
+    el("dlg-elem").innerHTML = ELEM_CATS.map(c => {
+      const chips = (pool[c]||[]).map(w=>`<button class="kwc" type="button" data-el="${esc(w)}"
+          aria-pressed="${sel.has(w)}">${esc(w)}</button>`).join("");
+      const tail = adding === c
+        ? `<input type="text" class="elnew" data-cat="${esc(c)}" maxlength="24" placeholder="적고 Enter">`
+        : `<button class="kwc add" type="button" data-add="${esc(c)}" title="${esc(c)}에 직접 적기">＋</button>`;
+      return `<div class="elrow"><span class="elcat">${esc(c)}</span><div class="kwchips">${chips}${tail}</div></div>`;
+    }).join("");
+    const inp = el("dlg-elem").querySelector(".elnew"); if(inp) inp.focus();
   }
   function joinElem(){
     const {pool, sel} = dlgState.elem, out = [];
@@ -3544,8 +3571,8 @@ JSON만 출력한다: {${ELEM_CATS.map(c=>`"${c}":[]`).join(",")}}`);
       const empty = ELEM_CATS.filter(c => !pool[c].length);
       el("dlg-elmsg").innerHTML = n
         ? `<div class="dmsg">${n}개를 올렸습니다. 누르는 대로 이어 붙습니다.${
-            empty.length ? ` <b>${esc(empty.join(" · "))}</b>는 이 성취기준에 없어 비워 두었습니다.` : ""}</div>`
-        : `<div class="dmsg">뽑을 것을 찾지 못했습니다. 성취기준을 먼저 고르세요.</div>`;
+            empty.length ? ` <b>${esc(empty.join(" · "))}</b>는 이 성취기준에 없습니다 — 가르치면서 볼 것이 있으면 ＋로 적으세요.` : ""}</div>`
+        : `<div class="dmsg">성취기준에서 뽑을 것을 찾지 못했습니다. ＋로 직접 적을 수 있습니다.</div>`;
     }catch(e){ el("dlg-elmsg").innerHTML = `<div class="dmsg" style="color:var(--low)">${esc(e.message)}</div>`; }
     const b2 = el("dlg-elai"); if(b2){ b2.disabled = false; b2.innerHTML = ICON.spark() + "AI 추천"; }
   }
