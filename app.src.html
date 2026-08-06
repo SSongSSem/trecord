@@ -226,6 +226,9 @@ textarea{line-height:1.7}
 .pickhead .r{margin-left:auto}
 .lvhead{font-size:10.5px;letter-spacing:.06em;color:var(--ink-3);font-weight:600;margin-top:11px}
 .lvwhy{font-size:12px;color:var(--ink-2);margin-top:5px;line-height:1.6;min-height:1.6em}
+/* 「할 말」 — 판정 옆에 다음 걸음이 붙는다. 여기도 중성이다(위 §5 주석) */
+.lvfb{display:block;margin-top:3px;color:var(--ink);font-weight:600}
+.lvfb::before{content:"→ ";color:var(--ink-3);font-weight:400}
 /* 수준 — 축(파랑)도 근거(살구)도 경고(의미색)도 아니다. 중성으로 남긴다.
    의미색·게이지·정렬을 여기 쓰면 §5 색 전용권이 무너진다. */
 .lv{display:flex;flex-wrap:wrap;gap:5px;align-items:center;margin-top:7px}
@@ -272,8 +275,9 @@ textarea{line-height:1.7}
 .logrow .t{line-height:1.6}
 .logrow .b{display:flex;gap:6px;opacity:0;transition:opacity .1s}
 .logrow:hover .b,.logrow:focus-within .b{opacity:1}
-.rub{display:flex;flex-direction:column;gap:6px}
-.rrow2{display:grid;grid-template-columns:88px minmax(0,1fr);gap:6px}
+.rub{display:flex;flex-direction:column;gap:13px}
+.rrow2{display:grid;grid-template-columns:88px minmax(0,1fr);column-gap:6px;row-gap:4px}
+.rrow2 .rfl{font-size:11.5px;color:var(--ink-3);align-self:center;text-align:right;padding-right:2px}
 .rubbox{flex-basis:100%;margin-top:6px;font-size:12.5px}
 .rubbox summary{color:var(--ink-3);font-size:12px}
 .rubbox>div{padding-top:6px}
@@ -576,9 +580,12 @@ dialog::backdrop{background:rgba(8,12,20,.45)}
           <span id="dlg-airub-slot"></span></span></div>
       <div id="dlg-skelmenu" hidden></div>
       <div class="rub" id="dlg-rub">
-        <div class="rrow2"><input type="text" class="rl" value="잘함"><input type="text" class="rt" placeholder="이 수준에서 보이는 모습 — 뼈대를 만들어 다듬어도 됩니다"></div>
-        <div class="rrow2"><input type="text" class="rl" value="보통"><input type="text" class="rt" placeholder="이 수준에서 보이는 모습"></div>
-        <div class="rrow2"><input type="text" class="rl" value="노력요함"><input type="text" class="rt" placeholder="이 수준에서 보이는 모습"></div>
+        <div class="rrow2"><input type="text" class="rl" value="잘함"><input type="text" class="rt" placeholder="이 수준에서 보이는 모습 — 뼈대를 만들어 다듬어도 됩니다">
+          <span class="rfl">할 말</span><input type="text" class="rf" placeholder="이 수준 학생에게 그 자리에서 할 말 — 다음 걸음 하나"></div>
+        <div class="rrow2"><input type="text" class="rl" value="보통"><input type="text" class="rt" placeholder="이 수준에서 보이는 모습">
+          <span class="rfl">할 말</span><input type="text" class="rf" placeholder="여기서 무엇을 해 보라고 할까요"></div>
+        <div class="rrow2"><input type="text" class="rl" value="노력요함"><input type="text" class="rt" placeholder="이 수준에서 보이는 모습">
+          <span class="rfl">할 말</span><input type="text" class="rf" placeholder="여기서 무엇을 해 보라고 할까요"></div>
       </div>
       <div id="dlg-lint"></div>
     </div>
@@ -799,6 +806,14 @@ function rubricLint(rows, stdTexts){
     out.push({id:"rub-deficit", hit:last.level,
               why:"무엇을 못 하는지 대신, 어떤 도움에서 무엇을 해내는지로 써 주세요"});
   return out;
+}
+/* 수준 서술과 「할 말」을 한 덩어리로 보인다.
+   판정만 뜨면 교사는 등급을 매기고 끝낸다 — 그 자리에서 할 말이 같이 떠야 말이 나간다.
+   설계할 때 비워 뒀으면 서술만 나온다. 없는 말을 지어 붙이지 않는다. */
+function lvwhyHTML(r, empty){
+  if(!r) return esc(empty || "수준을 고르면 그 서술이 여기 보입니다");
+  const t = esc(r.text || "");
+  return r.fb ? `${t}<span class="lvfb">${esc(r.fb)}</span>` : t;
 }
 
 /* ══ 기재요령 검사 ══ */
@@ -1601,7 +1616,7 @@ function detailHTML(){
           </div>
           <div class="lvwhy">${off
             ? `이 평가는 <b>${esc(off)}</b>으로 표시해 두었습니다 — 다시 누르면 풀립니다`
-            : esc((rb.find(r=>r.level===_noteLevel)||{}).text || "수준을 고르면 그 서술이 여기 보입니다")}</div>`; })() : ``}
+            : lvwhyHTML(rb.find(r=>r.level===_noteLevel))}</div>`; })() : ``}
       ${ready ? `<div class="catch-in">
         ${(() => {
           /* 설계할 때 「무엇으로 확인할지」를 정해 두었으면 그것이 먼저 온다 */
@@ -1929,11 +1944,10 @@ function bindDetail(){
     _noteLevel = (_noteLevel === b.dataset.lv) ? "" : b.dataset.lv;
     lvbox.querySelectorAll("[data-lv]").forEach(x =>
       x.setAttribute("aria-pressed", String(x.dataset.lv === _noteLevel)));
-    /* 수준을 고르면 그 서술이 바로 아래 뜬다 — 판정에는 언제나 서술어가 붙는다(§5-5) */
+    /* 수준을 고르면 그 서술과 「할 말」이 바로 아래 뜬다 — 판정에는 언제나 서술어가 붙는다(§5-5) */
     const why = wrap.querySelector(".lvwhy");
     if(why){ const t2 = S.tasks.find(x => x.id === _taskId);
-      why.textContent = (t2?.rubric || []).find(r => r.level === _noteLevel)?.text
-        || "수준을 고르면 그 서술이 여기 보입니다"; } };
+      why.innerHTML = lvwhyHTML((t2?.rubric || []).find(r => r.level === _noteLevel)); } };
   const ka = el("kw-area");
   if(ka) ka.onchange = () => { _kwArea = +ka.value; repaint(); };
   const pickKw = e => {
@@ -3241,6 +3255,7 @@ function openStd(subject, selected, onOK, taskMode){
     [...rubBox.querySelectorAll(".rrow2")].forEach((row,i) => {
       row.querySelector(".rl").value = rb[i]?.level ?? ["잘함","보통","노력요함"][i];
       row.querySelector(".rt").value = rb[i]?.text ?? "";
+      row.querySelector(".rf").value = rb[i]?.fb ?? "";
     });
     el("dlg-name").oninput = () => { el("dlg-skel").disabled = !skelKey(); };
     let lt = null;
@@ -3254,8 +3269,11 @@ function openStd(subject, selected, onOK, taskMode){
     if(dlgState.taskMode){
       const name = el("dlg-name").value.trim();
       if(!name){ el("dlg-name").focus(); return; }
+      /* 「할 말」은 비어 있어도 된다 — 빈 칸은 아예 담지 않아 v3 데이터와 모양이 같다 */
       const rubric = [...rubBox.querySelectorAll(".rrow2")]
-        .map(row => ({level:row.querySelector(".rl").value.trim(), text:row.querySelector(".rt").value.trim()}))
+        .map(row => { const fb = row.querySelector(".rf").value.trim();
+          return {level:row.querySelector(".rl").value.trim(),
+                  text:row.querySelector(".rt").value.trim(), ...(fb ? {fb} : {})}; })
         .filter(r => r.level && r.text);
       dlgState.taskMode.onSave({name, criteria:el("dlg-crit").value.trim(), codes:[...dlgState.sel],
                                 rubric, kw:[...dlgState.kw], sources:[...dlgState.src],
