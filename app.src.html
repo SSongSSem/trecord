@@ -718,9 +718,14 @@ const AREA_GROUP = {
 };
 /* 고른 성취기준에서 영역이 따라 나온다 — 영역은 고르는 것이 아니다 */
 const dlgAreas = () => [...new Set([...(dlgState?.sel || [])].map(c => CODEMAP[c]?.area).filter(Boolean))];
+/* 여러 교과를 담았을 때 이 과제가 어느 교과에 놓이는가.
+   나갈 때 보던 교과가 아니라 담은 것에서 정한다 — 진로는 교과가 아니므로 교과가 있으면 그쪽을 따른다. */
+const dlgSubjects = () => [...new Set([...(dlgState?.sel || [])].map(c => CODEMAP[c]?.subject).filter(Boolean))];
+const mainSubject = () => { const s = dlgSubjects(); return s.find(x => x !== CAREER) || s[0] || dlgState?.subject; };
 /* 1차 이름 일치 → 2차 AREA_GROUP → 3차 실패(missed로 돌려 화면에 알린다) */
 function kwOfAreas(subject, areas){
-  const blocks = (KW.subj[subject] || {})[band()] || [];
+  /* 진로는 학년군이 갈리지 않는다 — 성취기준과 같은 규칙으로 찾는다 */
+  const blocks = (KW.subj[subject] || {})[BAND_FREE[subject] || band()] || [];
   if(!areas || !areas.length) return {blocks:blocks.slice(0,1), missed:[]};
   const map = AREA_GROUP[subject] || {}, wanted = new Set(), missed = [];
   for(const a of areas){
@@ -3246,10 +3251,10 @@ function openTask(subject, task, onOK){
     if(task){
       Object.assign(task, {name:v.name, criteria:v.criteria, standards:v.codes, rubric:v.rubric,
                            kw:v.kw, sources:v.sources, when:v.when, targets:v.targets,
-                           axis:v.axis, subject:dlgState.subject});
+                           axis:v.axis, subject:v.subject});
       save(); onOK(task.id);
     } else {
-      const t = {id:uid(), name:v.name, subject:dlgState.subject, standards:v.codes, criteria:v.criteria,
+      const t = {id:uid(), name:v.name, subject:v.subject, standards:v.codes, criteria:v.criteria,
                  rubric:v.rubric, kw:v.kw, sources:v.sources, when:v.when, targets:v.targets,
                  axis:v.axis, legacy:[], off:{}};
       S.tasks.push(t); save(); onOK(t.id);
@@ -3268,21 +3273,12 @@ function openStd(subject, selected, onOK, taskMode){
   const subjSel = el("dlg-subj"), q = el("dlg-q"), rubBox = el("dlg-rub");
   subjSel.innerHTML = subjects().map(s=>`<option value="${esc(s)}"${s===subject?" selected":""}>${esc(subjShort(s))}</option>`).join("");
   subjSel.onchange = () => {
-    /* 다른 교과의 코드는 남겨 둘 수 없다 — 뺀 것을 숨기지 않는다 */
-    const before = dlgState.sel.size;
+    /* 교과를 넘나들어도 고른 것은 지우지 않는다 — 담은 것은 담긴 채로 둔다.
+       뺄 때는 위의 고른 목록에서 ×로 뺀다. 교과 전환이 몰래 빼 가지 않는다. */
     dlgState.subject = subjSel.value;
-    /* 교과↔교과 전환에서만 지운다. 진로가 한쪽에 끼면 둘 다 남긴다 —
-       교과 성취기준과 진로 성취기준을 함께 걸어 두는 것이 진로 융합 수업이다. */
-    const to = subjSel.value;
-    for(const c of [...dlgState.sel]){
-      const s = CODEMAP[c]?.subject;
-      if(s === to || s === CAREER || to === CAREER) continue;
-      dlgState.sel.delete(c);
-    }
     /* 교과를 바꿨는데 앞의 검색어가 남아 목록이 비면, 성취기준이 없는 줄 안다 */
     q.value = "";
-    const dropped = before - dlgState.sel.size;
-    dlgState.msg = dropped ? `다른 교과의 성취기준 ${dropped}건을 뺐습니다` : "";
+    dlgState.msg = "";
     dlgState.kw = new Set(); paintDlg();
   };
   q.value = ""; q.oninput = paintDlg;
@@ -3316,6 +3312,7 @@ function openStd(subject, selected, onOK, taskMode){
                   text:row.querySelector(".rt").value.trim(), ...(fb ? {fb} : {})}; })
         .filter(r => r.level && r.text);
       dlgState.taskMode.onSave({name, criteria:el("dlg-crit").value.trim(), codes:[...dlgState.sel],
+                                subject:mainSubject(),
                                 rubric, kw:[...dlgState.kw], sources:[...dlgState.src],
                                 when:el("dlg-when").value.trim(), targets:dlgState.targets.slice(),
                                 axis:dlgState.axis});
@@ -3399,8 +3396,10 @@ function openStd(subject, selected, onOK, taskMode){
   }
   function paintTask(){
     const codes = [...dlgState.sel];
+    /* 담은 것이 여러 교과에 걸치면 그대로 보여 준다 — 어디에 놓일지는 맨 앞 교과가 정한다 */
+    const subs = dlgSubjects();
     el("dlg-picked").innerHTML =
-      `<span class="subj">${esc(subjShort(dlgState.subject))}</span>`
+      `<span class="subj">${esc((subs.length ? subs : [dlgState.subject]).map(subjShort).join(" · "))}</span>`
       + codes.map(c=>`<span class="chip std" title="${esc(CODEMAP[c]?.text||"")}"><b>${esc(c)}</b>${esc(stdCut(c,22))}</span>`).join("")
       + (dlgAreas().length
           ? dlgAreas().map(a=>`<span class="abadge">${esc(a)}</span>`).join("")
@@ -3451,7 +3450,7 @@ function openStd(subject, selected, onOK, taskMode){
     onOK(ids){ dlgState.targets = ids.length === S.students.length ? [] : ids; paintWho(); }});
 
   function paintKw(){
-    const r = kwOfAreas(dlgState.subject, dlgAreas());
+    const r = kwOfAreas(mainSubject(), dlgAreas());
     const words = [...new Set([...dlgState.kw, ...r.blocks.flatMap(b => b.k)])];
     el("dlg-kw").innerHTML = words.map(w=>`<button class="kwc" type="button" data-kw="${esc(w)}"
       aria-pressed="${dlgState.kw.has(w)}">${esc(w)}</button>`).join("")
@@ -3462,7 +3461,7 @@ function openStd(subject, selected, onOK, taskMode){
     else if(r.blocks.length && dlgAreas().length > r.missed.length)
       m.innerHTML = `<div class="dmsg">‘${esc(r.missed.slice(0,2).join("’ · ‘"))}’${r.missed.length>2?` 외 ${r.missed.length-2}건`:""} 영역의 키워드 갈래를 찾지 못했습니다.</div>`;
     else
-      m.innerHTML = `<div class="dmsg">이 영역의 키워드 갈래를 찾지 못해 ${esc(subjShort(dlgState.subject))} 전체 키워드를 보입니다.</div>`;
+      m.innerHTML = `<div class="dmsg">이 영역의 키워드 갈래를 찾지 못해 ${esc(subjShort(mainSubject()))} 전체 키워드를 보입니다.</div>`;
   }
   function paintLint(){
     const rows = [...rubBox.querySelectorAll(".rrow2")]
@@ -3479,7 +3478,7 @@ function openStd(subject, selected, onOK, taskMode){
     const codes = [...dlgState.sel];
     const name = el("dlg-name").value.trim(), crit = el("dlg-crit").value.trim();
     try{
-      const r = await aiJSON(`한국 초등학교 ${S.klass.grade}학년 ${dlgState.subject} 수업에서 교사가 관찰 기록에 쓸 키워드를 뽑는다.
+      const r = await aiJSON(`한국 초등학교 ${S.klass.grade}학년 ${mainSubject()} 수업에서 교사가 관찰 기록에 쓸 키워드를 뽑는다.
 ${codes.length ? "성취기준:\n" + codes.map(c => `- [${c}] ${CODEMAP[c]?.text||""}`).join("\n") : "영역: " + dlgAreas().join(" · ")}
 ${name ? "평가과제: " + name + (crit ? " / 평가기준: " + crit : "") : ""}
 지식·기능·태도 세 갈래로 각각 6개씩, 교사가 관찰한 사실을 적을 때 쓰는 짧은 명사구로 쓴다(예: 중심 문장 찾기, 근거 들어 설명하기).
@@ -3497,7 +3496,7 @@ JSON만 출력한다: {"지식":["..."],"기능":["..."],"태도":["..."]}`);
     const rows = [...rubBox.querySelectorAll(".rrow2")];
     const levels = rows.map(r => r.querySelector(".rl").value.trim() || "수준");
     try{
-      const r = await aiJSON(`한국 초등학교 ${S.klass.grade}학년 ${dlgState.subject} 평가과제의 ${levels.length}수준 루브릭을 쓴다.
+      const r = await aiJSON(`한국 초등학교 ${S.klass.grade}학년 ${dlgSubjects().join("·") || mainSubject()} 평가과제의 ${levels.length}수준 루브릭을 쓴다.
 평가 요소: ${el("dlg-name").value.trim()} / 평가 내용: ${el("dlg-crit").value.trim()}
 성취기준:
 ${[...dlgState.sel].map(c => `- [${c}] ${CODEMAP[c]?.text||""}`).join("\n") || "- (없음)"}
