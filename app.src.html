@@ -226,7 +226,7 @@ textarea{line-height:1.7}
 .pickhead .r{margin-left:auto}
 .lvhead{font-size:10.5px;letter-spacing:.06em;color:var(--ink-3);font-weight:600;margin-top:11px}
 .lvwhy{font-size:12px;color:var(--ink-2);margin-top:5px;line-height:1.6;min-height:1.6em}
-/* 「할 말」 — 판정 옆에 다음 걸음이 붙는다. 여기도 중성이다(위 §5 주석) */
+/* 「피드백」 — 판정 옆에 다음 걸음이 붙는다. 여기도 중성이다(위 §5 주석) */
 .lvfb{display:block;margin-top:3px;color:var(--ink);font-weight:600}
 .lvfb::before{content:"→ ";color:var(--ink-3);font-weight:400}
 /* 수준 — 축(파랑)도 근거(살구)도 경고(의미색)도 아니다. 중성으로 남긴다.
@@ -586,11 +586,11 @@ dialog::backdrop{background:rgba(8,12,20,.45)}
       <div id="dlg-skelmenu" hidden></div>
       <div class="rub" id="dlg-rub">
         <div class="rrow2"><input type="text" class="rl" value="잘함"><input type="text" class="rt" placeholder="이 수준에서 보이는 모습 — 뼈대를 만들어 다듬어도 됩니다">
-          <span class="rfl">할 말</span><input type="text" class="rf" placeholder="이 수준 학생에게 그 자리에서 할 말 — 다음 걸음 하나"></div>
+          <span class="rfl">피드백</span><input type="text" class="rf" placeholder="이 수준 학생에게 그 자리에서 건넬 말 — 다음 걸음 하나"></div>
         <div class="rrow2"><input type="text" class="rl" value="보통"><input type="text" class="rt" placeholder="이 수준에서 보이는 모습">
-          <span class="rfl">할 말</span><input type="text" class="rf" placeholder="여기서 무엇을 해 보라고 할까요"></div>
+          <span class="rfl">피드백</span><input type="text" class="rf" placeholder="여기서 무엇을 해 보라고 할까요"></div>
         <div class="rrow2"><input type="text" class="rl" value="노력요함"><input type="text" class="rt" placeholder="이 수준에서 보이는 모습">
-          <span class="rfl">할 말</span><input type="text" class="rf" placeholder="여기서 무엇을 해 보라고 할까요"></div>
+          <span class="rfl">피드백</span><input type="text" class="rf" placeholder="여기서 무엇을 해 보라고 할까요"></div>
       </div>
       <div id="dlg-lint"></div>
     </div>
@@ -798,7 +798,7 @@ function lcsLen(a, b){
    정도의 역전(잘함이 노력요함보다 약하게 읽힘)은 기계가 못 잡는다. 잡는 척하지 않는다. */
 const RUB_COPY_MIN = 12;
 /* 수준을 가르는 말로 쓰면 채점이 인상으로 흐르는 것들.
-   「할 말」(fb)은 검사하지 않는다 — 거기서 "끝까지 잘 들어 보자"는 판정이 아니라 권유다. */
+   「피드백」(fb)은 검사하지 않는다 — 거기서 "끝까지 잘 들어 보자"는 판정이 아니라 권유다. */
 const RUB_DEGREE = /(자세히|적절히|적절하게|충분히|열심히|성실히|꼼꼼히|제대로|정확히|깊이 있게|잘 (?=[가-힣]))/;
 const RUB_COUNT  = /(\d+|한|두|세|네|다섯|여러)\s*(가지|개|번|줄|문장|항목)\s*이상/;
 const RUB_ATTEND = /((적극적으로|성실히|열심히|꾸준히|빠짐없이|끝까지)\s*(참여|참가|활동|수행)|참여도|성실성|참여 태도)/;
@@ -842,8 +842,8 @@ function rubricLint(rows, stdTexts){
               why:"'어려움이 있다' 대신 실제로 자주 나오는 모습을 적어 주세요 — 그래야 그 자리에서 손쓸 수 있습니다"});
   return out;
 }
-/* 수준 서술과 「할 말」을 한 덩어리로 보인다.
-   판정만 뜨면 교사는 등급을 매기고 끝낸다 — 그 자리에서 할 말이 같이 떠야 말이 나간다.
+/* 수준 서술과 「피드백」을 한 덩어리로 보인다.
+   판정만 뜨면 교사는 등급을 매기고 끝낸다 — 그 자리에서 건넬 말이 같이 떠야 말이 나간다.
    설계할 때 비워 뒀으면 서술만 나온다. 없는 말을 지어 붙이지 않는다. */
 function lvwhyHTML(r, empty){
   if(!r) return esc(empty || "수준을 고르면 그 서술이 여기 보입니다");
@@ -1979,7 +1979,7 @@ function bindDetail(){
     _noteLevel = (_noteLevel === b.dataset.lv) ? "" : b.dataset.lv;
     lvbox.querySelectorAll("[data-lv]").forEach(x =>
       x.setAttribute("aria-pressed", String(x.dataset.lv === _noteLevel)));
-    /* 수준을 고르면 그 서술과 「할 말」이 바로 아래 뜬다 — 판정에는 언제나 서술어가 붙는다(§5-5) */
+    /* 수준을 고르면 그 서술과 「피드백」이 바로 아래 뜬다 — 판정에는 언제나 서술어가 붙는다(§5-5) */
     const why = wrap.querySelector(".lvwhy");
     if(why){ const t2 = S.tasks.find(x => x.id === _taskId);
       why.innerHTML = lvwhyHTML((t2?.rubric || []).find(r => r.level === _noteLevel)); } };
@@ -3305,7 +3305,7 @@ function openStd(subject, selected, onOK, taskMode){
     if(dlgState.taskMode){
       const name = el("dlg-name").value.trim();
       if(!name){ el("dlg-name").focus(); return; }
-      /* 「할 말」은 비어 있어도 된다 — 빈 칸은 아예 담지 않아 v3 데이터와 모양이 같다 */
+      /* 「피드백」은 비어 있어도 된다 — 빈 칸은 아예 담지 않아 v3 데이터와 모양이 같다 */
       const rubric = [...rubBox.querySelectorAll(".rrow2")]
         .map(row => { const fb = row.querySelector(".rf").value.trim();
           return {level:row.querySelector(".rl").value.trim(),
@@ -3501,14 +3501,32 @@ JSON만 출력한다: {"지식":["..."],"기능":["..."],"태도":["..."]}`);
 성취기준:
 ${[...dlgState.sel].map(c => `- [${c}] ${CODEMAP[c]?.text||""}`).join("\n") || "- (없음)"}
 수준을 가르는 기준: ${dlgState.axis || "자립도"}
-각 수준은 한 문장이고 '~함'으로 끝낸다. 세 문장은 같은 행동을 다루며 정도만 다르다.
-성취기준 문장을 그대로 옮겨 적지 않는다. 점수·백분율·석차를 쓰지 않는다.
-'${levels[levels.length-1]}'은 못하는 것의 나열이 아니라 어떤 도움에서 무엇을 해내는지로 쓴다.
-JSON만 출력한다: {${levels.map(l=>`"${l}":"…"`).join(",")}}`);
-      /* 뼈대와 같은 규칙 — 빈칸만 채운다 */
+
+[모습] 그 수준에서 교실에 보이는 모습
+- 한 문장이고 '~함'으로 끝낸다. 수준끼리 같은 행동을 다루며 정도만 다르다.
+- 성취기준 문장을 그대로 옮겨 적지 않는다. 점수·백분율·석차를 쓰지 않는다.
+- '자세히·적절히·충분히·잘' 같은 정도를 나타내는 말로 수준을 가르지 않는다. 무엇을 하는지로 가른다.
+- 개수로 가르지 않는다. 수업 참여 태도나 성실성은 넣지 않는다.
+- '${levels[levels.length-1]}'은 못하는 것의 나열이 아니라 어떤 도움에서 무엇을 해내는지로 쓴다.
+
+[피드백] 그 수준의 학생에게 교사가 그 자리에서 건넬 말
+- 초등학생에게 직접 건네는 말투로 한두 문장. 어려운 말을 쓰지 않는다.
+- 이미 하고 있는 것에서 출발한다. 없는 것을 지적하기 전에 있는 것을 먼저 짚는다.
+- 사람이 아니라 그 학생이 한 행동을 말한다. "똑똑하네"(x) "여러 번 고쳐 썼네"(o)
+- 다음 걸음은 하나만 준다. 오늘 당장 해 볼 수 있는 크기로.
+- '${levels[levels.length-1]}'에게도 못한 것을 세지 않는다. 지금 할 수 있는 한 걸음을 준다.
+- 혼자 하기 버거운 걸음이면 친구와 함께 해 보는 방법을 알려 준다.
+- "잘했어" "훌륭해" 같은 막연한 칭찬만으로 끝내지 않는다.
+
+JSON만 출력한다: {${levels.map(l=>`"${l}":{"모습":"…","피드백":"…"}`).join(",")}}`);
+      /* 뼈대와 같은 규칙 — 빈칸만 채운다. 형식을 어겨 문자열로 오면 모습으로 받는다 */
       rows.forEach((row,i) => {
-        const t = row.querySelector(".rt"), v = r[levels[i]];
-        if(!t.value.trim() && v) t.value = String(v).trim();
+        const v = r[levels[i]];
+        const 모습 = typeof v === "string" ? v : v?.모습;
+        const 피드백 = typeof v === "string" ? "" : v?.피드백;
+        const t = row.querySelector(".rt"), f = row.querySelector(".rf");
+        if(!t.value.trim() && 모습) t.value = String(모습).trim();
+        if(!f.value.trim() && 피드백) f.value = String(피드백).trim();
       });
       paintLint();
     }catch(e){ el("dlg-lint").innerHTML = `<div class="dmsg" style="color:var(--low)">${esc(e.message)}</div>`; }
