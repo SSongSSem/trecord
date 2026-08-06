@@ -803,6 +803,8 @@ const RUB_DEGREE = /(자세히|적절히|적절하게|충분히|열심히|성실
 const RUB_COUNT  = /(\d+|한|두|세|네|다섯|여러)\s*(가지|개|번|줄|문장|항목)\s*이상/;
 const RUB_ATTEND = /((적극적으로|성실히|열심히|꾸준히|빠짐없이|끝까지)\s*(참여|참가|활동|수행)|참여도|성실성|참여 태도)/;
 const RUB_VAGUE  = /(어려움이 있|어려워하|힘들어하|하지 못한|이르지 못)/;
+/* AI가 올린 관찰 낱말 중 처음부터 켜 둘 개수. 나머지는 뜬 채로 꺼져 있다 */
+const AI_KW_ON = 4;
 function rubricLint(rows, stdTexts){
   const out = [], filled = rows.map((r,i) => ({i, level:r.level||`${i+1}수준`, text:(r.text||"").trim()}))
                               .filter(r => r.text);
@@ -3266,7 +3268,10 @@ function openTask(subject, task, onOK){
 function openStd(subject, selected, onOK, taskMode){
   dlgState = {subject, sel:new Set(selected), onOK, taskMode,
               step: (taskMode && taskMode.task) ? 2 : 1,
-              kw:new Set(taskMode?.task?.kw || []), src:new Set(taskMode?.task?.sources || []),
+              kw:new Set(taskMode?.task?.kw || []),
+              /* 올라온 낱말은 꺼도 목록에 남는다 — 껐다고 지우면 다시 부르는 수밖에 없다 */
+              kwPool:new Set(taskMode?.task?.kw || []),
+              src:new Set(taskMode?.task?.sources || []),
               /* 빈 배열은 「우리 반 전체」다 — 기본이 전원이므로 빈칸을 강요하지 않는다 */
               targets:(taskMode?.task?.targets || []).slice(),
               axis:taskMode?.task?.axis || "", msg:""};
@@ -3279,7 +3284,9 @@ function openStd(subject, selected, onOK, taskMode){
     /* 교과를 바꿨는데 앞의 검색어가 남아 목록이 비면, 성취기준이 없는 줄 안다 */
     q.value = "";
     dlgState.msg = "";
-    dlgState.kw = new Set(); paintDlg();
+    /* 관찰 낱말도 지우지 않는다 — 성취기준을 여러 교과에서 담는데 낱말만 교과마다 날아가면
+       교과를 오갈 때마다 처음부터 다시 고르게 된다 */
+    paintDlg();
   };
   q.value = ""; q.oninput = paintDlg;
 
@@ -3451,7 +3458,7 @@ function openStd(subject, selected, onOK, taskMode){
 
   function paintKw(){
     const r = kwOfAreas(mainSubject(), dlgAreas());
-    const words = [...new Set([...dlgState.kw, ...r.blocks.flatMap(b => b.k)])];
+    const words = [...new Set([...dlgState.kw, ...(dlgState.kwPool||[]), ...r.blocks.flatMap(b => b.k)])];
     el("dlg-kw").innerHTML = words.map(w=>`<button class="kwc" type="button" data-kw="${esc(w)}"
       aria-pressed="${dlgState.kw.has(w)}">${esc(w)}</button>`).join("")
       || `<span class="muted">이 영역의 키워드가 없습니다</span>`;
@@ -3484,10 +3491,19 @@ ${name ? "평가과제: " + name + (crit ? " / 평가기준: " + crit : "") : ""
 지식·기능·태도 세 갈래로 각각 6개씩, 교사가 관찰한 사실을 적을 때 쓰는 짧은 명사구로 쓴다(예: 중심 문장 찾기, 근거 들어 설명하기).
 점수·등급·대회·상표명은 넣지 않는다.
 JSON만 출력한다: {"지식":["..."],"기능":["..."],"태도":["..."]}`);
-      const got = ["지식","기능","태도"].flatMap(k => (r[k]||[]).map(String)).filter(Boolean);
-      got.forEach(w => dlgState.kw.add(w));
+      const byCat = ["지식","기능","태도"].map(k => (r[k]||[]).map(String).map(s=>s.trim()).filter(Boolean));
+      const got = [...new Set(byCat.flat())];
+      got.forEach(w => dlgState.kwPool.add(w));
+      /* 스무 개 가까이 켜진 채로 들어오면 고른 것이 아니라 받은 것이 된다.
+         갈래를 돌아가며 몇 개만 켜 두고, 나머지는 뜬 채로 둔다. */
+      const on = [];
+      for(let i = 0; on.length < AI_KW_ON; i++){
+        if(!byCat.some(l => l[i])) break;
+        for(const l of byCat) if(l[i] && on.length < AI_KW_ON && !on.includes(l[i])) on.push(l[i]);
+      }
+      on.forEach(w => dlgState.kw.add(w));
       paintKw();
-      el("dlg-kwmsg").innerHTML = `<div class="dmsg">AI가 ${got.length}개를 더했습니다. 필요 없는 것은 눌러서 끄세요.</div>`;
+      el("dlg-kwmsg").innerHTML = `<div class="dmsg">AI가 ${got.length}개를 올렸고 그중 ${on.length}개를 켜 두었습니다. 눌러서 켜고 끕니다 — <b>끈 것도 목록에 남습니다.</b></div>`;
     }catch(e){ el("dlg-kwmsg").innerHTML = `<div class="dmsg" style="color:var(--low)">${esc(e.message)}</div>`; }
     const b2 = el("dlg-kwai"); if(b2){ b2.disabled = false; b2.innerHTML = ICON.spark() + "AI 추천"; }
   }
