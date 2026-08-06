@@ -1872,23 +1872,75 @@ function taskStd(){ const t = S.tasks.find(x => x.id === _taskId); return t ? (t
 function taskLegacy(){ const t = S.tasks.find(x => x.id === _taskId); return t ? (t.legacy||[]) : []; }
 function taskOfId(id){ return S.tasks.find(x => x.id === id); }
 
+/* 검토 항목은 ‘검토를 돌린 그 문장’(rv.base)의 구간을 가리킨다.
+   그래서 고치기는 hit 문자열을 찾아 바꾸지 않고, 받아들인 구간 교체(rv.edits)를
+   모두 base에 겹쳐 다시 만든다 — 앞 항목을 고쳐 위치가 밀려도 뒤 항목이 엉키지 않는다. */
+function aiSpan(rv, it){
+  const at = it.hit ? rv.base.indexOf(it.hit) : -1;
+  it.at = at; it.end = at < 0 ? -1 : at + it.hit.length;
+}
+function aiPatched(rv, extra){
+  const es = (rv.edits || []).concat(extra ? [extra] : []).sort((a,b) => a.at - b.at);
+  let out = "", p = 0;
+  es.forEach(e => { out += rv.base.slice(p, e.at) + e.to; p = e.end; });
+  return tidySentence(out + rv.base.slice(p));
+}
+/* fix가 대체 문구가 아니라 ‘(해당 부분 삭제)’ 같은 지시문이면 지우기로 본다 */
+const aiDrop = it => !it.fix ||
+  /^[\s(（'"‘“]*(해당\s*부분\s*)?(전체\s*)?(삭제|제거|빼기|생략)[^가-힣]*$/.test(it.fix.trim());
+const squash = s => String(s).replace(/\s+/g, "");
+function countIn(hay, ndl){
+  if(!ndl) return 0;
+  let n = 0, i = 0;
+  while((i = hay.indexOf(ndl, i)) >= 0){ n++; i += ndl.length; }
+  return n;
+}
+/* 지금 이 항목을 그대로 적용하면 안 되는 경우 — AI는 한 문장의 겹치는 부분을
+   여러 항목으로 나눠 짚곤 한다. 잇달아 누르면 같은 구절이 두 번 들어간다.
+   ① 앞서 고친 구간과 겹친다  ② 넣을 표현이 이미 문장에 있어 중복이 된다 */
+function aiClash(rv, it){
+  if(!(it.at >= 0)) return false;
+  if((rv.edits || []).some(e => it.at < e.end && e.at < it.end)) return true;
+  const to = aiDrop(it) ? "" : it.fix, sq = squash(to);
+  if(sq.length < 8) return false;
+  return countIn(squash(rv.cur), sq) >= 1 &&
+         countIn(squash(aiPatched(rv, {at:it.at, end:it.end, to})), sq) > 1;
+}
+/* 교사가 문장을 손으로 고쳤으면(우리가 만든 것과 다르면) 기준 문장을 지금 것으로 다시 잡는다.
+   옛 저장본에는 base가 없으므로 그것도 이 길로 들어온다. */
+function aiSync(k){
+  const rv = revOf(k), d = S.drafts[k];
+  if(!rv || !d || rv.cur === d.text) return rv;
+  rv.base = rv.cur = d.text; rv.edits = [];
+  (rv.items || []).forEach(it => {
+    if(it.state === "applied" || it.state === "ok" || it.state === "skip") return;
+    aiSpan(rv, it);
+    it.state = it.hit && it.at < 0 ? "gone" : "";
+  });
+  return rv;
+}
+
 /* AI 검토 결과 — 고치기·확인함으로 하나씩 닫아 나간다 */
 function aiReviewHTML(k, text, ev){
-  const rv = revOf(k);
+  const rv = aiSync(k);
   if(!rv || rv.closed) return "";
   /* 검토한 뒤에 문장이나 근거가 바뀌었다면 그 사실을 숨기지 않는다 */
   const stale = rv.sig && rv.sig !== revSig(text, ev);
   const items = (rv.items||[]).map(it => {
-    const gone = it.hit && !text.includes(it.hit);
-    const state = it.state || (gone ? "gone" : "");
+    let state = it.state || "";
+    if(!state && it.hit && !(it.at >= 0)) state = "gone";
+    if(!state && aiClash(rv, it)) state = "clash";
     return Object.assign({}, it, {state});
   });
   const left = items.filter(i => !i.state).length;
+  const clashes = items.filter(i => i.state === "clash").length;
   return `
   <div class="scan" id="ai-block">
     <div class="scan-head"><span class="lab">AI 검토</span>
       <span class="tally">${items.length
-        ? (left ? `${left}건 남음` : `<span class="none">모두 처리했습니다</span>`)
+        ? (left ? `${left}건 남음`
+          : clashes ? `${clashes}건은 다시 검토가 필요합니다`
+          : `<span class="none">모두 처리했습니다</span>`)
         : `<span class="none">짚은 것 없음</span>`}${stale
         ? ` <span style="color:var(--low)">· 그 뒤 문장이 바뀌었습니다</span>` : ``}</span>
       <span class="r" style="margin-left:auto;display:flex;gap:8px">
@@ -1896,19 +1948,23 @@ function aiReviewHTML(k, text, ev){
         <button class="link" data-aiclose="1" type="button">닫기</button></span>
     </div>
     ${items.map((f,i)=>{
-      const done = !!f.state;
+      const clash = f.state === "clash";
+      const done = !!f.state && !clash;
       const badge = f.state === "applied" ? "고쳤음" : f.state === "ok" ? "선생님이 확인함"
-                  : f.state === "gone" ? "문장에서 사라짐" : "";
+                  : f.state === "skip" ? "넘김" : f.state === "gone" ? "문장에서 사라짐" : "";
       return `<details class="f ${done?"done":(f.level==="위반"?"block":"warn")}"${done?"":" open"}>
-        <summary><span class="mk">${done?"✓":(f.level==="위반"?"●":"▲")}</span>
+        <summary><span class="mk">${done?"✓":clash?"↻":(f.level==="위반"?"●":"▲")}</span>
           <span class="hit">${esc(f.hit||"")}</span>
-          ${f.fix&&!done?`<span class="to">→ ${esc(f.fix)}</span>`:""}
+          ${f.fix&&!done&&!clash?`<span class="to">→ ${esc(f.fix)}</span>`:""}
           ${done?`<span class="to" style="color:var(--good)">${badge}</span>`:""}
-          <span class="r">${done?"":`
+          ${clash?`<span class="to" style="color:var(--mid)">다시 검토가 필요합니다</span>`:""}
+          <span class="r">${done?"":clash?`
+            <button class="fix" type="button" data-aiskip="${i}" title="이 항목을 넘기고 목록에서 닫기">넘기기</button>`:`
             ${f.fix?`<button class="fix" type="button" data-aifix="${i}">이대로 고치기</button>`:""}
             <button class="fix" type="button" data-aiok="${i}" title="규정에 어긋나지 않는다고 판단해 그대로 두기">확인함</button>`}
             <span class="basis">AI 검토</span></span></summary>
-        <div class="why">${esc(f.why||"")}${f.state==="ok"?`<br><span style="color:var(--good)">선생님이 확인해 그대로 두기로 한 항목입니다.</span>`:""}</div></details>`;
+        <div class="why">${esc(f.why||"")}${f.state==="ok"?`<br><span style="color:var(--good)">선생님이 확인해 그대로 두기로 한 항목입니다.</span>`:""}${
+          clash?`<br><span style="color:var(--mid)">앞서 고친 부분과 같은 자리를 짚었거나, 넣을 표현이 이미 문장에 들어가 있습니다. 그대로 적용하면 같은 말이 두 번 들어갑니다 — 위의 「다시 검토」를 누르거나 문장을 직접 다듬어 주세요.</span>`:""}</div></details>`;
     }).join("")}
     ${rv.note?`<div class="hint">${esc(rv.note)}</div>`:""}
     <div class="hint">참고 의견입니다.${rv.at?` · ${esc(rv.at.slice(5).replace("-","/"))} 검토`:""}</div>
@@ -2209,25 +2265,28 @@ ${S.drafts[k].text}`);
       const dSave = S.drafts[k] || (S.drafts[k] = {text:"", gate:[false,false,false,false]});
       dSave.review = {items:(r.findings||[]).map(f => ({level:f.level||"확인", hit:String(f.hit||""),
                         why:String(f.why||""), fix:String(f.fix||""), state:""})),
-                      note:String(r.note||""), sig:sigNow, at:stamp(), closed:false};
+                      note:String(r.note||""), sig:sigNow, at:stamp(), closed:false,
+                      base:dSave.text, cur:dSave.text, edits:[]};
+      dSave.review.items.forEach(it => {
+        aiSpan(dSave.review, it); if(it.hit && it.at < 0) it.state = "gone"; });
       save(); repaint();
     }catch(e){ out.innerHTML = `<div class="hint" style="color:var(--low)">${esc(e.message)}</div>`; busy(rv, false, "AI 검토"); }
   };
   /* AI 검토 항목 처리 — 고치기 / 확인함 */
   wrap.querySelectorAll("[data-aifix]").forEach(b => b.onclick = e => {
     e.preventDefault();
-    const it = revOf(k)?.items[+b.dataset.aifix]; const d = S.drafts[k];
-    if(!it || !d) return;
-    if(!d.text.includes(it.hit)){
+    const rev = aiSync(k), it = rev?.items[+b.dataset.aifix], d = S.drafts[k];
+    if(!it || !d || it.state) return;
+    if(!(it.at >= 0)){
       b.outerHTML = `<span class="basis" style="color:var(--low)">문장에서 그 부분을 찾지 못했습니다</span>`;
       return;
     }
-    /* fix가 대체 문구가 아니라 ‘(해당 부분 삭제)’ 같은 지시문이면 지우기로 본다 */
-    const drop = !it.fix || /^[\s(（'"‘“]*(해당\s*부분\s*)?(전체\s*)?(삭제|제거|빼기|생략)[^가-힣]*$/.test(it.fix.trim());
-    d.text = tidySentence(d.text.replace(it.hit, drop ? "" : it.fix));
+    if(aiClash(rev, it)){ repaint(); return; }   // 겹치는 제안 — 눌러도 중복만 생긴다
+    rev.edits.push({at:it.at, end:it.end, to:aiDrop(it) ? "" : it.fix});
     it.state = "applied";
+    d.text = rev.cur = aiPatched(rev);
     /* 이 수정은 검토가 시킨 것이므로 서명을 함께 옮긴다 — ‘문장이 바뀌었다’고 알릴 일이 아니다 */
-    d.review.sig = revSig(d.text, evid());
+    rev.sig = revSig(d.text, evid());
     d.gate = [false,false,false,false];      // 문장이 바뀌었으니 확인은 다시 받는다
     save(); repaint();
   });
@@ -2235,6 +2294,11 @@ ${S.drafts[k].text}`);
     e.preventDefault();
     const it = revOf(k)?.items[+b.dataset.aiok];
     if(it){ it.state = "ok"; save(); repaint(); }
+  });
+  wrap.querySelectorAll("[data-aiskip]").forEach(b => b.onclick = e => {
+    e.preventDefault();
+    const it = revOf(k)?.items[+b.dataset.aiskip];
+    if(it){ it.state = "skip"; save(); repaint(); }
   });
   const redo = wrap.querySelector("[data-airedo]");
   if(redo) redo.onclick = e => { e.preventDefault(); el("ai-review")?.onclick({force:true}); };
