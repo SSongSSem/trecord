@@ -1001,7 +1001,7 @@ function toNominal(s){
 }
 /* 자동 검사에서 교사가 ‘확인함’으로 넘긴 항목 (화면에만 남는다) */
 let ackScan = {}, upFile = null;
-let _kwArea = 0, _level = '', _noteLevel = '', _rubOpen = false;
+let _kwArea = 0, _noteLevel = '', _rubOpen = false;
 /* 낱말 칩은 접어 둔다 — 한번 편 사람에게는 계속 펴 준다(슬롯을 옮겨도 유지) */
 let _kwOpen = false, _kwMore = false;
 /* 훑어 적기 — 수업 직후 명렬 순서로 한 바퀴 돈다. 세션에만 산다(저장하지 않는다) */
@@ -1758,13 +1758,6 @@ function detailHTML(){
       <span class="r">
         <button class="ghost tip" id="mk-draft" type="button"${ns.length?"":" disabled"}
                 data-tip="담아 둔 근거를 명사형 문장으로 이어 붙여 초안을 만듭니다">근거로 초안</button>
-        ${aiOn() ? (() => {
-          /* 옵션은 이 칸 관찰이 참조한 과제의 루브릭에서, 기본값은 담긴 수준의 최빈값에서 온다 */
-          const pick = _level || modeLevel(ns);
-          return `<select id="lv-sel" title="초안의 서술 수준">
-             <option value="">수준 선택 안 함</option>
-             ${slotLevels(ns).map(v=>`<option value="${esc(v)}"${v===pick?" selected":""}>${esc(v)}</option>`).join("")}
-           </select>`; })() : ``}
         ${aiOn() ? `
            <button class="ghost" id="ai-draft" type="button"${ns.length?"":" disabled"}>AI 초안</button>
                     <button class="ghost" id="ai-review" type="button"${d.text.trim()?"":" disabled"}>AI 검토</button>`
@@ -1862,11 +1855,6 @@ function stdCut(code, n){
   return t.length > n ? t.slice(0, n) + "…" : t;
 }
 /* 이 칸 관찰들이 참조한 과제 루브릭의 수준명 — 없으면 통용 3수준 */
-function slotLevels(ns){
-  const out = [];
-  for(const n of ns) for(const r of (taskOf(n)?.rubric || [])) if(!out.includes(r.level)) out.push(r.level);
-  return out.length ? out : ["잘함","보통","노력요함"];
-}
 function modeLevel(ns){
   const c = {};
   for(const n of ns) if(n.level) c[n.level] = (c[n.level] || 0) + 1;
@@ -1982,8 +1970,6 @@ function bindDetail(){
   if(tg) tg.onclick = e => { const b = e.target.closest("[data-drop]"); if(!b) return;
     pendingStd = pendingStd.filter(c => c !== b.dataset.drop); repaint(); };
 
-  const lv = el("lv-sel");
-  if(lv) lv.onchange = () => { _level = lv.value; };
   const lvbox = el("c-level");
   if(lvbox) lvbox.onclick = e => {
     /* 결석·미제출은 과제에 남는다 — 노트를 만들지 않는다 */
@@ -2185,7 +2171,8 @@ ${(() => { const ts = [...new Set(notesOf(s.id, S.ui.slot).map(n => n.taskId).fi
     if(!ts.length) return "";
     return "[루브릭] 아래 수준 서술을 참고해 표현을 고른다.\n" +
       ts.map(t => t.name + ": " + t.rubric.map(r => r.level + " — " + r.text).join(" / ")).join("\n"); })()}
-${(() => { const L = el("lv-sel")?.value || "";
+${(() => { /* 수준은 위에서 찍은 관찰들이 이미 말하고 있다 — 따로 또 고르게 하지 않는다 */
+  const L = modeLevel(notesOf(s.id, S.ui.slot));
   return L ? `성취수준은 ‘${L}’ 정도로 읽히게 서술한다. 다만 ‘${L}’·점수·등급을 문장에 직접 쓰지 않는다.${/노력|미흡|부족/.test(L)?" 부족한 점만 남기지 말고 변화 가능성을 함께 쓴다." : ""}` : ""; })()}
 JSON만 출력한다: {"text":"초안"}
 [근거]
