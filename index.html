@@ -3458,7 +3458,9 @@ function openStd(subject, selected, onOK, taskMode){
 
   function paintKw(){
     const r = kwOfAreas(mainSubject(), dlgAreas());
-    const words = [...new Set([...dlgState.kw, ...(dlgState.kwPool||[]), ...r.blocks.flatMap(b => b.k)])];
+    /* 자리를 지킨다 — 고른 것을 앞으로 당기면 눌러 놓고도 누른 것인지 눈이 잃는다.
+       켜짐은 색으로 이미 보인다. 순서는 기본 낱말 → 올라온 낱말 → 그 밖의 것. */
+    const words = [...new Set([...r.blocks.flatMap(b => b.k), ...(dlgState.kwPool||[]), ...dlgState.kw])];
     el("dlg-kw").innerHTML = words.map(w=>`<button class="kwc" type="button" data-kw="${esc(w)}"
       aria-pressed="${dlgState.kw.has(w)}">${esc(w)}</button>`).join("")
       || `<span class="muted">이 영역의 키워드가 없습니다</span>`;
