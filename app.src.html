@@ -458,6 +458,12 @@ dialog::backdrop{background:rgba(8,12,20,.45)}
 /* 고른 성취기준과 그 영역 — 영역은 고르는 것이 아니라 따라 나온다(읽기 전용) */
 #dlg-picked{display:flex;flex-wrap:wrap;gap:5px;align-items:center;margin-bottom:10px}
 #dlg-picked .subj{font-size:12.5px;font-weight:600;color:var(--ink-2);margin-right:2px}
+/* 평가 요소를 갈래로 고른다 — 갈래 이름은 2022 개정 범주를 그대로 쓴다 */
+#dlg-elem{display:flex;flex-direction:column;gap:5px;margin-top:7px}
+#dlg-elem:empty{margin-top:0}
+.elrow{display:flex;gap:7px;align-items:flex-start}
+.elcat{flex:0 0 56px;font-size:11px;color:var(--ink-3);padding-top:5px;text-align:right;line-height:1.3}
+.elrow .kwchips{max-height:none;flex:1;min-width:0}
 /* 고른 성취기준 원문 — 읽는 것이지 고치는 것이 아니다 */
 #dlg-full,#dlg-chosen{margin:-4px 0 10px;padding:9px 12px;background:var(--surface);border:1px solid var(--rule);
           border-radius:8px;font-size:12.5px;line-height:1.7;color:var(--ink-2);max-height:132px;overflow-y:auto}
@@ -551,8 +557,12 @@ dialog::backdrop{background:rgba(8,12,20,.45)}
     <!-- 설계는 원문과의 대조 작업이다 — 22자로 자른 배지로는 대조가 되지 않는다 -->
     <div id="dlg-full"></div>
     <div class="field" style="margin-bottom:10px">
-      <span class="lab">평가 요소</span>
+      <div class="fieldhead"><span class="lab">평가 요소</span>
+        <span class="r" id="dlg-elai-slot"></span></div>
       <input type="text" id="dlg-name" placeholder="예) 문단의 중심 생각 정리하기">
+      <!-- 빈칸을 마주보는 대신 갈래로 고른다. 성취기준에 없는 갈래는 줄을 그리지 않는다 -->
+      <div id="dlg-elmsg"></div>
+      <div id="dlg-elem"></div>
     </div>
     <div class="field" style="margin-bottom:10px">
       <span class="lab">평가 내용</span>
@@ -805,6 +815,9 @@ const RUB_ATTEND = /((적극적으로|성실히|열심히|꾸준히|빠짐없이
 const RUB_VAGUE  = /(어려움이 있|어려워하|힘들어하|하지 못한|이르지 못)/;
 /* AI가 올린 관찰 낱말 중 처음부터 켜 둘 개수. 나머지는 뜬 채로 꺼져 있다 */
 const AI_KW_ON = 4;
+/* 평가 요소의 갈래 — 2022 개정 범주다. 옛 '지식/기능/태도'가 아니다.
+   성취기준에 없는 갈래는 채우지 않는다. 빈 칸을 채우려 들면 참여도가 들어온다. */
+const ELEM_CATS = ["지식·이해", "과정·기능", "가치·태도"];
 function rubricLint(rows, stdTexts){
   const out = [], filled = rows.map((r,i) => ({i, level:r.level||`${i+1}수준`, text:(r.text||"").trim()}))
                               .filter(r => r.text);
@@ -3271,6 +3284,8 @@ function openStd(subject, selected, onOK, taskMode){
               kw:new Set(taskMode?.task?.kw || []),
               /* 올라온 낱말은 꺼도 목록에 남는다 — 껐다고 지우면 다시 부르는 수밖에 없다 */
               kwPool:new Set(taskMode?.task?.kw || []),
+              /* 평가 요소 갈래 — 창을 닫으면 사라진다. 남는 것은 이어 붙인 한 줄뿐이다 */
+              elem:{pool:{}, sel:new Set()},
               src:new Set(taskMode?.task?.sources || []),
               /* 빈 배열은 「우리 반 전체」다 — 기본이 전원이므로 빈칸을 강요하지 않는다 */
               targets:(taskMode?.task?.targets || []).slice(),
@@ -3333,6 +3348,14 @@ function openStd(subject, selected, onOK, taskMode){
     const c = r.dataset.code;
     dlgState.sel.has(c) ? dlgState.sel.delete(c) : dlgState.sel.add(c);
     dlgState.msg = ""; paintDlg(); };
+  /* 고를 때마다 이어 붙여 평가 요소 한 줄을 만든다.
+     다 꺼도 입력칸은 비우지 않는다 — 손으로 쓴 것이 있을 수 있다 */
+  el("dlg-elem").onclick = e => { const b = e.target.closest("[data-el]"); if(!b) return;
+    const w = b.dataset.el, sel = dlgState.elem.sel;
+    sel.has(w) ? sel.delete(w) : sel.add(w);
+    const joined = joinElem();
+    if(joined){ const n = el("dlg-name"); n.value = joined; n.dispatchEvent(new Event("input",{bubbles:true})); }
+    paintElem(); };
   el("dlg-kw").onclick = e => { const b = e.target.closest("[data-kw]"); if(!b) return;
     const w = b.dataset.kw;
     dlgState.kw.has(w) ? dlgState.kw.delete(w) : dlgState.kw.add(w);
@@ -3418,13 +3441,16 @@ function openStd(subject, selected, onOK, taskMode){
     el("dlg-skel").disabled = !skelKey();
     paintSrc(); paintWho();
     /* AI 버튼 둘은 연결돼 있을 때만 */
+    el("dlg-elai-slot").innerHTML = aiOn()
+      ? `<button class="kwai" id="dlg-elai" type="button">${ICON.spark()}AI 추천</button>` : "";
     el("dlg-kwai-slot").innerHTML = aiOn()
       ? `<button class="kwai" id="dlg-kwai" type="button">${ICON.spark()}AI 추천</button>` : "";
     el("dlg-airub-slot").innerHTML = aiOn()
       ? `<button class="ghost" id="dlg-airub" type="button">AI 초안</button>` : "";
+    const eai = el("dlg-elai"); if(eai) eai.onclick = aiElements;
     const kai = el("dlg-kwai"); if(kai) kai.onclick = aiKeywords;
     const arb = el("dlg-airub"); if(arb) arb.onclick = aiRubric;
-    paintKw(); paintLint();
+    paintElem(); paintKw(); paintLint();
   }
   /* 증거 계획 — 관찰 한 번으로 판정하는 평가를 설계 시점에 거른다.
      짚어주기의 「근거가 직접관찰뿐인 학생」은 사후 경보인데, 이 줄은 같은 점검을 앞으로 당긴다.
@@ -3456,6 +3482,20 @@ function openStd(subject, selected, onOK, taskMode){
     msg:"비워서 정하면 우리 반 전체가 됩니다", allowEmpty:true,
     onOK(ids){ dlgState.targets = ids.length === S.students.length ? [] : ids; paintWho(); }});
 
+  /* 평가 요소를 갈래로 고른다 — 빈칸을 마주보는 대신 고르고, 고른 것이 이어져 한 줄이 된다 */
+  function paintElem(){
+    const {pool, sel} = dlgState.elem;
+    el("dlg-elem").innerHTML = ELEM_CATS.filter(c => (pool[c]||[]).length).map(c =>
+      `<div class="elrow"><span class="elcat">${esc(c)}</span><div class="kwchips">`
+      + pool[c].map(w=>`<button class="kwc" type="button" data-el="${esc(w)}"
+          aria-pressed="${sel.has(w)}">${esc(w)}</button>`).join("")
+      + `</div></div>`).join("");
+  }
+  function joinElem(){
+    const {pool, sel} = dlgState.elem, out = [];
+    for(const c of ELEM_CATS) for(const w of (pool[c]||[])) if(sel.has(w)) out.push(w);
+    return out.join(" · ");
+  }
   function paintKw(){
     const r = kwOfAreas(mainSubject(), dlgAreas());
     /* 자리를 지킨다 — 고른 것을 앞으로 당기면 눌러 놓고도 누른 것인지 눈이 잃는다.
@@ -3482,6 +3522,33 @@ function openStd(subject, selected, onOK, taskMode){
       <div class="why">${esc(f.why)}</div></details>`).join("");
   }
 
+  async function aiElements(){
+    const b = el("dlg-elai"); b.disabled = true; b.textContent = "…";
+    const codes = [...dlgState.sel];
+    try{
+      const r = await aiJSON(`한국 초등학교 ${S.klass.grade}학년 ${dlgSubjects().join("·") || mainSubject()} 평가과제의 「평가 요소」 후보를 뽑는다.
+성취기준:
+${codes.map(c => `- [${c}] ${CODEMAP[c]?.text||""}`).join("\n") || "- (없음)"}
+성취기준 문장을 2022 개정 세 범주로 나누어 갈래마다 4개까지 뽑는다.
+- 4~12자의 짧은 명사구나 '~하기'로 쓴다. 문장이 아니다. '~할 수 있다'를 붙이지 않는다.
+- 교실에서 보이는 것으로 쓴다. '이해', '함양', '역량' 같은 속뜻말은 쓰지 않는다.
+- **그 갈래가 성취기준 문장에 없으면 빈 배열 []을 반환한다. 채우려고 지어내지 마라.**
+- 수업 참여 태도·성실성·발표 태도는 넣지 않는다.
+JSON만 출력한다: {${ELEM_CATS.map(c=>`"${c}":[]`).join(",")}}`);
+      const pool = {};
+      for(const c of ELEM_CATS)
+        pool[c] = [...new Set((r[c]||[]).map(String).map(s=>s.trim()).filter(Boolean))].slice(0,4);
+      dlgState.elem = {pool, sel:new Set()};
+      paintElem();
+      const n = ELEM_CATS.reduce((a,c)=>a+pool[c].length, 0);
+      const empty = ELEM_CATS.filter(c => !pool[c].length);
+      el("dlg-elmsg").innerHTML = n
+        ? `<div class="dmsg">${n}개를 올렸습니다. 누르는 대로 이어 붙습니다.${
+            empty.length ? ` <b>${esc(empty.join(" · "))}</b>는 이 성취기준에 없어 비워 두었습니다.` : ""}</div>`
+        : `<div class="dmsg">뽑을 것을 찾지 못했습니다. 성취기준을 먼저 고르세요.</div>`;
+    }catch(e){ el("dlg-elmsg").innerHTML = `<div class="dmsg" style="color:var(--low)">${esc(e.message)}</div>`; }
+    const b2 = el("dlg-elai"); if(b2){ b2.disabled = false; b2.innerHTML = ICON.spark() + "AI 추천"; }
+  }
   async function aiKeywords(){
     const b = el("dlg-kwai"); b.disabled = true; b.textContent = "…";
     const codes = [...dlgState.sel];
