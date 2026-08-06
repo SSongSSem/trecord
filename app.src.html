@@ -459,11 +459,16 @@ dialog::backdrop{background:rgba(8,12,20,.45)}
 #dlg-picked{display:flex;flex-wrap:wrap;gap:5px;align-items:center;margin-bottom:10px}
 #dlg-picked .subj{font-size:12.5px;font-weight:600;color:var(--ink-2);margin-right:2px}
 /* 고른 성취기준 원문 — 읽는 것이지 고치는 것이 아니다 */
-#dlg-full{margin:-4px 0 10px;padding:9px 12px;background:var(--surface);border:1px solid var(--rule);
+#dlg-full,#dlg-chosen{margin:-4px 0 10px;padding:9px 12px;background:var(--surface);border:1px solid var(--rule);
           border-radius:8px;font-size:12.5px;line-height:1.7;color:var(--ink-2);max-height:132px;overflow-y:auto}
-#dlg-full .one{display:flex;gap:8px}
-#dlg-full .one+.one{margin-top:5px;padding-top:5px;border-top:1px solid var(--rule)}
-#dlg-full .c{font-family:var(--mono);font-size:11.5px;color:var(--accent);flex:0 0 auto}
+#dlg-full .one,#dlg-chosen .one{display:flex;gap:8px}
+#dlg-full .one+.one,#dlg-chosen .one+.one{margin-top:5px;padding-top:5px;border-top:1px solid var(--rule)}
+#dlg-full .c,#dlg-chosen .c{font-family:var(--mono);font-size:11.5px;color:var(--accent);flex:0 0 auto}
+/* 고르는 중에도 고른 것이 눈앞에 남아야 한다 — 여러 개를 견주는 일이기 때문이다 */
+#dlg-chosen{margin:0 0 8px;flex:0 0 auto}
+#dlg-chosen .x{margin-left:auto;flex:0 0 auto;border:0;background:none;cursor:pointer;
+          color:var(--ink-3);font-size:14px;line-height:1;padding:0 2px}
+#dlg-chosen .x:hover{color:var(--ink)}
 /* 근거유형은 살구 계열 — 근거의 색이다(§4-3) */
 .srcpick{display:flex;flex-wrap:wrap;gap:5px}
 .srcpick button{background:var(--surface);border:1px solid var(--rule);border-radius:999px;
@@ -596,6 +601,7 @@ dialog::backdrop{background:rgba(8,12,20,.45)}
       <p>3. 수준을 가르는 축이 <b>이 기준의 핵심 능력</b>입니까?</p>
     </div></details>
   </div>
+  <div id="dlg-chosen" hidden></div>
   <div class="dbody" id="dlg-body"></div>
   <div class="dfoot">
     <span class="muted" id="dlg-sel"></span>
@@ -3316,6 +3322,9 @@ function openStd(subject, selected, onOK, taskMode){
     } else dlgState.onOK([...dlgState.sel]);
     el("dlg").close();
   };
+  /* 고른 목록에서 바로 뺀다 — 뺄 것을 다시 찾아 들어가게 하지 않는다 */
+  el("dlg-chosen").onclick = e => { const b = e.target.closest("[data-drop]"); if(!b) return;
+    dlgState.sel.delete(b.dataset.drop); dlgState.msg = ""; paintDlg(); };
   el("dlg-body").onclick = e => { const r = e.target.closest(".srow"); if(!r) return;
     const c = r.dataset.code;
     dlgState.sel.has(c) ? dlgState.sel.delete(c) : dlgState.sel.add(c);
@@ -3357,6 +3366,7 @@ function openStd(subject, selected, onOK, taskMode){
     const tm = dlgState.taskMode, one = !tm || dlgState.step === 1;
     el("dlg-title").textContent = tm ? (tm.task ? "평가 고치기" : "평가 설계") : "성취기준 고르기";
     subjSel.hidden = !one; q.hidden = !one; el("dlg-cnt").hidden = !one; el("dlg-body").hidden = !one;
+    el("dlg-chosen").hidden = !one || !dlgState.sel.size;
     el("dlg-task").hidden = !tm || one;
     el("dlg-back").hidden = !tm || one;
     el("dlg-next").hidden = !tm || !one;
@@ -3375,6 +3385,13 @@ function openStd(subject, selected, onOK, taskMode){
           <span class="mk">${dlgState.sel.has(c)?"✓":"＋"}</span><span class="code">${esc(c)}</span><span>${esc(t)}</span></button>`).join("") : "";
     }).join("");
     el("dlg-body").innerHTML = html || `<div class="empty">찾는 성취기준이 없습니다</div>`;
+    /* 교과를 넘나들며 고르는 동안에도 고른 것이 눈앞에 남아야 한다.
+       목록 안의 ✓만으로는 다른 교과로 넘어간 순간 보이지 않는다. */
+    const picked = [...dlgState.sel], box = el("dlg-chosen");
+    box.hidden = !picked.length;
+    box.innerHTML = picked.map(c =>
+      `<div class="one"><span class="c">${esc(c)}</span><span>${esc(CODEMAP[c]?.text || "원문을 찾지 못했습니다")}</span>`
+      + `<button class="x" type="button" data-drop="${esc(c)}" title="빼기" aria-label="${esc(c)} 빼기">×</button></div>`).join("");
     el("dlg-cnt").textContent = n + "건";
     el("dlg-sel").innerHTML = (dlgState.msg ? `<span style="color:var(--mid)">${esc(dlgState.msg)}</span> · ` : "")
       + (dlgState.sel.size ? `${dlgState.sel.size}건 선택` : "");
