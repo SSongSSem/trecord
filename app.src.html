@@ -237,8 +237,14 @@ textarea{line-height:1.7}
 .empty-action .copy{min-width:0;line-height:1.45}.empty-action .copy b{display:block;color:var(--ink);font-size:13.5px}
 .empty-action .copy span{display:block;margin-top:3px;color:var(--ink-3);font-size:12px}
 .empty-action .actions{margin-left:auto;display:flex;gap:7px;flex:0 0 auto}
+.empty-action .mark .ic{width:19px;height:19px}
 .prep-empty{min-height:136px;border-color:var(--rule-strong);background:var(--raise)}
 .record-empty{margin-top:10px}
+/* 수업 설계 — 성취기준 원문은 대조하는 글이라 자르지 않고 통째로 보인다 */
+.dsg-std{margin-top:5px;padding:7px 10px;border-radius:9px;background:var(--raise);
+         border:1px solid var(--rule);font-size:12.5px;line-height:1.6}
+.dsg-std .mono{color:var(--accent);font-size:11.5px;margin-right:5px}
+.dsg-fb{display:block;margin-top:3px;font-style:normal;color:var(--ink-3);font-size:12px}
 /* 고른 평가 — 무엇을 기록하는 중인지 한 줄로 */
 .pickhead{display:flex;gap:10px;align-items:baseline;flex-wrap:wrap;margin-top:10px;
           padding-bottom:9px;border-bottom:1px solid var(--rule)}
@@ -667,6 +673,8 @@ input.elnew{border:1px solid var(--accent-line);border-radius:999px;padding:3px 
   </div>
   <nav class="tabs" role="tablist">
     <button class="tab" role="tab" id="tab-prep" aria-selected="false" type="button">준비</button>
+    <!-- 평가를 먼저 짜고 수업을 나중에 짠다(백워드). 탭 순서가 그 순서다 -->
+    <button class="tab" role="tab" id="tab-design" aria-selected="false" type="button">수업 설계</button>
     <button class="tab" role="tab" id="tab-write" aria-selected="true" type="button">기록</button>
     <button class="tab" role="tab" id="tab-check" aria-selected="false" type="button">살펴보기</button>
     <button class="tab" role="tab" id="tab-ai" aria-selected="false" type="button">AI 연결</button>
@@ -1102,7 +1110,10 @@ const ICON = {
   cca:      () => SVG('<path d="m21 3.5-18 7.2 7.2 2.3L21 3.5Z"/><path d="m10.2 13 1.8 7.5 3.4-5.4"/>'),
   behavior: () => SVG('<path d="M12 21v-8"/><path d="M12 13C12 9 9.5 6.5 5 6.5c0 4.5 2.5 6.5 7 6.5Z"/><path d="M12 11c0-3.5 2-5.5 6-5.5 0 4-2 5.5-6 5.5Z"/>'),
   /* 주의 — 도로 표지. 위반(stop)과 함께 stroke 2.0 */
-  warn: () => SVG('<path d="M12 3.5 22 20H2L12 3.5Z"/><path d="M12 9.5v5"/><path d="M12 17.3v.2"/>', 2)
+  warn: () => SVG('<path d="M12 3.5 22 20H2L12 3.5Z"/><path d="M12 9.5v5"/><path d="M12 17.3v.2"/>', 2),
+  /* 수업 설계 — 평가에서 활동으로 갈라져 나가는 모양 */
+  flow: () => SVG('<circle cx="5.5" cy="12" r="2.5"/><circle cx="18.5" cy="6" r="2.5"/><circle cx="18.5" cy="18" r="2.5"/><path d="M7.8 10.9 16.2 7"/><path d="M7.8 13.1 16.2 17"/>'),
+  hand: () => SVG('<path d="M9 11V5.2a1.7 1.7 0 0 1 3.4 0V11"/><path d="M12.4 11V6.6a1.7 1.7 0 0 1 3.4 0V11"/><path d="M15.8 11.4V8.6a1.7 1.7 0 0 1 3.4 0V15c0 3.3-2.4 5.8-5.8 5.8-2.4 0-4-1-5.2-2.8l-2.6-4a1.6 1.6 0 0 1 2.5-2L9 13.4"/>')
 };
 /* 근거유형 → 아이콘. 진행 표에서 글자 칩을 대신한다 */
 const SRC_ICON = {"직접관찰":"eye","수업산출물":"paper","자기평가서":"self",
@@ -1523,29 +1534,28 @@ function render(){
       `<option value="${c.id}"${c.id===S.curId?" selected":""}>${esc(klassName(c))} · ${c.students.length}명${c.klass.demo?" (예시)":""}</option>`).join("")
     + `<option value="__new">＋ 새 학급 만들기</option>`;
   el("klass").style.display = S.classes.length ? "" : "none";
-  el("tab-prep").setAttribute("aria-selected", String(S.ui.tab === "prep"));
-  el("tab-write").setAttribute("aria-selected", String(S.ui.tab === "write"));
-  el("tab-check").setAttribute("aria-selected", String(S.ui.tab === "check"));
-  el("tab-ai").setAttribute("aria-selected", String(S.ui.tab === "ai"));
+  paintTabs();
   el("tab-ai").innerHTML = "AI 연결" + (aiOn() ? `<span class="dot" style="background:var(--good)"></span>` : "");
   const p = S.klass ? pointers().filter(x => x.sev !== "low").length : 0;
   el("tab-check").innerHTML = "살펴보기" + (p ? `<span class="dot"></span>` : "");
   const ready = !!(S.klass && S.classes.length);
-  // 학급을 만들기 전에는 기록·점검으로 갈 수 없다. 눌러도 안 되는 이유를 보이게 한다.
-  for(const id of ["tab-write","tab-check"]){
+  // 학급을 만들기 전에는 설계·기록·점검으로 갈 수 없다. 눌러도 안 되는 이유를 보이게 한다.
+  for(const id of ["tab-design","tab-write","tab-check"]){
     el(id).disabled = !ready;
     el(id).title = ready ? "" : "먼저 준비 탭에서 우리 반을 등록해 주세요";
   }
   if(!ready && S.ui.tab !== "ai") S.ui.tab = "prep";
-  el("tab-prep").setAttribute("aria-selected", String(S.ui.tab === "prep"));
-  el("tab-write").setAttribute("aria-selected", String(S.ui.tab === "write"));
-  el("tab-check").setAttribute("aria-selected", String(S.ui.tab === "check"));
+  paintTabs();
   if(S.ui.tab === "ai"){ renderAI(); return; }
   if(!ready){ renderSetup(); return; }
   if(S.ui.tab === "prep") renderPrep();
+  else if(S.ui.tab === "design") renderDesign();
   else if(S.ui.tab === "check") renderCheck();
   else renderWrite();
 }
+const TABS = ["prep","design","write","check","ai"];
+const paintTabs = () => TABS.forEach(t =>
+  el("tab-" + t).setAttribute("aria-selected", String(S.ui.tab === t)));
 
 /* ── 설정 ── */
 function renderSetup(edit){
@@ -2670,6 +2680,150 @@ function renderPrep(){
     S.tasks = S.tasks.filter(x => x.id !== t.id); if(_taskId === t.id) _taskId = "";
     save(); renderPrep(); });
   bindUpload();
+}
+
+/* ══ 수업 설계 — 백워드 3단계 ══
+   준비 탭에서 정한 루브릭을 활동으로 역산하는 자리다. 순서가 뒤집히지 않도록
+   루브릭이 없는 과제는 설계를 시작할 수 없게 막는다 — 역산할 지표가 없으면
+   활동 고르기가 다시 ‘재미있는 것’ 고르기로 돌아간다. */
+let _dsgId = "";
+
+function ensureDesign(t){
+  if(!t.design) t.design = {v:1, goal:"", minutes:40, hands:null, flow:[],
+    sheet:{title:"", blocks:[]}, slides:[], images:[], notAssessed:[],
+    reflect:{saw:"", why:"", next:""}, stale:{}, at:new Date().toISOString()};
+  return t.design;
+}
+/* 관문 순서대로만 올라간다. 삽화는 선택이므로 단계를 만들지 않는다 */
+function designStage(d){
+  if(!d || !(d.flow || []).length) return 0;
+  if(!(d.slides || []).length && !(d.sheet?.blocks || []).length) return 1;
+  return 2;
+}
+const DSG_STEPS = ["흐름", "원고", "삽화", "파일"];
+const DSG_STAGE = ["설계 전", "흐름까지", "원고까지"];
+/* 수준 서술이 하나라도 있어야 역산이 된다. 이름과 코드만 있는 과제로는 못 짠다 */
+const designable = t => (t.rubric || []).some(r => (r.text || "").trim());
+
+function renderDesign(){
+  const t = S.tasks.find(x => x.id === _dsgId);
+  if(!t){ renderDesignList(); return; }
+  const d = ensureDesign(t), stage = designStage(d);
+
+  el("main").innerHTML = `<div class="stack">
+    <div class="panel">
+      <div class="ph"><h2>${esc(t.name)}</h2>
+        <span class="r"><span class="muted">${esc(subjShort(t.subject))}${t.when?` · ${esc(t.when)}`:""}</span>
+          <button class="ghost" id="d-back" type="button">목록</button></span></div>
+      <div class="dsteps" aria-label="수업 설계 단계">
+        ${DSG_STEPS.map((s,i) => `<span${i===stage?` aria-current="step"`:""}><b>${i+1}</b>${s}</span>${
+          i<DSG_STEPS.length-1?`<i aria-hidden="true"></i>`:""}`).join("")}
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="ph"><h2>역산할 재료</h2>
+        <span class="r"><button class="ghost" id="d-editrub" type="button">준비 탭에서 고치기</button></span></div>
+      <div class="pb">
+        <div class="field"><span class="lab">성취기준</span>
+          ${t.standards.length ? t.standards.map(c => `<div class="dsg-std">
+            <span class="mono">${esc(c)}</span> ${esc(CODEMAP[c]?.text || "")}</div>`).join("")
+            : `<div class="muted">성취기준이 걸려 있지 않습니다.</div>`}</div>
+        ${t.criteria ? `<div class="field"><span class="lab">관찰 관점</span>
+          <div>${esc(t.criteria)}</div></div>` : ``}
+        <div class="field" style="margin-bottom:0">
+          <span class="lab">루브릭 — 활동은 이 수준들이 드러나게 짠다</span>
+          ${(t.rubric||[]).map(r => `<div class="rline"><b>${esc(r.level)}</b><span>${esc(r.text)}${
+            r.fb ? `<em class="dsg-fb">→ ${esc(r.fb)}</em>` : ``}</span></div>`).join("")}</div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="ph"><h2>이 차시</h2></div>
+      <div class="pb">
+        <div class="field">
+          <span class="lab">학습목표 <span class="muted">— 주제를 얹은 문장은 여기에 씁니다</span></span>
+          <input type="text" id="d-goal" value="${esc(d.goal||"")}"
+            placeholder="예) 주변에서 만날 수 있는 직업인을 찾아, 매체를 고려하여 면담해 봅시다">
+          <div class="hint" id="d-goalmsg"></div>
+        </div>
+        <div class="field inline" style="margin-bottom:0">
+          <span><span class="lab">수업 시간</span><br>
+            <select id="d-min">${[40,80,120].map(n =>
+              `<option value="${n}"${n===(d.minutes||40)?" selected":""}>${n}분${n>40?` (${n/40}차시)`:""}</option>`).join("")}</select></span>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="ph"><h2>① 활동 흐름</h2></div>
+      <div class="pb"><div class="empty-action">
+        <span class="mark" aria-hidden="true">${ICON.flow()}</span>
+        <span class="copy"><b>루브릭에서 활동을 역산합니다</b>
+          <span>위 수준 서술이 드러나는 활동만 만들고, 어느 지표도 보지 않는 활동은 넣지 않습니다.</span></span>
+        <span class="actions"><button class="primary" id="d-flow" type="button" disabled>흐름 만들기</button></span>
+      </div>
+      <div class="hint">다음 단계에서 이어 만듭니다.</div></div>
+    </div>
+  </div>`;
+
+  el("d-back").onclick = () => { _dsgId = ""; renderDesign(); };
+  el("d-editrub").onclick = () => openTask(t.subject, t, () => renderDesign());
+
+  /* 재구성 문장이 성취기준 칸으로 새는 것을 막는 자리 — 새면 그대로
+     평가 계획과 나이스 기록까지 흘러간다 */
+  const goal = el("d-goal"), gmsg = el("d-goalmsg");
+  const checkGoal = () => {
+    gmsg.innerHTML = /\[\s*\d[가-힣]{1,4}\d{2}-\d{2}\s*\]/.test(goal.value)
+      ? `<span style="color:var(--mid)">성취기준 코드가 들어 있습니다. 학습목표 칸에는 <b>학생에게 줄 문장</b>만 씁니다 — 코드와 원문은 위 재료 칸이 들고 있습니다.</span>`
+      : ``;
+  };
+  goal.oninput = checkGoal; checkGoal();
+  goal.onchange = () => { d.goal = goal.value.trim(); d.at = new Date().toISOString(); save(); };
+  el("d-min").onchange = e => { d.minutes = +e.target.value; save(); };
+}
+
+function renderDesignList(){
+  const ok = S.tasks.filter(designable), no = S.tasks.filter(t => !designable(t));
+  el("main").innerHTML = `<div class="stack">
+    <div class="panel">
+      <div class="ph"><h2>수업 설계</h2>
+        <span class="r muted">평가를 먼저 정하고, 활동은 거기서 역산합니다</span></div>
+      ${ok.length ? `<div class="scroll"><table class="task-table">
+        <thead><tr><th>과제</th><th>루브릭</th><th>설계</th><th></th></tr></thead>
+        <tbody>${ok.map(t => {
+          const st = designStage(t.design);
+          return `<tr class="trow" data-dopen="${t.id}">
+            <td>${esc(t.name)}<div style="font-size:12px;color:var(--ink-3)">${esc(subjShort(t.subject))}${
+              t.design?.goal ? ` · ${esc(t.design.goal.slice(0,34))}` : ""}</div></td>
+            <td style="font-size:12px;color:var(--ink-3)">${(t.rubric||[]).map(r=>esc(r.level)).join(" · ")}</td>
+            <td><span class="chip"${st?``:` style="background:var(--sink);color:var(--ink-3);border-color:var(--rule)"`}>${DSG_STAGE[st]}</span></td>
+            <td class="rowact" style="text-align:right"><button class="ghost" type="button" data-dgo="${t.id}">열기</button></td></tr>`;
+        }).join("")}</tbody></table></div>` : `<div class="pb"><div class="empty-action">
+          <span class="mark" aria-hidden="true">${ICON.flow()}</span>
+          <span class="copy"><b>먼저 준비 탭에서 평가를 설계하세요</b>
+            <span>수준 서술(루브릭)이 있어야 활동을 역산할 수 있습니다.</span></span>
+          <span class="actions"><button class="primary" id="d-goprep" type="button">준비 탭으로</button></span>
+        </div></div>`}
+    </div>
+    ${no.length ? `<div class="panel">
+      <div class="ph"><h2>아직 설계할 수 없는 평가</h2><span class="r muted">${no.length}개</span></div>
+      <div class="pb"><div class="hint">수준 서술이 비어 있어 역산할 지표가 없습니다.
+        아래에서 눌러 루브릭을 채우면 위 목록으로 올라옵니다.</div>
+        <div class="tags" style="margin-top:10px">${no.map(t =>
+          `<button class="chip" type="button" data-dfix="${t.id}">${esc(t.name)}</button>`).join("")}</div></div>
+    </div>` : ``}
+  </div>`;
+
+  const gp = el("d-goprep");
+  if(gp) gp.onclick = () => { S.ui.tab = "prep"; save(); render(); };
+  const open = id => { _dsgId = id; renderDesign(); };
+  el("main").querySelectorAll(".trow").forEach(r => r.onclick = e => {
+    if(e.target.closest("button")) return; open(r.dataset.dopen); });
+  el("main").querySelectorAll("[data-dgo]").forEach(b => b.onclick = () => open(b.dataset.dgo));
+  el("main").querySelectorAll("[data-dfix]").forEach(b => b.onclick = () => {
+    const t = S.tasks.find(x => x.id === b.dataset.dfix);
+    openTask(t.subject, t, () => renderDesign()); });
 }
 
 /* 과제 양식이 요구하는 윤리 점검 3항목. 줄이거나 순서를 바꾸지 말 것 —
@@ -4058,6 +4212,7 @@ function demo(){
 
 /* ── 부팅 ── */
 el("tab-prep").onclick  = () => { S.ui.tab = "prep";  save(); render(); };
+el("tab-design").onclick = () => { S.ui.tab = "design"; save(); render(); };
 el("tab-write").onclick = () => { S.ui.tab = "write"; save(); render(); };
 el("tab-check").onclick = () => { S.ui.tab = "check"; save(); render(); };
 el("tab-ai").onclick = () => { S.ui.tab = "ai"; save(); render(); };
