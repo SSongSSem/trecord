@@ -3011,6 +3011,240 @@ ${src.map(({r, i}) => `${i}. ${r.name}${(r.asks||[]).length ? " / 교사 발문:
   }
 }
 
+/* ══ 수업자료 파일(PPTX) ══
+   OOXML을 손으로 짠다. 라이브러리를 담으면 700KB가 넘는데, 우리가 낼 것은
+   글상자뿐이라 그만한 값을 하지 않는다. 규약(본문 22pt 이상·노트는 교사만)을
+   우리가 쥐고 있는 편이 오히려 지키기 쉽다. */
+const EMU = 914400;                       // 1인치
+const DECK = {w: 12192000, h: 6858000};   // 16:9
+const PAD = Math.round(EMU * 0.72);
+const XE = xesc;
+
+const pptRun = (txt, sz, b, color) =>
+  `<a:r><a:rPr lang="ko-KR" altLang="en-US" sz="${sz}"${b ? ` b="1"` : ``} dirty="0">` +
+  `<a:solidFill><a:srgbClr val="${color || "1A2733"}"/></a:solidFill></a:rPr>` +
+  `<a:t>${XE(txt)}</a:t></a:r>`;
+function pptBox(id, name, x, y, cx, cy, paras, align){
+  return `<p:sp><p:nvSpPr><p:cNvPr id="${id}" name="${XE(name)}"/>` +
+    `<p:cNvSpPr txBox="1"/><p:nvPr/></p:nvSpPr>` +
+    `<p:spPr><a:xfrm><a:off x="${x}" y="${y}"/><a:ext cx="${cx}" cy="${cy}"/></a:xfrm>` +
+    `<a:prstGeom prst="rect"><a:avLst/></a:prstGeom><a:noFill/></p:spPr>` +
+    `<p:txBody><a:bodyPr wrap="square" lIns="0" tIns="0" rIns="0" bIns="0" anchor="t">` +
+    `<a:normAutofit/></a:bodyPr><a:lstStyle/>` +
+    (paras.length ? paras.join("") : `<a:p><a:endParaRPr lang="ko-KR"/></a:p>`) +
+    `</p:txBody></p:sp>`;
+}
+
+/* 한 장. 표지만 가운데 크게 두고 나머지는 제목+본문 한 벌이다 */
+function pptSlideXml(sl){
+  const W = DECK.w - PAD * 2;
+  const body = [];
+  let id = 2;
+  if(sl.kind === "title"){
+    body.push(pptBox(id++, "제목", PAD, Math.round(DECK.h * 0.30), W, 1600000,
+      [`<a:p><a:pPr algn="ctr"><a:buNone/></a:pPr>` + pptRun(sl.title || "", 4000, true, "1A2733") + `</a:p>`]));
+    body.push(pptBox(id++, "부제", PAD, Math.round(DECK.h * 0.30) + 1700000, W, 1400000,
+      (sl.body || []).map(x =>
+        `<a:p><a:pPr algn="ctr"><a:buNone/></a:pPr>` + pptRun(x, 2400, false, "55677C") + `</a:p>`)));
+  } else {
+    body.push(pptBox(id++, "제목", PAD, PAD, W, 900000,
+      [`<a:p><a:pPr><a:buNone/></a:pPr>` + pptRun(sl.title || "", 3200, true, "1A2733") + `</a:p>`]));
+    /* 본문 22pt 아래로 내려가지 않는다. 줄이 많으면 24 → 22까지만 줄인다 */
+    const n = (sl.body || []).length;
+    const sz = sl.kind === "big" ? 3600 : (n > 5 ? 2200 : 2400);
+    body.push(pptBox(id++, "본문", PAD, PAD + 1100000, W, DECK.h - PAD * 2 - 1100000,
+      (sl.body || []).map(x => {
+        const bul = sl.kind === "bullets" || sl.kind === "steps";
+        return `<a:p><a:pPr${bul ? ` marL="285750" indent="-285750"` : ``}>` +
+          (bul ? `<a:buChar char="·"/>` : `<a:buNone/>`) + `</a:pPr>` +
+          pptRun(x, sz, sl.kind === "big", sl.kind === "quote" ? "1558B0" : "1A2733") + `</a:p>`;
+      })));
+  }
+  return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>` +
+    `<p:sld xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" ` +
+    `xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" ` +
+    `xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main">` +
+    `<p:cSld><p:spTree><p:nvGrpSpPr><p:cNvPr id="1" name=""/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr>` +
+    `<p:grpSpPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="0" cy="0"/>` +
+    `<a:chOff x="0" y="0"/><a:chExt cx="0" cy="0"/></a:xfrm></p:grpSpPr>` +
+    body.join("") + `</p:spTree></p:cSld><p:clrMapOvr><a:masterClrMapping/></p:clrMapOvr></p:sld>`;
+}
+
+/* 발표자 노트. 교사만 보는 자리라 화면 규약과 무관하게 길어도 된다 */
+function pptNotesXml(note){
+  return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>` +
+    `<p:notes xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" ` +
+    `xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" ` +
+    `xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main">` +
+    `<p:cSld><p:spTree><p:nvGrpSpPr><p:cNvPr id="1" name=""/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr>` +
+    `<p:grpSpPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="0" cy="0"/>` +
+    `<a:chOff x="0" y="0"/><a:chExt cx="0" cy="0"/></a:xfrm></p:grpSpPr>` +
+    `<p:sp><p:nvSpPr><p:cNvPr id="2" name="Notes Placeholder"/>` +
+    `<p:cNvSpPr><a:spLocks noGrp="1"/></p:cNvSpPr><p:nvPr><p:ph type="body" idx="1"/></p:nvPr></p:nvSpPr>` +
+    `<p:spPr/><p:txBody><a:bodyPr/><a:lstStyle/>` +
+    String(note || "").split("\n").map(x =>
+      `<a:p><a:r><a:rPr lang="ko-KR" dirty="0"/><a:t>${XE(x)}</a:t></a:r></a:p>`).join("") +
+    `</p:txBody></p:sp></p:spTree></p:cSld><p:clrMapOvr><a:masterClrMapping/></p:clrMapOvr></p:notes>`;
+}
+
+/* 파워포인트가 열려면 있어야 하는 최소 한 벌.
+   테마·마스터·레이아웃은 내용이 없어도 자리는 있어야 한다 */
+const PPT_NS_A = "http://schemas.openxmlformats.org/drawingml/2006/main";
+const PPT_NS_P = "http://schemas.openxmlformats.org/presentationml/2006/main";
+const PPT_NS_R = "http://schemas.openxmlformats.org/officeDocument/2006/relationships";
+const XMLH = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>`;
+
+const pptTheme = () => {
+  const c = (n, v) => `<a:${n}><a:srgbClr val="${v}"/></a:${n}>`;
+  const fill3 = `<a:solidFill><a:schemeClr val="phClr"/></a:solidFill>`.repeat(3);
+  const ln1 = `<a:ln w="9525" cap="flat" cmpd="sng" algn="ctr"><a:solidFill>` +
+    `<a:schemeClr val="phClr"/></a:solidFill><a:prstDash val="solid"/></a:ln>`;
+  const font = t => `<a:${t}Font><a:latin typeface="맑은 고딕"/><a:ea typeface="맑은 고딕"/>` +
+    `<a:cs typeface=""/></a:${t}Font>`;
+  return XMLH + `<a:theme xmlns:a="${PPT_NS_A}" name="T-record"><a:themeElements>` +
+    `<a:clrScheme name="T-record"><a:dk1><a:sysClr val="windowText" lastClr="000000"/></a:dk1>` +
+    `<a:lt1><a:sysClr val="window" lastClr="FFFFFF"/></a:lt1>` +
+    c("dk2", "1A2733") + c("lt2", "F2F6FB") + c("accent1", "1E6FD9") + c("accent2", "1558B0") +
+    c("accent3", "1E7A55") + c("accent4", "8F6410") + c("accent5", "B3372A") + c("accent6", "55677C") +
+    c("hlink", "1E6FD9") + c("folHlink", "55677C") + `</a:clrScheme>` +
+    `<a:fontScheme name="T-record">${font("major")}${font("minor")}</a:fontScheme>` +
+    `<a:fmtScheme name="T-record"><a:fillStyleLst>${fill3}</a:fillStyleLst>` +
+    `<a:lnStyleLst>${ln1.repeat(3)}</a:lnStyleLst>` +
+    `<a:effectStyleLst>${`<a:effectStyle><a:effectLst/></a:effectStyle>`.repeat(3)}</a:effectStyleLst>` +
+    `<a:bgFillStyleLst>${fill3}</a:bgFillStyleLst></a:fmtScheme>` +
+    `</a:themeElements></a:theme>`;
+};
+
+const pptEmptyTree = () =>
+  `<p:cSld><p:spTree><p:nvGrpSpPr><p:cNvPr id="1" name=""/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr>` +
+  `<p:grpSpPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="0" cy="0"/>` +
+  `<a:chOff x="0" y="0"/><a:chExt cx="0" cy="0"/></a:xfrm></p:grpSpPr></p:spTree></p:cSld>`;
+
+const PPT_CLRMAP = `<p:clrMap bg1="lt1" tx1="dk1" bg2="lt2" tx2="dk2" accent1="accent1" ` +
+  `accent2="accent2" accent3="accent3" accent4="accent4" accent5="accent5" accent6="accent6" ` +
+  `hlink="hlink" folHlink="folHlink"/>`;
+
+const pptMaster = () => XMLH +
+  `<p:sldMaster xmlns:a="${PPT_NS_A}" xmlns:r="${PPT_NS_R}" xmlns:p="${PPT_NS_P}">` +
+  pptEmptyTree() + PPT_CLRMAP +
+  `<p:sldLayoutIdLst><p:sldLayoutId id="2147483649" r:id="rId1"/></p:sldLayoutIdLst></p:sldMaster>`;
+
+const pptLayout = () => XMLH +
+  `<p:sldLayout xmlns:a="${PPT_NS_A}" xmlns:r="${PPT_NS_R}" xmlns:p="${PPT_NS_P}" type="blank" preserve="1">` +
+  pptEmptyTree() + `<p:clrMapOvr><a:masterClrMapping/></p:clrMapOvr></p:sldLayout>`;
+
+const pptNotesMaster = () => XMLH +
+  `<p:notesMaster xmlns:a="${PPT_NS_A}" xmlns:r="${PPT_NS_R}" xmlns:p="${PPT_NS_P}">` +
+  `<p:cSld><p:spTree><p:nvGrpSpPr><p:cNvPr id="1" name=""/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr>` +
+  `<p:grpSpPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="0" cy="0"/>` +
+  `<a:chOff x="0" y="0"/><a:chExt cx="0" cy="0"/></a:xfrm></p:grpSpPr>` +
+  `<p:sp><p:nvSpPr><p:cNvPr id="2" name="Notes Placeholder"/>` +
+  `<p:cNvSpPr><a:spLocks noGrp="1"/></p:cNvSpPr><p:nvPr><p:ph type="body" idx="1"/></p:nvPr></p:nvSpPr>` +
+  `<p:spPr><a:xfrm><a:off x="685800" y="1143000"/><a:ext cx="5486400" cy="4114800"/></a:xfrm>` +
+  `<a:prstGeom prst="rect"><a:avLst/></a:prstGeom></p:spPr>` +
+  `<p:txBody><a:bodyPr/><a:lstStyle/><a:p><a:endParaRPr lang="ko-KR"/></a:p></p:txBody></p:sp>` +
+  `</p:spTree></p:cSld>` + PPT_CLRMAP + `</p:notesMaster>`;
+
+const REL_OPEN = `<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">`;
+
+/* 슬라이드를 묶어 pptx 한 벌로 만든다 */
+async function buildPptx(slides, title){
+  if(!slides.length) throw new Error("슬라이드가 없습니다.");
+  const enc = new TextEncoder(), F = [];
+  const put = (name, xml) => F.push({name, data: enc.encode(xml)});
+  const hasNote = i => !!(slides[i].note || "").trim();
+  const n = slides.length;
+
+  put("[Content_Types].xml", XMLH +
+    `<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">` +
+    `<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>` +
+    `<Default Extension="xml" ContentType="application/xml"/>` +
+    `<Override PartName="/ppt/presentation.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.presentation.main+xml"/>` +
+    `<Override PartName="/ppt/slideMasters/slideMaster1.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.slideMaster+xml"/>` +
+    `<Override PartName="/ppt/slideLayouts/slideLayout1.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.slideLayout+xml"/>` +
+    `<Override PartName="/ppt/notesMasters/notesMaster1.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.notesMaster+xml"/>` +
+    `<Override PartName="/ppt/theme/theme1.xml" ContentType="application/vnd.openxmlformats-officedocument.theme+xml"/>` +
+    slides.map((_, i) => `<Override PartName="/ppt/slides/slide${i+1}.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.slide+xml"/>`).join("") +
+    slides.map((_, i) => hasNote(i) ? `<Override PartName="/ppt/notesSlides/notesSlide${i+1}.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.notesSlide+xml"/>` : ``).join("") +
+    `<Override PartName="/docProps/core.xml" ContentType="application/vnd.openxmlformats-package.core-properties+xml"/>` +
+    `<Override PartName="/docProps/app.xml" ContentType="application/vnd.openxmlformats-officedocument.extended-properties+xml"/>` +
+    `</Types>`);
+
+  put("_rels/.rels", XMLH + REL_OPEN +
+    `<Relationship Id="rId1" Type="${PPT_NS_R}/officeDocument" Target="ppt/presentation.xml"/>` +
+    `<Relationship Id="rId2" Type="${PPT_NS_R}/metadata/core-properties" Target="docProps/core.xml"/>` +
+    `<Relationship Id="rId3" Type="${PPT_NS_R}/extended-properties" Target="docProps/app.xml"/>` +
+    `</Relationships>`);
+
+  put("docProps/core.xml", XMLH +
+    `<cp:coreProperties xmlns:cp="http://schemas.openxmlformats.org/package/2006/metadata/core-properties" ` +
+    `xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:dcterms="http://purl.org/dc/terms/" ` +
+    `xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">` +
+    `<dc:title>${XE(title || "수업자료")}</dc:title></cp:coreProperties>`);
+  put("docProps/app.xml", XMLH +
+    `<Properties xmlns="http://schemas.openxmlformats.org/officeDocument/2006/extended-properties" ` +
+    `xmlns:vt="http://schemas.openxmlformats.org/officeDocument/2006/docPropsVTypes">` +
+    `<Slides>${n}</Slides></Properties>`);
+
+  put("ppt/presentation.xml", XMLH +
+    `<p:presentation xmlns:a="${PPT_NS_A}" xmlns:r="${PPT_NS_R}" xmlns:p="${PPT_NS_P}" saveSubsetFonts="1">` +
+    `<p:sldMasterIdLst><p:sldMasterId id="2147483648" r:id="rId1"/></p:sldMasterIdLst>` +
+    `<p:notesMasterIdLst><p:notesMasterId r:id="rId${n + 2}"/></p:notesMasterIdLst>` +
+    `<p:sldIdLst>${slides.map((_, i) => `<p:sldId id="${256 + i}" r:id="rId${i + 2}"/>`).join("")}</p:sldIdLst>` +
+    `<p:sldSz cx="${DECK.w}" cy="${DECK.h}"/><p:notesSz cx="6858000" cy="9144000"/>` +
+    `</p:presentation>`);
+  put("ppt/_rels/presentation.xml.rels", XMLH + REL_OPEN +
+    `<Relationship Id="rId1" Type="${PPT_NS_R}/slideMaster" Target="slideMasters/slideMaster1.xml"/>` +
+    slides.map((_, i) => `<Relationship Id="rId${i + 2}" Type="${PPT_NS_R}/slide" Target="slides/slide${i + 1}.xml"/>`).join("") +
+    `<Relationship Id="rId${n + 2}" Type="${PPT_NS_R}/notesMaster" Target="notesMasters/notesMaster1.xml"/>` +
+    `<Relationship Id="rId${n + 3}" Type="${PPT_NS_R}/theme" Target="theme/theme1.xml"/>` +
+    `</Relationships>`);
+
+  put("ppt/theme/theme1.xml", pptTheme());
+  put("ppt/slideMasters/slideMaster1.xml", pptMaster());
+  put("ppt/slideMasters/_rels/slideMaster1.xml.rels", XMLH + REL_OPEN +
+    `<Relationship Id="rId1" Type="${PPT_NS_R}/slideLayout" Target="../slideLayouts/slideLayout1.xml"/>` +
+    `<Relationship Id="rId2" Type="${PPT_NS_R}/theme" Target="../theme/theme1.xml"/>` +
+    `</Relationships>`);
+  put("ppt/slideLayouts/slideLayout1.xml", pptLayout());
+  put("ppt/slideLayouts/_rels/slideLayout1.xml.rels", XMLH + REL_OPEN +
+    `<Relationship Id="rId1" Type="${PPT_NS_R}/slideMaster" Target="../slideMasters/slideMaster1.xml"/>` +
+    `</Relationships>`);
+  put("ppt/notesMasters/notesMaster1.xml", pptNotesMaster());
+  put("ppt/notesMasters/_rels/notesMaster1.xml.rels", XMLH + REL_OPEN +
+    `<Relationship Id="rId1" Type="${PPT_NS_R}/theme" Target="../theme/theme1.xml"/>` +
+    `</Relationships>`);
+
+  slides.forEach((sl, i) => {
+    put(`ppt/slides/slide${i + 1}.xml`, pptSlideXml(sl));
+    put(`ppt/slides/_rels/slide${i + 1}.xml.rels`, XMLH + REL_OPEN +
+      `<Relationship Id="rId1" Type="${PPT_NS_R}/slideLayout" Target="../slideLayouts/slideLayout1.xml"/>` +
+      (hasNote(i) ? `<Relationship Id="rId2" Type="${PPT_NS_R}/notesSlide" Target="../notesSlides/notesSlide${i + 1}.xml"/>` : ``) +
+      `</Relationships>`);
+    if(hasNote(i)){
+      put(`ppt/notesSlides/notesSlide${i + 1}.xml`, pptNotesXml(sl.note));
+      put(`ppt/notesSlides/_rels/notesSlide${i + 1}.xml.rels`, XMLH + REL_OPEN +
+        `<Relationship Id="rId1" Type="${PPT_NS_R}/notesMaster" Target="../notesMasters/notesMaster1.xml"/>` +
+        `<Relationship Id="rId2" Type="${PPT_NS_R}/slide" Target="../slides/slide${i + 1}.xml"/>` +
+        `</Relationships>`);
+    }
+  });
+  return zip(F);
+}
+
+async function savePptx(t, d, btn){
+  const keep = btn.textContent; btn.disabled = true; btn.textContent = "…";
+  try{
+    const blob = await buildPptx(d.slides || [], t.name);
+    saveBlob(blob, `수업자료_${safeName(t.name)}.pptx`);
+  }catch(e){
+    console.warn("[수업자료]", e);
+    const m = el("d-outmsg");
+    if(m){ m.hidden = false; m.style.color = "var(--low)"; m.textContent = e.message; }
+  }
+  btn.disabled = false; btn.textContent = keep;
+}
+
 /* ══ 관문③ 수업자료 원고 ══
    교사가 띄우는 화면이다. 활동지의 규칙을 그대로 옮기지 않는다 —
    활동지에는 성취기준 코드가 0건이었지만 PPT는 96%가 표지에 싣는다.
@@ -3370,12 +3604,14 @@ function sheetImgHTML(d){
 function paintOut(t, d){
   const box = el("d-outpanel"); if(!box) return;
   const hasFlow = (d.flow || []).length, hasSheet = (d.sheet?.blocks || []).length;
+  const hasDeck = (d.slides || []).length;
   box.innerHTML = `
     <div class="ph"><h2>③ 완성</h2></div>
     <div class="pb">
       <div class="rowbtns">
         <button class="ghost" id="d-hwpx" type="button"${hasFlow?"":" disabled"}>지도안 한글파일</button>
         <button class="ghost" id="d-sheethwpx" type="button"${hasSheet?"":" disabled"}>활동지 한글파일</button>
+        <button class="ghost" id="d-pptx" type="button"${hasDeck?"":" disabled"}>수업자료 PPTX</button>
       </div>
       <div class="hint" style="margin-top:8px">${hasFlow
         ? "한글에서 열어 고칠 수 있습니다."
@@ -3386,6 +3622,8 @@ function paintOut(t, d){
   if(hw) hw.onclick = () => saveHwpx(t, d, hw);
   const shw = el("d-sheethwpx");
   if(shw) shw.onclick = () => saveSheet(t, d, shw);
+  const pp = el("d-pptx");
+  if(pp) pp.onclick = () => savePptx(t, d, pp);
 }
 
 function sheetCard(b, i, d){
