@@ -2751,7 +2751,7 @@ const minutesOf = d => periodsOf(d) * PERIOD_MIN;
 
 function ensureDesign(t){
   if(!t.design) t.design = {v:1, goal:"", periods:1, hands:null, flow:[],
-    sheet:{goal:"", blocks:[]}, sheetImg:null, slides:[], images:[], notAssessed:[],
+    sheet:{goal:"", blocks:[]}, slides:[], images:[], notAssessed:[],
     reflect:{saw:"", why:"", next:""}, stale:{}, at:new Date().toISOString()};
   return t.design;
 }
@@ -2990,77 +2990,159 @@ ${src.map(({r, i}) => `${i}. ${r.name}${(r.asks||[]).length ? " / 교사 발문:
   }
 }
 
-/* 원고를 바탕으로 그림 프롬프트를 받는다. 교사가 고쳐 쓰는 것이 전제라
-   그대로 그리게 하지 않고 화면에 내어 놓는다 */
-async function genSheetPrompt(t, d, btn){
-  if(!aiOn()){ S.ui.tab = "ai"; save(); render(); return; }
-  const sh = d.sheet || {blocks:[]}, opts = seeOpts(t);
-  const keep = btn.textContent; btn.disabled = true; btn.textContent = "…";
-  const msg = el("d-imgmsg"); if(msg) msg.hidden = true;
-  try{
-    const r = await aiJSON2(`초등 ${S.klass.grade}학년 활동지 한 장을 그림으로 그리게 하려 한다.
-그림 생성 모델에 줄 프롬프트를 쓴다.
+/* ══ 활동지 그림 그리기 ══
+   A4 210×297mm를 200dpi로 잡는다. 인쇄해도 글자가 또렷하고 파일이 무겁지 않은 선이다.
+   pt를 px로 옮길 때는 200/72을 곱한다 — 10pt가 28px이다. */
+const PX = 200 / 25.4;                    // 1mm
+const PT = 200 / 72;                      // 1pt
+const A4 = {w: Math.round(210 * PX), h: Math.round(297 * PX), pad: Math.round(18 * PX)};
+const SHEET_FONT = `"맑은 고딕","Malgun Gothic","Apple SD Gothic Neo","Noto Sans KR",sans-serif`;
 
-[학생용 목표] ${sh.goal || d.goal || ""}
-[활동지 칸]
-${(sh.blocks || []).map((b, i) => `${i+1}. ${b.title}${b.kind ? ` (${b.kind})` : ""}
-   지시: ${b.ask || ""}
-   물음: ${b.q || ""}
-   답 칸: ${b.lines || 3}줄`).join("\n") || "(칸 없음)"}
-
-규칙
-- A4 세로 한 장, 초등학생용 학습지 판면으로 그리게 한다.
-- 맨 위에 학년·반·이름 쓰는 칸, 그 아래 목표 한 줄을 둔다.
-- 칸마다 번호와 제목, 지시, 물음, 그리고 학생이 쓸 밑줄 칸을 둔다.
-- 위 글자를 **한 글자도 바꾸지 말고 그대로** 넣으라고 분명히 적는다.
-- 글씨는 또렷한 고딕, 흑백 인쇄에도 읽히게 한다. 배경은 흰색.
-- 장식은 옅은 선과 칸 테두리까지만. 그림·캐릭터로 칸을 덮지 않는다.
-- 프롬프트는 한국어로 쓰고, 300자 안쪽으로 한다.
-
-아래 모양 그대로, 키 이름을 번역하지 말고 영문 그대로 쓴다. JSON만 출력한다:
-{"prompt":"그림 모델에 줄 프롬프트"}`);
-    const pr = String(r?.prompt || "").trim();
-    if(!pr) throw new Error("프롬프트를 받지 못했습니다. 다시 시도해 주세요.");
-    d.sheetImg = Object.assign({}, d.sheetImg, {prompt: pr});
-    save(); paintSheet(t, d);
-  }catch(e){
-    const m = el("d-imgmsg");
-    if(m){ m.hidden = false; m.style.color = "var(--low)"; m.textContent = e.message; }
+/* 재려면 글꼴이 정해져 있어야 한다 — 재기 전에 늘 폰트를 건다 */
+function wrapText(ctx, text, maxW){
+  const out = [];
+  for(const para of String(text == null ? "" : text).split("\n")){
+    let line = "";
+    for(const ch of para){
+      const t = line + ch;
+      if(ctx.measureText(t).width > maxW && line){ out.push(line); line = ch; }
+      else line = t;
+    }
+    out.push(line);
   }
-  const b2 = el("d-imgprompt"); if(b2){ b2.disabled = false; b2.textContent = keep; }
+  return out;
 }
 
-const mk2 = () => el("d-imgmake");
-async function genSheetImage(t, d, btn){
-  if(!aiOn()){ S.ui.tab = "ai"; save(); render(); return; }
-  const pr = (d.sheetImg?.prompt || "").trim();
-  const msg = el("d-imgmsg");
-  if(!pr){ if(msg){ msg.hidden = false; msg.style.color = "var(--mid)";
-    msg.textContent = "먼저 프롬프트를 받아 두거나 직접 적어 주세요."; } return; }
-  const keep = btn.textContent; btn.disabled = true; btn.textContent = "그리는 중…";
-  if(msg) msg.hidden = true;
-  try{
-    const models = d.sheetImg?.model ? [d.sheetImg.model] : await aiImageModels();
-    console.info("[활동지 그림] 시도할 모델:", models);
-    let blob = null, last = null;
-    for(const m of models.slice(0, 4)){
-      if(mk2()) mk2().textContent = `${m} …`;
-      try{ blob = await aiImage(pr, m); d.sheetImg.model = m; break; }
-      catch(e){ last = e; console.warn("[활동지 그림]", m, "실패 —", e.message); }
+/* 활동지 한 벌을 그린다. 한 장을 넘치면 다음 장으로 넘긴다 */
+function drawSheetPages(t, d){
+  const sh = d.sheet || {blocks:[]}, blocks = sh.blocks || [];
+  const pages = [];
+  let cv = null, ctx = null, y = 0;
+
+  const newPage = () => {
+    cv = document.createElement("canvas");
+    cv.width = A4.w; cv.height = A4.h;
+    ctx = cv.getContext("2d");
+    ctx.fillStyle = "#fff"; ctx.fillRect(0, 0, A4.w, A4.h);
+    ctx.textBaseline = "top";
+    pages.push(cv);
+    y = A4.pad;
+  };
+  const room = need => { if(y + need > A4.h - A4.pad) newPage(); };
+  const font = (pt, bold) => { ctx.font = `${bold ? "700 " : ""}${Math.round(pt * PT)}px ${SHEET_FONT}`; };
+  const put = (text, pt, bold, color, indent) => {
+    font(pt, bold);
+    ctx.fillStyle = color || "#111";
+    const x = A4.pad + (indent || 0);
+    const lines = wrapText(ctx, text, A4.w - A4.pad * 2 - (indent || 0));
+    const lh = Math.round(pt * PT * 1.55);
+    for(const ln of lines){ room(lh); ctx.fillText(ln, x, y); y += lh; }
+  };
+
+  newPage();
+
+  /* 이름칸 — 학년·반·이름은 학생이 손으로 쓴다 */
+  font(11, false); ctx.fillStyle = "#111";
+  const name = "(       )학년   (       )반   이름 (                    )";
+  ctx.fillText(name, A4.w - A4.pad - ctx.measureText(name).width, y);
+  y += Math.round(11 * PT * 2.2);
+
+  /* 학생용 목표 — 가운데 */
+  font(17, true); ctx.fillStyle = "#111";
+  const goal = sh.goal || "오늘의 목표";
+  for(const ln of wrapText(ctx, goal, A4.w - A4.pad * 2)){
+    room(Math.round(17 * PT * 1.5));
+    ctx.fillText(ln, (A4.w - ctx.measureText(ln).width) / 2, y);
+    y += Math.round(17 * PT * 1.5);
+  }
+  y += Math.round(6 * PX);
+  ctx.strokeStyle = "#111"; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.moveTo(A4.pad, y); ctx.lineTo(A4.w - A4.pad, y); ctx.stroke();
+  y += Math.round(7 * PX);
+
+  blocks.forEach((b, i) => {
+    room(Math.round(30 * PX));
+    const top = y;
+    /* 번호와 제목, 그리고 오른쪽 끝에 유형 배지 */
+    font(13, true);
+    const title = `${i + 1}. ${b.title || ""}`;
+    ctx.fillStyle = "#111";
+    const tw = A4.w - A4.pad * 2 - (b.kind ? Math.round(30 * PX) : 0);
+    for(const ln of wrapText(ctx, title, tw)){
+      room(Math.round(13 * PT * 1.5));
+      ctx.fillText(ln, A4.pad + Math.round(3 * PX), y);
+      y += Math.round(13 * PT * 1.5);
     }
-    if(!blob) throw last || new Error("그림을 만들지 못했습니다.");
-    const id = "sheetimg:" + uid();
-    if(d.sheetImg.key) try{ await fileDel(d.sheetImg.key); }catch(e){}
-    await filePut(id, {blob, name:`활동지_${safeName(t.name)}.png`,
-      type:blob.type, size:blob.size, at:today()});
-    d.sheetImg.key = id; d.sheetImg.at = new Date().toISOString();
-    d.at = d.sheetImg.at; save(); paintSheet(t, d);
+    if(b.kind){
+      font(9.5, false);
+      const kw = ctx.measureText(b.kind).width, ph = Math.round(9.5 * PT * 1.9);
+      const bx = A4.w - A4.pad - kw - Math.round(6 * PX);
+      ctx.fillStyle = "#EDF2F9"; ctx.strokeStyle = "#B6D0F0"; ctx.lineWidth = 1;
+      roundRect(ctx, bx - Math.round(3 * PX), top, kw + Math.round(6 * PX), ph, Math.round(2 * PX));
+      ctx.fill(); ctx.stroke();
+      ctx.fillStyle = "#1558B0";
+      ctx.fillText(b.kind, bx, top + Math.round(ph * 0.24));
+    }
+    y += Math.round(1.5 * PX);
+    if(b.ask) put(b.ask, 11.5, false, "#111", Math.round(4 * PX));
+    if(b.q)   put(b.q,   11.5, false, "#111", Math.round(4 * PX));
+    y += Math.round(3 * PX);
+
+    /* 학생이 쓰는 줄 */
+    const gap = Math.round(11 * PX);
+    ctx.strokeStyle = "#9AA7B4"; ctx.lineWidth = 1;
+    for(let k = 0; k < (+b.lines || 3); k++){
+      room(gap);
+      y += gap;
+      ctx.beginPath();
+      ctx.moveTo(A4.pad + Math.round(4 * PX), y);
+      ctx.lineTo(A4.w - A4.pad, y);
+      ctx.stroke();
+    }
+    y += Math.round(9 * PX);
+  });
+
+  if(!blocks.length) put("(활동지 원고를 아직 만들지 않았습니다)", 12, false, "#7C8DA0");
+  return pages;
+}
+function roundRect(ctx, x, y, w, h, r){
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.arcTo(x + w, y, x + w, y + h, r);
+  ctx.arcTo(x + w, y + h, x, y + h, r);
+  ctx.arcTo(x, y + h, x, y, r);
+  ctx.arcTo(x, y, x + w, y, r);
+  ctx.closePath();
+}
+const canvasBlob = cv => new Promise(ok => cv.toBlob(ok, "image/png"));
+
+async function saveSheetPng(t, d, btn){
+  const keep = btn.textContent; btn.disabled = true; btn.textContent = "…";
+  try{
+    const pages = drawSheetPages(t, d);
+    for(let i = 0; i < pages.length; i++){
+      const blob = await canvasBlob(pages[i]);
+      saveBlob(blob, `활동지_${safeName(t.name)}${pages.length > 1 ? `_${i + 1}` : ""}.png`);
+    }
   }catch(e){
     console.warn("[활동지 그림]", e);
     const m = el("d-imgmsg");
     if(m){ m.hidden = false; m.style.color = "var(--low)"; m.textContent = e.message; }
   }
-  const b2 = el("d-imgmake"); if(b2){ b2.disabled = false; b2.textContent = keep; }
+  btn.disabled = false; btn.textContent = keep;
+}
+
+let _sheetPngUrls = [];
+function previewSheetPng(t, d){
+  const box = el("d-imgprev"); if(!box) return;
+  _sheetPngUrls.forEach(u => URL.revokeObjectURL(u)); _sheetPngUrls = [];
+  const pages = drawSheetPages(t, d);
+  Promise.all(pages.map(canvasBlob)).then(blobs => {
+    if(!el("d-imgprev")) return;
+    box.innerHTML = blobs.map(b => {
+      const u = URL.createObjectURL(b); _sheetPngUrls.push(u);
+      return `<img src="${u}" alt="활동지 미리 보기">`; }).join("");
+  });
 }
 
 function paintSheet(t, d){
@@ -3112,57 +3194,26 @@ function paintSheet(t, d){
     if(!confirm("이 칸을 지웁니다.")) return;
     d.sheet.blocks.splice(+btn.dataset.srm, 1); save(); paintSheet(t, d); });
 
-  const pb = el("d-imgprompt");
-  if(pb) pb.onclick = () => genSheetPrompt(t, d, pb);
-  const pt = el("d-imgtext");
-  if(pt) pt.onchange = () => {
-    d.sheetImg = Object.assign({}, d.sheetImg, {prompt: pt.value.trim()}); save(); paintSheet(t, d); };
-  if(pt) autoGrow(pt);
-  const mk = el("d-imgmake");
-  if(mk) mk.onclick = () => genSheetImage(t, d, mk);
-  const ig = el("d-imggo");
-  if(ig) ig.onclick = () => { S.ui.tab = "ai"; save(); render(); };
-  const dl = el("d-imgsave");
-  if(dl) dl.onclick = async () => {
-    const rec = await fileGet(d.sheetImg.key);
-    if(rec?.blob) saveBlob(rec.blob, rec.name || `활동지_${safeName(t.name)}.png`); };
-  const rm = el("d-imgdel");
-  if(rm) rm.onclick = async () => {
-    if(!confirm("만든 활동지 그림을 지웁니다.")) return;
-    try{ await fileDel(d.sheetImg.key); }catch(e){}
-    d.sheetImg.key = ""; save(); paintSheet(t, d); };
-  /* 미리보기는 그릴 때마다 주소를 새로 딴다 — 지난 주소는 놓아 준다 */
-  const box2 = el("d-imgprev");
-  if(box2 && d.sheetImg?.key) fileGet(d.sheetImg.key).then(rec => {
-    if(!rec?.blob || !el("d-imgprev")) return;
-    if(_sheetImgUrl) URL.revokeObjectURL(_sheetImgUrl);
-    _sheetImgUrl = URL.createObjectURL(rec.blob);
-    el("d-imgprev").innerHTML = `<img src="${_sheetImgUrl}" alt="만든 활동지 그림">`;
-  });
+  const png = el("d-png");
+  if(png) png.onclick = () => saveSheetPng(t, d, png);
+  const pv = el("d-pngview");
+  if(pv) pv.onclick = () => previewSheetPng(t, d);
   paintOut(t, d);
 }
-let _sheetImgUrl = "";
 
-/* 활동지를 그림 한 장으로 뽑는 자리. 글자를 그리는 일이라 모델이 흘릴 수 있어
-   원고(한글파일)를 정본으로 두고, 그림은 그 위에 얹는 것으로 본다 */
+/* 활동지를 그림으로 뽑는 자리. 그림 모델에 맡기지 않고 브라우저가 직접 그린다 —
+   활동지는 글자가 한 자도 틀리면 안 되는 종이인데, 그림 모델은 글자를 흘린다.
+   판면도 이쪽이 낫다. 칸 테두리와 답 줄의 자리를 우리가 정할 수 있다 */
 function sheetImgHTML(d){
-  const im = d.sheetImg || {};
   return `<div class="panel-sub">
-    <div class="fieldhead"><span class="lab">활동지 그림으로 뽑기</span>
-      <span class="r"><button class="ghost" id="d-imgprompt" type="button">프롬프트 제안받기</button></span></div>
-    <textarea id="d-imgtext" class="big" placeholder="그림 모델에 줄 말. 제안을 받은 뒤 고쳐 써도 됩니다."
-      style="min-height:70px">${esc(im.prompt || "")}</textarea>
-    <div class="rowbtns" style="margin-top:8px">
-      <button class="primary" id="d-imgmake" type="button">활동지 그림 만들기</button>
-      ${im.key ? `<button class="ghost" id="d-imgsave" type="button">그림 내려받기</button>
-        <button class="ghost danger" id="d-imgdel" type="button">그림 지우기</button>` : ``}
-      ${im.model ? `<span class="muted mono" style="align-self:center;font-size:11px">${esc(im.model)}</span>` : ``}
+    <div class="fieldhead"><span class="lab">그림으로 뽑기</span>
+      <span class="r muted">A4 · 인쇄용 200dpi</span></div>
+    <div class="rowbtns">
+      <button class="primary" id="d-png" type="button">활동지 PNG 내려받기</button>
+      <button class="ghost" id="d-pngview" type="button">미리 보기</button>
     </div>
-    <div class="hint" style="margin-top:6px">그림 모델은 글자를 흘리는 일이 있습니다.
-      뽑은 뒤 <b>글자가 원고와 같은지 눈으로 확인</b>하세요 — 고칠 일이 생기면 한글파일 쪽이 정본입니다.</div>
-    ${aiShared() ? `<div class="hint" style="color:var(--mid)">지금은 <b>공용 연결</b>로 이어져 있습니다.
-      그림 만들기는 글보다 훨씬 값이 비싸 공용 연결에서는 대개 막힙니다 —
-      <button class="link" id="d-imggo" type="button">AI 연결 탭</button>에서 본인 키를 넣어 주세요.</div>` : ``}
+    <div class="hint" style="margin-top:6px">글자는 원고 그대로 나옵니다.
+      클래스팅·e학습터에 그대로 올리거나 태블릿으로 나눠 줄 수 있습니다.</div>
     <div class="fl-msg" id="d-imgmsg" hidden></div>
     <div class="imgprev" id="d-imgprev"></div>
   </div>`;
@@ -3432,71 +3483,6 @@ function bindFlow(t, d){
 /* 흐름은 활동마다 발문과 세부가 붙어 답이 길다. 기본 8192로는 도중에 잘리고,
    잘린 JSON은 부분만 복구돼 빈 배열로 보인다 — 그래서 여유를 준다 */
 const aiJSON2 = (prompt, opt) => aiJSON(prompt, Object.assign({maxTokens:24576}, opt || {}));
-
-/* ── 그림 만들기 ──
-   글 쓰는 모델 목록(AI_MODELS)은 image·preview를 일부러 걸러 낸다. 그림은 그 걸러 낸
-   쪽에 있으므로 따로 받아 온다. 이름은 기기·계정마다 다르므로 못 박지 않는다. */
-async function aiImageModels(){
-  if(!AI.key && !AI_PROXY) throw new Error("먼저 AI 연결 탭에서 키를 넣어 주세요.");
-  const res = await fetch(aiBase() + "/v1beta/models?pageSize=200", {headers:aiHead()});
-  if(!res.ok) throw new Error("모델 목록을 받지 못했습니다 (" + res.status + ")");
-  const j = await res.json();
-  const names = (j.models || [])
-    .filter(m => (m.supportedGenerationMethods || []).includes("generateContent"))
-    .map(m => String(m.name || "").replace(/^models\//, ""))
-    .filter(n => /gemini/.test(n) && /image/i.test(n) && !/embedding|tts|audio|vision/i.test(n));
-  if(!names.length) throw new Error("이 키로 쓸 수 있는 그림 모델이 없습니다.");
-  /* 새 것을 앞에 둔다 — 이름의 숫자가 클수록 새 판이다 */
-  names.sort((a, b) => (parseFloat((b.match(/[\d.]+/) || [0])[0]) || 0) -
-                       (parseFloat((a.match(/[\d.]+/) || [0])[0]) || 0));
-  return names;
-}
-
-/* 그림 한 장. 응답의 inlineData(base64)를 Blob으로 돌려준다 */
-async function aiImage(prompt, model){
-  const body = {contents:[{parts:[{text:prompt}]}],
-                generationConfig:{responseModalities:["TEXT", "IMAGE"]}};
-  let res = await fetch(`${aiBase()}/v1beta/models/${model}:generateContent`, {
-    method:"POST", headers:Object.assign({"Content-Type":"application/json"}, aiHead()),
-    body:JSON.stringify(body)});
-  /* responseModalities를 거부하는 판이 있다 — 그때는 빼고 한 번 더 */
-  if(res.status === 400){
-    delete body.generationConfig;
-    res = await fetch(`${aiBase()}/v1beta/models/${model}:generateContent`, {
-      method:"POST", headers:Object.assign({"Content-Type":"application/json"}, aiHead()),
-      body:JSON.stringify(body)});
-  }
-  if(!res.ok){
-    /* 구글이 까닭을 본문에 적어 보낸다. 읽지 않고 "한도"로 뭉뚱그리면
-       무료 판에서 못 쓰는 모델인지, 정말 한도인지 가릴 수 없다 */
-    let why = "";
-    try{ const j = await res.clone().json(); why = j?.error?.message || ""; }
-    catch(e){ try{ why = (await res.text()).slice(0, 300); }catch(e2){} }
-    console.warn("[활동지 그림] 모델", model, "· HTTP", res.status, "·", why);
-    if(res.status === 429){
-      const free = /free tier|free_tier|quota|billing|not supported/i.test(why);
-      throw new Error(aiShared()
-        ? `공용 연결로는 그림을 만들 수 없습니다. AI 연결 탭에서 본인 키를 넣어 주세요. (${why.slice(0, 120)})`
-        : (free
-          ? `이 그림 모델은 무료 사용 범위 밖입니다. 구글 AI 스튜디오에서 결제를 연결하거나 다른 모델을 골라 주세요. (${why.slice(0, 120)})`
-          : `사용 한도를 넘었습니다. 잠시 뒤 다시 시도해 주세요. (${why.slice(0, 120)})`));
-    }
-    if(res.status === 400 || res.status === 403)
-      throw new Error(`이 키로는 ‘${model}’을 쓸 수 없습니다. (${why.slice(0, 140)})`);
-    if(res.status === 404) throw new Error(`‘${model}’ 모델을 찾지 못했습니다.`);
-    throw new Error(`그림을 받지 못했습니다 (${res.status}) ${why.slice(0, 140)}`);
-  }
-  const j = await res.json();
-  const parts = j?.candidates?.[0]?.content?.parts || [];
-  const img = parts.find(x => x.inlineData?.data);
-  if(!img){
-    console.warn("[활동지 그림] 그림이 없는 응답:", j);
-    throw new Error("그림 대신 글이 왔습니다. 다른 그림 모델을 골라 보세요.");
-  }
-  const bin = atob(img.inlineData.data), u = new Uint8Array(bin.length);
-  for(let i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i);
-  return new Blob([u], {type: img.inlineData.mimeType || "image/png"});
-}
 
 /* 답에서 활동 배열을 찾아낸다. 한국어로 물었으니 키도 한국어로 오는 일이 잦고,
    배열만 덜렁 오기도 한다. 키 이름을 하나로 못 박아 두면 그때마다 빈손이 된다 */
