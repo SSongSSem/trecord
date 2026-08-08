@@ -2916,71 +2916,61 @@ function paintFlow(t, d){
 }
 
 /* ── 지도안 본문 ──
-   수업 중에 펴 보는 나침반이다(lesson_plan_guide). 설계 해설은 넣지 않는다.
-   현장 양식이 표이므로 표로 낸다 — 문단으로 흘리면 수업 중에 눈이 줄을 잃는다 */
-function planBody(t, d, bf){
-  const out = [], rb = (t.rubric || []).filter(r => (r.text || "").trim());
+   수업 중에 펴 보는 나침반이다(lesson_plan_guide). 설계 해설은 넣지 않는다 */
+function planParas(t, d){
+  const P = [], push = (...a) => P.push(...a);
+  const rb = (t.rubric || []).filter(r => (r.text || "").trim());
   const opts = seeOpts(t), p = periodsOf(d);
-  out.push(hwpP(t.name || "수업 지도안"));
-  out.push(hwpP(`${S.klass.grade}학년 ${S.klass.room || ""}반 · ${subjShort(t.subject)} · ${p}차시(${minutesOf(d)}분)`));
-  out.push(hwpP(""));
-
-  /* 평가 계획 — backward_design §4의 계획표를 그대로 옮긴 여섯 줄 */
-  out.push(hwpP("■ 평가 계획"));
-  const rows = [[{t:"항목", head:true}, {t:"내용", head:true}]];
-  rows.push([{t:"성취기준"}, {t: t.standards.length
-    ? t.standards.map(c => `[${c}] ${CODEMAP[c]?.text || ""}`) : ["(걸린 성취기준 없음)"]}]);
-  rows.push([{t:"학습목표"}, {t: d.goal || "(아직 쓰지 않음)"}]);
-  rows.push([{t:"평가 요소"}, {t: t.name || ""}]);
-  rows.push([{t:"관찰 관점"}, {t: opts.length ? opts.join(" · ") : "(아직 없음)"}]);
-  if(t.criteria) rows.push([{t:"평가 내용"}, {t: t.criteria}]);
-  rows.push([{t:"기준"}, {t: rb.length ? rb.map(r => `${r.level} — ${r.text}`) : ["(수준 서술 없음)"]}]);
-  rows.push([{t:"피드백"}, {t: rb.some(r => r.fb)
-    ? rb.filter(r => r.fb).map(r => `${r.level} — ${r.fb}`) : ["(아직 없음)"]}]);
+  push(t.name || "수업 지도안", "");
+  push(`${S.klass.grade}학년 ${S.klass.room || ""}반 · ${subjShort(t.subject)} · ${p}차시(${minutesOf(d)}분)`);
+  push("");
+  push("■ 성취기준");
+  if(t.standards.length) t.standards.forEach(c => push(`[${c}] ${CODEMAP[c]?.text || ""}`));
+  else push("(걸린 성취기준 없음)");
+  push("");
+  push("■ 학습목표");
+  push(d.goal || "(아직 쓰지 않음)");
+  push("");
+  push("■ 평가 계획");
+  push(`평가 요소 : ${t.name || ""}`);
+  if(t.criteria) push(`평가 내용 : ${t.criteria}`);
+  push(`  └ 관찰 관점 : ${opts.length ? opts.join(" · ") : "(아직 없음)"}`);
+  rb.forEach(r => { push(`${r.level} : ${r.text}`);
+    if(r.fb) push(`   → 피드백 : ${r.fb}`); });
+  push("");
+  push("■ 평가하지 않는 것");
   const na = (d.notAssessed || []).filter(Boolean);
-  rows.push([{t:"평가하지 않는 것"}, {t: na.length ? na : ["(수업 전에 적어 둘 것)"]}]);
-  out.push(hwpTbl(rows, [7000, 35520], bf));
-  out.push(hwpP(""));
-
-  /* 활동 흐름 */
-  out.push(hwpP("■ 교수·학습 과정"));
-  const fr = [[{t:"단계", head:true}, {t:"교수·학습 활동", head:true},
-               {t:"관찰 관점", head:true}, {t:"시간", head:true}]];
+  if(na.length) na.forEach(x => push(`- ${x}`));
+  else push("- (수업 전에 적어 둘 것)");
+  push("");
+  push(`■ 활동 흐름`);
   (d.flow || []).forEach(r => {
-    const body = [`■ ${r.name || ""}`];
-    (r.asks  || []).forEach(a => body.push(`• ${a}`));
-    (r.steps || []).forEach(x => body.push(`- ${x}`));
-    if(r.aid) body.push(`▸ 못 따라올 때 : ${r.aid}`);
     const k = seesLive(r, opts);
-    fr.push([{t: r.phase || ""}, {t: body},
-             {t: k.includes("hook") ? "동기 유발" : (k.length ? k : "—")},
-             {t: `${r.min || 0}분`}]);
+    const see = k.includes("hook") ? "동기 유발" : (k.length ? `관점 : ${k.join(" · ")}` : "관점 없음");
+    push(`[${r.phase} ${r.min}분] ${r.name}  (${see})`);
+    (r.asks || []).forEach(a => push(`   • ${a}`));
+    (r.steps || []).forEach(x => push(`   - ${x}`));
+    if(r.aid) push(`   ▸ 못 따라올 때 : ${r.aid}`);
+    push("");
   });
-  if(fr.length === 1) fr.push([{t:"—"}, {t:"(활동을 아직 짜지 않았습니다)"}, {t:"—"}, {t:"—"}]);
-  out.push(hwpTbl(fr, [4000, 25520, 9000, 4000], bf));
-
   if(d.hands && d.hands.gate && d.hands.gate !== "fix"){
-    out.push(hwpP(""));
-    out.push(hwpP("■ 도구를 먼저 쓰는 까닭"));
-    out.push(hwpP(`${HAND_WHY[d.hands.gate] || d.hands.gate}${d.hands.why ? ` — ${d.hands.why}` : ""}`));
+    push("■ 도구를 먼저 쓰는 까닭");
+    push(`${HAND_WHY[d.hands.gate] || d.hands.gate}${d.hands.why ? ` — ${d.hands.why}` : ""}`);
+    push("");
   }
-
-  /* 환류는 수업을 해 본 뒤 채우는 자리다. 빈 칸으로 둔다 */
-  out.push(hwpP(""));
-  out.push(hwpP("■ 수업 뒤 환류 (수업을 해 본 뒤 채운다)"));
-  out.push(hwpTbl([
-    [{t:"본 것",  head:true}, {t: d.reflect?.saw  || ""}],
-    [{t:"왜?",    head:true}, {t: d.reflect?.why  || ""}],
-    [{t:"다음엔", head:true}, {t: d.reflect?.next || ""}]
-  ], [7000, 35520], bf));
-  return out.join("");
+  push("■ 수업 뒤 환류 (수업을 해 본 뒤 채운다)");
+  push(`본 것   : ${d.reflect?.saw  || ""}`);
+  push(`왜?     : ${d.reflect?.why  || ""}`);
+  push(`다음엔  : ${d.reflect?.next || ""}`);
+  return P;
 }
+/* 파일 이름에 못 쓰는 글자를 덜어 낸다 */
 const safeName = v => String(v || "지도안").replace(/[\/:*?"<>|]/g, "").trim().slice(0, 40) || "지도안";
 
 async function saveHwpx(t, d, btn){
   const keep = btn.textContent; btn.disabled = true; btn.textContent = "…";
   try{
-    const blob = await buildHwpx(bf => planBody(t, d, bf));
+    const blob = await buildHwpx(planParas(t, d).map(hwpP).join(""));
     saveBlob(blob, `지도안_${safeName(t.name)}.hwpx`);
   }catch(e){
     console.warn("[지도안]", e);
@@ -3709,43 +3699,17 @@ async function zip(files){
 
 /* 골격을 풀어 본문만 갈아 끼운다. mimetype은 무압축으로 맨 앞에 둔다 —
    ZIP 안에서 그 자리에 있어야 한글이 형식을 알아본다 */
-/* 골격의 테두리 정의는 둘 다 '없음'이라 표를 그려도 선이 보이지 않는다.
-   골격 파일은 그대로 두고 실선 한 벌을 여기서 덧붙인다(머리행은 옅은 바탕) */
-const BF_XML = (id, fill) =>
-  `<hh:borderFill id="${id}" threeD="0" shadow="0" centerLine="NONE" breakCellSeparateLine="0">` +
-  `<hh:slash type="NONE" Crooked="0" isCounter="0"/><hh:backSlash type="NONE" Crooked="0" isCounter="0"/>` +
-  ["left","right","top","bottom"].map(k =>
-    `<hh:${k}Border type="SOLID" width="0.12 mm" color="#000000"/>`).join("") +
-  `<hh:diagonal type="SOLID" width="0.1 mm" color="#000000"/>` +
-  (fill ? `<hc:fillBrush><hc:winBrush faceColor="${fill}" hatchColor="#999999" alpha="0"/></hc:fillBrush>` : ``) +
-  `</hh:borderFill>`;
-
-function withBorders(headerXml){
-  const ids = [...headerXml.matchAll(/<hh:borderFill id="(\d+)"/g)].map(m => +m[1]);
-  const base = (ids.length ? Math.max(...ids) : 0) + 1;
-  const m = headerXml.match(/<hh:borderFills itemCnt="(\d+)">/);
-  if(!m) return {xml: headerXml, line: 1, head: 1};
-  const add = BF_XML(base, "") + BF_XML(base + 1, "#EFEFEF");
-  const xml = headerXml
-    .replace(m[0], `<hh:borderFills itemCnt="${+m[1] + 2}">`)
-    .replace("</hh:borderFills>", add + "</hh:borderFills>");
-  return {xml, line: base, head: base + 1};
-}
-
-/* body는 테두리 id를 받아 XML을 돌려주는 함수다 — 표를 그리려면 id를 알아야 한다 */
-async function buildHwpx(body){
+/* 골격을 풀어 본문만 갈아 끼운다. mimetype은 무압축으로 맨 앞에 둔다 —
+   ZIP 안에서 그 자리에 있어야 한글이 형식을 알아본다 */
+async function buildHwpx(bodyXml){
   if(!HWPX_SKEL) throw new Error("문서 골격이 빠져 있습니다. 빌드를 다시 해 주세요.");
   const all = await unzip(b64bytes(HWPX_SKEL).buffer, () => true);
-  const key = "Contents/section0.xml", hkey = "Contents/header.xml";
-  if(!all[key] || !all[hkey]) throw new Error("문서 골격이 온전하지 않습니다.");
-  const td = new TextDecoder(), te = new TextEncoder();
-  const bf = withBorders(td.decode(all[hkey]));
-  all[hkey] = te.encode(bf.xml);
-  const sec = td.decode(all[key]);
+  const key = "Contents/section0.xml";
+  if(!all[key]) throw new Error("문서 골격이 온전하지 않습니다.");
+  const sec = new TextDecoder().decode(all[key]);
   if(!sec.includes("</hs:sec>")) throw new Error("문서 골격의 본문을 찾지 못했습니다.");
-  const xml = typeof body === "function" ? body(bf) : body;
   /* 골격의 첫 문단에 쪽 설정(secPr)이 들어 있으므로 그것을 남기고 뒤에 붙인다 */
-  all[key] = te.encode(sec.replace("</hs:sec>", xml + "</hs:sec>"));
+  all[key] = new TextEncoder().encode(sec.replace("</hs:sec>", bodyXml + "</hs:sec>"));
   const names = Object.keys(all);
   return zip([{name:"mimetype", data:all["mimetype"], store:true},
     ...names.filter(n => n !== "mimetype").map(n => ({name:n, data:all[n]}))]);
@@ -3755,43 +3719,6 @@ const xesc = v => String(v == null ? "" : v)
 /* 문단 하나. 골격이 쓰는 기본 모양(0번)을 그대로 쓴다 */
 const hwpP = txt => `<hp:p id="0" paraPrIDRef="0" styleIDRef="0" pageBreak="0" columnBreak="0" merged="0">` +
   `<hp:run charPrIDRef="0"><hp:t>${xesc(txt)}</hp:t></hp:run></hp:p>`;
-
-/* ── 표 ──
-   A4 본문 폭(59528 - 좌우 여백 8504씩). 열 폭의 합을 늘 이 값에 맞춘다 */
-const HWP_W = 42520;
-let _tblId = 1000;
-/* cells: [{t:"글" 또는 ["여러","문단"], head:true}] */
-function hwpTr(cells, widths, r, bf){
-  return `<hp:tr>` + cells.map((c, i) => {
-    const paras = (Array.isArray(c.t) ? c.t : [c.t])
-      .flatMap(x => String(x == null ? "" : x).split("\n"));
-    return `<hp:tc name="" header="${c.head ? 1 : 0}" hasMargin="0" protect="0" editable="0" dirty="0" ` +
-      `borderFillIDRef="${c.head ? bf.head : bf.line}">` +
-      `<hp:subList id="" textDirection="HORIZONTAL" lineWrap="BREAK" vertAlign="${c.head ? "CENTER" : "TOP"}" ` +
-      `linkListIDRef="0" linkListNextIDRef="0" textWidth="0" textHeight="0" hasTextRef="0" hasNumRef="0">` +
-      (paras.length ? paras : [""]).map(hwpP).join("") +
-      `</hp:subList><hp:cellAddr colAddr="${i}" rowAddr="${r}"/>` +
-      `<hp:cellSpan colSpan="1" rowSpan="1"/>` +
-      `<hp:cellSz width="${widths[i]}" height="1200"/>` +
-      `<hp:cellMargin left="283" right="283" top="141" bottom="141"/></hp:tc>`;
-  }).join("") + `</hp:tr>`;
-}
-function hwpTbl(rows, widths, bf){
-  const id = ++_tblId;
-  return `<hp:p id="0" paraPrIDRef="0" styleIDRef="0" pageBreak="0" columnBreak="0" merged="0">` +
-    `<hp:run charPrIDRef="0">` +
-    `<hp:tbl id="${id}" zOrder="0" numberingType="TABLE" textWrap="TOP_AND_BOTTOM" textFlow="BOTH_SIDES" ` +
-    `lock="0" dropcapstyle="None" pageBreak="CELL" repeatHeader="1" rowCnt="${rows.length}" ` +
-    `colCnt="${widths.length}" cellSpacing="0" borderFillIDRef="${bf.line}" noAdjust="0">` +
-    `<hp:sz width="${widths.reduce((a, b) => a + b, 0)}" widthRelTo="ABSOLUTE" ` +
-    `height="${rows.length * 1200}" heightRelTo="ABSOLUTE" protect="0"/>` +
-    `<hp:pos treatAsChar="1" affectLSpacing="0" flowWithText="1" allowOverlap="0" holdAnchorAndSO="0" ` +
-    `vertRelTo="PARA" horzRelTo="COLUMN" vertAlign="TOP" horzAlign="LEFT" vertOffset="0" horzOffset="0"/>` +
-    `<hp:outMargin left="0" right="0" top="0" bottom="0"/>` +
-    `<hp:inMargin left="0" right="0" top="0" bottom="0"/>` +
-    rows.map((cells, r) => hwpTr(cells, widths, r, bf)).join("") +
-    `</hp:tbl></hp:run></hp:p>`;
-}
 
 function saveBlob(blob, name){
   const u = URL.createObjectURL(blob), a = document.createElement("a");
