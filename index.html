@@ -260,6 +260,13 @@ textarea.goal{width:100%;min-height:66px;font-size:13.5px;line-height:1.7;resize
 .fl-act{display:flex;gap:5px;justify-content:flex-end;margin-top:7px}
 .fl-act button{padding:3px 9px;font-size:11.5px;min-height:0}
 .fl-msg{margin-top:6px;font-size:11.5px;color:var(--mid)}
+.fl-see{display:flex;flex-wrap:wrap;gap:5px;padding-top:2px}
+.fl-see .chip{cursor:pointer}
+.fl-see .chip:disabled{opacity:.35;cursor:not-allowed}
+.fl-see .hookc[aria-pressed="true"]{background:var(--ink-3);border-color:var(--ink-3)}
+.dsg-elem{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;padding:9px 12px;margin-bottom:4px;
+          border-radius:11px;background:var(--raise);border:1px solid var(--rule);font-size:13px}
+.dsg-elem .lab{margin:0;flex:0 0 auto}.dsg-elem b{color:var(--ink)}
 .fl-sum{display:flex;align-items:center;gap:9px;margin-top:11px;padding:9px 12px;border-radius:11px;
         background:var(--raise);border:1px solid var(--rule);font-size:12.5px}
 .fl-sum b{font-family:var(--mono);font-size:14px}
@@ -2770,8 +2777,12 @@ function renderDesign(){
           ${t.standards.length ? t.standards.map(c => `<div class="dsg-std">
             <span class="mono">${esc(c)}</span> ${esc(CODEMAP[c]?.text || "")}</div>`).join("")
             : `<div class="muted">성취기준이 걸려 있지 않습니다.</div>`}</div>
-        ${t.criteria ? `<div class="field"><span class="lab">관찰 관점</span>
+        ${t.criteria ? `<div class="field"><span class="lab">평가 내용</span>
           <div>${esc(t.criteria)}</div></div>` : ``}
+        <div class="field"><span class="lab">관찰 관점 <span class="muted">— 활동마다 이 가운데 무엇을 보는지 고릅니다</span></span>
+          ${seeOpts(t).length ? `<div class="tags">${seeOpts(t).map(k =>
+            `<span class="chip">${esc(k)}</span>`).join("")}</div>`
+            : `<div style="color:var(--mid)">아직 없습니다 — 「준비 탭에서 고치기」에서 골라 주세요.</div>`}</div>
         <div class="field" style="margin-bottom:0">
           <span class="lab">루브릭 — 활동은 이 수준들이 드러나게 짠다</span>
           ${(t.rubric||[]).map(r => `<div class="rline"><b>${esc(r.level)}</b><span>${esc(r.text)}${
@@ -2845,13 +2856,21 @@ const PHASES = ["도입", "전개", "정리"];
 const toLines = v => String(v).split("\n").map(s => s.trim()).filter(Boolean);
 const autoGrow = x => { x.style.height = "auto"; x.style.height = (x.scrollHeight + 2) + "px"; };
 /* 루브릭에 실제로 쓴 수준명만 고를 수 있게 한다 */
-const seeLevels = t => (t.rubric || []).filter(r => (r.text || "").trim()).map(r => r.level);
-/* 준비 탭에서 수준명을 고치면 흐름의 sees가 가리킬 곳을 잃는다.
-   그때는 지정되지 않은 것으로 본다 — 옛 이름을 지표인 척 두면 경고가 꺼진다 */
-const seeOK = (r, lv) => r.sees === "hook" || lv.includes(r.sees);
+/* 활동이 보는 것은 관찰 관점이다. 한 장면에서 여러 관점을 볼 수 있으므로 여럿 담는다.
+   수준(잘함·보통)이 아니다 — 한 활동에서 학생들이 그 수준으로 갈리는 것이지,
+   활동이 어느 한 수준만 드러내지는 않는다. */
+const seeOpts = t => (t.kw || []).filter(Boolean);
+/* 옛 데이터는 sees가 루브릭 수준명 하나였다. 그 값은 관점이 아니므로 버리고 다시 고르게 한다 */
+function seesOf(r){
+  if(Array.isArray(r?.sees)) return r.sees.filter(Boolean);
+  return r?.sees === "hook" ? ["hook"] : [];
+}
+/* 준비 탭에서 관점을 지우면 흐름이 가리킬 곳을 잃는다 — 남은 것만 인정한다 */
+const seesLive = (r, opts) => seesOf(r).filter(k => k === "hook" || opts.includes(k));
+const seeOK = (r, opts) => seesLive(r, opts).length > 0;
 
 function paintFlow(t, d){
-  const box = el("d-flowpanel"), rows = d.flow || [], lv = seeLevels(t);
+  const box = el("d-flowpanel"), rows = d.flow || [], lv = seeOpts(t);
   const sum = rows.reduce((a, r) => a + (+r.min || 0), 0);
   const nosee = rows.filter(r => !seeOK(r, lv)).length;
   const want = minutesOf(d);
@@ -2862,6 +2881,10 @@ function paintFlow(t, d){
           ? `<button class="ghost" id="d-fill" type="button">빈칸 채우기</button>` : ``}
         <button class="ghost" id="d-gen" type="button">AI로 흐름 만들기</button>` : ``}</span></div>
     <div class="pb">
+      <div class="dsg-elem"><span class="lab">평가 요소</span>
+        <b>${esc(t.name || "(이름 없음)")}</b>${lv.length
+          ? `<span class="muted">· 관점 ${lv.length}개</span>`
+          : `<span style="color:var(--mid)">· 관찰 관점이 없습니다 — 준비 탭에서 골라 주세요</span>`}</div>
       ${rows.length ? rows.map((r, i) => flowCard(r, i, lv, rows.length)).join("") + `
         <div class="fl-sum">
           <span>합계 <b class="${sum===want?"fit":(sum>want?"over":"")}">${sum}분</b>
@@ -2909,7 +2932,8 @@ function planParas(t, d){
   push("");
   push(`■ 활동 흐름`);
   (d.flow || []).forEach(r => {
-    const see = r.sees === "hook" ? "동기 유발" : (r.sees ? `보는 것 : ${r.sees}` : "지표 없음");
+    const k = seesOf(r);
+    const see = k.includes("hook") ? "동기 유발" : (k.length ? `관점 : ${k.join(" · ")}` : "관점 없음");
     push(`[${r.phase} ${r.min}분] ${r.name}  (${see})`);
     (r.asks || []).forEach(a => push(`   • ${a}`));
     (r.steps || []).forEach(x => push(`   - ${x}`));
@@ -2967,19 +2991,21 @@ function handsCard(d){
 }
 
 function flowCard(r, i, lv, n){
-  const ok = seeOK(r, lv);
+  const cur = seesLive(r, lv), ok = cur.length > 0, hook = cur.includes("hook");
   return `<div class="fl${ok?"":" nosee"}" data-fi="${i}">
     <div class="fl-head">
       <select class="ph2" aria-label="단계">${PHASES.map(p =>
         `<option${p===r.phase?" selected":""}>${p}</option>`).join("")}</select>
       <input type="text" class="nm" value="${esc(r.name||"")}" placeholder="활동 이름" aria-label="활동 이름">
       <input type="text" class="mn" value="${+r.min||0}" inputmode="numeric" aria-label="분"><span class="muted">분</span>
-      <select class="se" aria-label="무엇을 보나">
-        <option value=""${ok?"":" selected"}>— 무엇을 보나</option>
-        ${lv.map(l => `<option value="${esc(l)}"${r.sees===l?" selected":""}>‘${esc(l)}’이 드러남</option>`).join("")}
-        <option value="hook"${r.sees==="hook"?" selected":""}>동기 유발 (지표 없음)</option>
-      </select>
     </div>
+    <div class="fl-row"><span class="lab">관점</span>
+      <div class="fl-see">
+        ${lv.map(k => `<button type="button" class="chip kwc" data-see="${esc(k)}"
+          aria-pressed="${cur.includes(k)}"${hook?` disabled`:``}>${esc(k)}</button>`).join("")}
+        <button type="button" class="chip kwc hookc" data-see="hook"
+          aria-pressed="${hook}">동기 유발</button>
+      </div></div>
     <div class="fl-row"><span class="lab">발문</span>
       <textarea class="ak" placeholder="한 줄에 하나씩. 답이 갈리는 물음을 절반 이상">${esc((r.asks||[]).join("\n"))}</textarea></div>
     <div class="fl-row"><span class="lab">세부</span>
@@ -2995,7 +3021,7 @@ function flowCard(r, i, lv, n){
 }
 
 function bindFlow(t, d){
-  const box = el("d-flowpanel"), lv = seeLevels(t);
+  const box = el("d-flowpanel"), lv = seeOpts(t);
   /* 흐름을 통째로 새로 짠다. 교사가 적어 둔 것이 있을 때만 물어본다 —
      빈 카드만 있는 상태에서 확인을 받으면 아무것도 안 버리는데 겁을 주게 된다 */
   const gen = el("d-gen");
@@ -3026,7 +3052,12 @@ function bindFlow(t, d){
     g(".nm").onchange = e => { r.name = e.target.value.trim(); save(); };
     /* 합계와 경고가 바뀌는 둘만 다시 그린다 — 글 칸은 다시 그리면 커서가 튄다 */
     g(".mn").onchange = e => { r.min = Math.max(0, +e.target.value || 0); save(); paintFlow(t, d); };
-    g(".se").onchange = e => { r.sees = e.target.value; save(); paintFlow(t, d); };
+    /* 관점 토글. 동기 유발은 배타적이다 — 평가하지 않는 활동에 관점을 달 수 없다 */
+    card.querySelectorAll("[data-see]").forEach(b => b.onclick = () => {
+      const k = b.dataset.see, now = new Set(seesLive(r, lv));
+      if(k === "hook"){ now.has("hook") ? now.delete("hook") : (now.clear(), now.add("hook")); }
+      else { now.delete("hook"); now.has(k) ? now.delete(k) : now.add(k); }
+      r.sees = [...now]; save(); paintFlow(t, d); });
     g(".ak").onchange = e => { r.asks = toLines(e.target.value); save(); };
     g(".st").onchange = e => { r.steps = toLines(e.target.value); save(); };
     g(".ad").onchange = e => { r.aid = e.target.value.trim(); save(); };
@@ -3069,25 +3100,28 @@ const asList = v => Array.isArray(v) ? v.map(s => String(s).trim()).filter(Boole
 /* 모델이 어떤 모양으로 보내오든 한 칸씩 걸러 담는다. 두 갈래가 같이 쓴다 */
 function normFlowRow(x, lv){
   const ph = String(pickKey(x, "phase", "단계") || "");
-  const sees = String(pickKey(x, "sees", "무엇을보나", "관찰", "지표", "수준") || "");
+  const raw = pickKey(x, "sees", "관점", "무엇을보나", "관찰", "지표");
+  const cand = Array.isArray(raw) ? raw.map(v => String(v).trim())
+    : (raw ? String(raw).split(/[,·]/).map(v => v.trim()) : []);
   return {
     phase: PHASES.includes(ph) ? ph : "전개",
     name:  String(pickKey(x, "name", "활동명", "활동", "이름") || "").trim(),
     min:   Math.max(0, Math.round(+pickKey(x, "min", "분", "시간", "소요시간") || 0)),
     asks:  asList(pickKey(x, "asks", "발문", "질문")),
     steps: asList(pickKey(x, "steps", "세부", "활동내용", "내용", "절차")),
-    /* 루브릭에 없는 수준명이 오면 비운다 — 지어낸 지표를 그대로 들이지 않는다 */
-    sees:  (sees === "hook" || lv.includes(sees)) ? sees : "",
+    /* 과제에 걸어 둔 관점이 아니면 버린다 — 지어낸 지표를 그대로 들이지 않는다.
+       동기 유발은 배타적이라 그것만 남긴다 */
+    sees:  cand.includes("hook") ? ["hook"] : cand.filter(k => lv.includes(k)),
     aid:   String(pickKey(x, "aid", "처방", "도움", "미도달처방") || "").trim()
   };
 }
 /* 한 칸이라도 비어 있나 — 「빈칸 채우기」를 띄울지 정한다 */
-const hasBlank = (r, lv) => !r.name || !r.min || !(r.asks||[]).length ||
-  !(r.steps||[]).length || !seeOK(r, lv) || !r.aid;
+const hasBlank = (r, opts) => !r.name || !r.min || !(r.asks||[]).length ||
+  !(r.steps||[]).length || !seeOK(r, opts) || !r.aid;
 /* 교사가 실제로 쓴 것이 하나라도 있나. 없으면 채울 빈칸이 아니라 빈 종이다 —
    그때는 카드 개수에 갇히지 않도록 새로 짠다(＋활동이 넣어 두는 기본 분은 쓴 것이 아니다) */
-const flowWritten = (flow, lv) => (flow || []).some(r =>
-  r.name || (r.asks||[]).length || (r.steps||[]).length || r.aid || seeOK(r, lv));
+const flowWritten = (flow, opts) => (flow || []).some(r =>
+  r.name || (r.asks||[]).length || (r.steps||[]).length || r.aid || seeOK(r, opts));
 
 /* ── 손이 먼저다(§2-1) ──
    초등은 구체적 조작기에 걸쳐 있어, 손으로 만져 본 적 없는 것을 화면으로 먼저 만나면
@@ -3102,7 +3136,9 @@ function handsGate(flow){
   const rows = flow || [];
   const at = rows.findIndex(isDigital);
   if(at < 0) return null;
-  const done = rows.slice(0, at).some(r => !isDigital(r) && r.sees && r.sees !== "hook");
+  const done = rows.slice(0, at).some(r => {
+    const k = seesOf(r);
+    return !isDigital(r) && k.length && !k.includes("hook"); });
   return {at, ok: done, name: rows[at].name || "이 활동"};
 }
 const HAND_WHY = {
@@ -3122,16 +3158,21 @@ async function genFlow(t, d, btn, fill){
   if(msg) msg.hidden = true;
   try{
     const rb = (t.rubric || []).filter(r => (r.text || "").trim());
-    const lv = rb.map(r => r.level);
+    const lv = seeOpts(t);
+    if(!lv.length) throw new Error("먼저 준비 탭에서 이 평가의 「관찰 관점」을 골라 주세요. 활동이 무엇을 보는지 댈 곳이 없습니다.");
     const p = periodsOf(d), want = minutesOf(d);
     const head = `[학습목표] ${d.goal || "(아직 정하지 않음 — 성취기준에서 끌어낸다)"}
 [성취기준]
 ${t.standards.map(c => `- [${c}] ${CODEMAP[c]?.text || ""}`).join("\n") || "- (없음)"}
-[관찰 관점] ${t.criteria || "(없음)"}
-[루브릭 — 활동은 이 수준들이 드러나게 짠다]
+[평가 내용] ${t.criteria || "(없음)"}
+[관찰 관점 — 활동은 이 가운데 무엇을 보는지 댈 수 있어야 한다]
+${lv.map(k => `- ${k}`).join("\n")}
+[수준 서술 — 활동의 어려움을 여기에 맞춘다]
 ${rb.map(x => `- ${x.level}: ${x.text}`).join("\n")}`;
-    const rules = `- 활동마다 무엇을 보는지를 sees에 적는다. 위 수준명(${lv.join(" / ")}) 중 하나이거나, 동기 유발이면 "hook"이다.
-- 어느 수준도 드러내지 못하는 활동은 넣지 않는다. 재미있어도 넣지 않는다. 예외는 동기 유발 하나뿐이다.
+    const rules = `- 활동마다 그 장면에서 교사가 관찰할 관점을 sees에 배열로 적는다. 한 활동에서 여럿을 볼 수 있다.
+  고를 수 있는 관점은 이것뿐이다 — ${lv.join(" / ")}. 이 밖의 말을 지어내지 않는다.
+  평가하지 않는 동기 유발 활동이면 sees를 ["hook"] 하나로 둔다.
+- 어느 관점도 관찰할 수 없는 활동은 넣지 않는다. 재미있어도 넣지 않는다. 예외는 동기 유발 하나뿐이다.
 - 손으로 해 볼 수 있는 일은 반드시 먼저 한다. 몸과 구체물로 해 보기 → 말과 기호로 옮기기 → 디지털 도구 순서다.
   도구는 손으로 이미 해 본 일을 반복하거나 완성할 때만 쓴다. 개념을 처음 만나는 자리에 두지 않는다.
 - 발문(asks)은 답이 갈리는 물음을 절반 이상 넣는다. 예·아니오로 닫히는 물음만 늘어놓지 않는다.
@@ -3144,7 +3185,7 @@ ${rb.map(x => `- ${x.level}: ${x.text}`).join("\n")}`;
       /* 교사가 이미 쓴 것을 그대로 보여 준다. 빈 칸이 어디인지 모델이 봐야 한다 */
       const cur = (d.flow || []).map((r, i) => ({i, phase:r.phase||"", name:r.name||"",
         min:+r.min||0, asks:r.asks||[], steps:r.steps||[],
-        sees:seeOK(r, lv) ? r.sees : "", aid:r.aid||""}));
+        sees:seesLive(r, lv), aid:r.aid||""}));
       const r = await aiJSON2(`한국 초등학교 ${S.klass.grade}학년 ${subjShort(t.subject)} ${p}차시(${want}분) 수업이다.
 아래는 교사가 짜다 만 활동 흐름이다. **빈 칸만 채운다.**
 
@@ -3161,7 +3202,7 @@ ${JSON.stringify(cur)}
 ${rules}
 
 아래 모양 그대로, 키 이름을 번역하지 말고 영문 그대로 쓴다. JSON만 출력한다:
-{"flow":[{"i":0,"phase":"도입","name":"활동 이름","min":5,"asks":["발문"],"steps":["세부"],"sees":"hook","aid":""}]}`);
+{"flow":[{"i":0,"phase":"도입","name":"활동 이름","min":5,"asks":["발문"],"steps":["세부"],"sees":["hook"],"aid":""}]}`);
 
       const by = new Map();
       pickFlowArray(r).forEach((x, k) => {
@@ -3179,7 +3220,7 @@ ${rules}
           min:   (+r0.min || 0) || x.min || 0,
           asks:  (r0.asks  || []).length ? r0.asks  : (x.asks  || []),
           steps: (r0.steps || []).length ? r0.steps : (x.steps || []),
-          sees:  seeOK(r0, lv) ? r0.sees : (x.sees || ""),
+          sees:  seeOK(r0, lv) ? seesLive(r0, lv) : (x.sees || []),
           aid:   r0.aid || x.aid || ""
         };
       });
@@ -3193,7 +3234,7 @@ ${rules}
 - 분(min)의 합이 정확히 ${want}가 되게 한다.
 
 아래 모양 그대로, 키 이름을 번역하지 말고 영문 그대로 쓴다. JSON만 출력한다:
-{"flow":[{"phase":"도입","name":"활동 이름","min":5,"asks":["발문"],"steps":["세부"],"sees":"hook","aid":""}]}`);
+{"flow":[{"phase":"도입","name":"활동 이름","min":5,"asks":["발문"],"steps":["세부"],"sees":["hook"],"aid":""}]}`);
 
       const made = pickFlowArray(r).map(x => normFlowRow(x, lv)).filter(x => x.name);
       if(!made.length){
@@ -4707,7 +4748,8 @@ function demo(){
      예시가 준비 탭의 절반만 보여 주게 된다. 기준은 [4국03-01]의 과정·기능이다 */
   const t1 = {id:uid(), name:"문단의 중심 생각 정리하기", subject:"국어", standards:["4국02-01","4국03-01"],
               criteria:"문단의 중심 문장을 찾아 글의 내용을 요약하여 쓸 수 있다.",
-              axis:"정확성", off:{}, kw:[], sources:[], targets:[], legacy:[],
+              axis:"정확성", off:{}, sources:[], targets:[], legacy:[],
+              kw:["중심 생각 파악", "읽기 이해", "글쓰기"],
               rubric:[
                 {level:"잘함", text:"중심 문장을 먼저 정하고 뒷받침 문장을 그 아래 붙여 문단을 씀",
                  fb:"중심 문장을 먼저 쓰고 뒷받침을 붙인 순서가 좋았어. 다음에는 뒷받침 하나를 예로 바꿔 보자."},
