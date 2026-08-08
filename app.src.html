@@ -276,6 +276,9 @@ textarea.goal{width:100%;min-height:66px;font-size:13.5px;line-height:1.7;resize
         background:var(--raise);border:1px solid var(--rule);font-size:12.5px}
 .fl-sum b{font-family:var(--mono);font-size:14px}
 .fl-sum .over{color:var(--low)}.fl-sum .fit{color:var(--good)}
+.hint.over{color:var(--low)}
+.sh .fl-head .st{flex:1 1 200px;font-weight:600}
+.sh-from{margin-top:5px;font-size:11.5px;color:var(--ink-3)}
 /* 손이 먼저다 — 막지 않는다. 자리를 보여 주고 판단은 교사가 한다 */
 .hands{margin-top:11px;padding:12px 13px;border-radius:12px;border:1px solid var(--mid);
        background:color-mix(in srgb,var(--mid) 6%,var(--surface))}
@@ -2743,7 +2746,7 @@ const minutesOf = d => periodsOf(d) * PERIOD_MIN;
 
 function ensureDesign(t){
   if(!t.design) t.design = {v:1, goal:"", periods:1, hands:null, flow:[],
-    sheet:{title:"", blocks:[]}, slides:[], images:[], notAssessed:[],
+    sheet:{goal:"", blocks:[]}, slides:[], images:[], notAssessed:[],
     reflect:{saw:"", why:"", next:""}, stale:{}, at:new Date().toISOString()};
   return t.design;
 }
@@ -2818,15 +2821,17 @@ function renderDesign(){
     </div>
 
     <div class="panel" id="d-flowpanel"></div>
+    <div class="panel" id="d-sheetpanel"></div>
 
     <div class="panel">
       <div class="ph"><h2>④ 파일</h2></div>
       <div class="pb">
         <div class="rowbtns">
-          <button class="ghost" id="d-hwpx" type="button"${(d.flow||[]).length?"":" disabled"}>지도안 한글파일(HWPX)</button>
+          <button class="ghost" id="d-hwpx" type="button"${(d.flow||[]).length?"":" disabled"}>지도안 한글파일</button>
+          <button class="ghost" id="d-sheethwpx" type="button"${(d.sheet?.blocks||[]).length?"":" disabled"}>활동지 한글파일</button>
         </div>
         <div class="hint" style="margin-top:8px">${(d.flow||[]).length
-          ? "한글에서 열어 고칠 수 있습니다. 활동지와 수업자료는 원고를 만든 뒤에 나옵니다."
+          ? "한글에서 열어 고칠 수 있습니다. 수업자료(PPT)는 슬라이드 원고를 만든 뒤에 나옵니다."
           : "활동 흐름을 먼저 만들어 주세요."}</div>
         <div class="fl-msg" id="d-outmsg" hidden></div>
       </div>
@@ -2858,7 +2863,10 @@ function renderDesign(){
   };
   const hw = el("d-hwpx");
   if(hw) hw.onclick = () => saveHwpx(t, d, hw);
+  const shw = el("d-sheethwpx");
+  if(shw) shw.onclick = () => saveSheet(t, d, shw);
   paintFlow(t, d);
+  paintSheet(t, d);
 }
 
 /* ── 관문① 활동 흐름 ── */
@@ -2913,6 +2921,155 @@ function paintFlow(t, d){
       <div class="fl-msg" id="d-flowmsg" hidden></div>
     </div>`;
   bindFlow(t, d);
+  /* 흐름이 바뀌면 활동지가 가리키는 활동도 달라진다 */
+  if(el("d-sheetpanel")) paintSheet(t, d);
+}
+
+/* ══ 관문② 활동지 원고 ══
+   활동지는 학생이 손에 들고 쓰는 종이다. 교사가 말로 할 것은 적지 않는다 —
+   남는 글은 지시문과 물음뿐이다(worksheet_guide, 교육청 배포 실물 9종 실측). */
+const SHEET_LIMITS = {goal: 20, ask: 60, kind: 8, total: 400};
+/* 활동 하나를 시작하기 전에 읽는 글자. 60자면 6학년이 10초 안에 읽는다 */
+const askLen = b => (b.ask || "").length + (b.q || "").length;
+const sheetLen = sh => (sh.blocks || []).reduce((a, b) =>
+  a + (b.title || "").length + askLen(b), 0);
+/* 지표가 붙은 활동만 칸이 된다. 동기 유발에는 쓸 칸을 만들지 않는다 */
+const sheetSrc = (d, opts) => (d.flow || [])
+  .map((r, i) => ({r, i}))
+  .filter(({r}) => { const k = seesLive(r, opts); return k.length && !k.includes("hook"); });
+
+function normSheetBlock(x, i){
+  return {
+    from:  Number.isInteger(x?.from) ? x.from : i,
+    title: String(pickKey(x, "title", "제목", "활동제목") || "").trim(),
+    kind:  String(pickKey(x, "kind", "유형", "하는일") || "").trim().slice(0, SHEET_LIMITS.kind),
+    ask:   String(pickKey(x, "ask", "지시", "지시문") || "").trim(),
+    q:     String(pickKey(x, "q", "물음", "질문") || "").trim(),
+    lines: Math.min(12, Math.max(1, Math.round(+pickKey(x, "lines", "줄수") || 3)))
+  };
+}
+
+async function genSheet(t, d, btn){
+  if(!aiOn()){ S.ui.tab = "ai"; save(); render(); return; }
+  const opts = seeOpts(t), src = sheetSrc(d, opts);
+  const msg = el("d-sheetmsg");
+  if(!src.length){
+    if(msg){ msg.hidden = false; msg.style.color = "var(--mid)";
+      msg.textContent = "관점이 붙은 활동이 없습니다. 흐름에서 무엇을 보는지 먼저 골라 주세요."; }
+    return;
+  }
+  const keep = btn.textContent; btn.disabled = true; btn.textContent = "…";
+  if(msg) msg.hidden = true;
+  try{
+    const r = await aiJSON2(`한국 초등학교 ${S.klass.grade}학년 ${subjShort(t.subject)} 활동지를 쓴다.
+학생이 손에 들고 연필로 쓰는 종이다.
+
+[교사의 학습목표] ${d.goal || "(없음)"}
+[칸을 만들 활동 — 이 순서 그대로, from을 그대로 돌려준다]
+${src.map(({r, i}) => `${i}. ${r.name}${(r.asks||[]).length ? " / 교사 발문: " + r.asks.join(" ") : ""}${
+  (r.steps||[]).length ? " / 하는 일: " + r.steps.join(" ") : ""} / 볼 관점: ${seesLive(r, opts).join(" · ")}`).join("\n")}
+
+규칙
+- 교사가 말로 할 것을 종이에 적지 않는다. 상황·배경·왜 하는지는 넣지 않는다.
+  종이에 남는 글은 무엇을 하라는 지시(ask)와 판단을 묻는 물음(q)뿐이다.
+- 한 칸에서 활동을 시작하기 전에 읽는 글자는 지시와 물음을 합쳐 ${SHEET_LIMITS.ask}자 안쪽이다.
+- 한 문장에 한 가지만. 25자를 넘기면 자른다.
+- 제목(title)은 아이가 하는 일로 적는다. 설계 의도를 이름으로 삼지 않는다.
+- 유형(kind)은 아이가 할 동작을 ${SHEET_LIMITS.kind}자 안쪽으로 한 낱말 — 표시하기 · 골라 쓰기 ·
+  서술하기 · 그려 보기 · 재어 보기 · 이야기하기처럼. 한 칸에 하나만.
+- 물음은 결론을 심지 않는다. 어느 쪽을 골라도 채워지는 틀로 쓴다.
+- 채점 기준, 성취기준 코드, 차시, 소요 시간을 적지 않는다. 아이 종이에 없는 것들이다.
+- 학생용 목표(goal)는 ${SHEET_LIMITS.goal}자 안쪽으로 오늘 할 일만 적는다. 조건을 붙이지 않는다.
+- lines는 답 칸 줄 수다. ${S.klass.grade}학년이 3분 안에 채울 분량으로 정한다.
+- 처음 나오는 어려운 말에는 괄호로 예를 붙인다.
+
+아래 모양 그대로, 키 이름을 번역하지 말고 영문 그대로 쓴다. JSON만 출력한다:
+{"goal":"학생용 목표","blocks":[{"from":0,"title":"제목","kind":"골라 쓰기","ask":"지시 한 줄","q":"묻는 말","lines":3}]}`);
+
+    const arr = Array.isArray(r?.blocks) ? r.blocks : pickFlowArray(r);
+    const blocks = arr.map((x, i) => normSheetBlock(x, src[i]?.i ?? i)).filter(b => b.title || b.ask);
+    if(!blocks.length){ console.warn("[활동지] 이해하지 못한 응답:", r);
+      throw new Error("활동지를 만들지 못했습니다. 다시 시도해 주세요. (F12 콘솔에 받은 답이 남습니다)"); }
+    d.sheet = {goal: String(r?.goal || "").trim(), blocks};
+    d.at = new Date().toISOString(); save(); paintSheet(t, d);
+  }catch(e){
+    btn.disabled = false; btn.textContent = keep;
+    const m = el("d-sheetmsg");
+    if(m){ m.hidden = false; m.style.color = "var(--low)"; m.textContent = e.message; }
+  }
+}
+
+function paintSheet(t, d){
+  const box = el("d-sheetpanel"); if(!box) return;
+  const opts = seeOpts(t), sh = d.sheet || {blocks:[]}, blocks = sh.blocks || [];
+  const src = sheetSrc(d, opts), total = sheetLen(sh);
+  const gLen = (sh.goal || "").length;
+  box.innerHTML = `
+    <div class="ph"><h2>② 활동지 원고</h2>
+      <span class="r">${blocks.length ? `<button class="ghost" id="d-sheetgen" type="button">다시 만들기</button>` : ``}</span></div>
+    <div class="pb">
+      ${blocks.length ? `
+        <div class="field">
+          <span class="lab">학생용 목표 <span class="muted">— 오늘 할 일만. 교사용 학습목표와 다른 문장입니다</span></span>
+          <input type="text" id="sh-goal" value="${esc(sh.goal || "")}" placeholder="예) 우리 반 이야기를 리듬으로 만들어 봅시다">
+          <div class="hint${gLen > SHEET_LIMITS.goal ? " over" : ""}">${gLen}자 / ${SHEET_LIMITS.goal}자${
+            gLen > SHEET_LIMITS.goal ? " — 두 가지를 담았다면 하나는 지도안으로 보내세요" : ""}</div>
+        </div>
+        ${blocks.map((b, i) => sheetCard(b, i, d)).join("")}
+        <div class="fl-sum">
+          <span>활동지 전체 <b class="${total > SHEET_LIMITS.total ? "over" : "fit"}">${total}자</b>
+            <span class="muted">/ ${SHEET_LIMITS.total}자</span></span>
+          ${total > SHEET_LIMITS.total ? `<span class="muted">설명이 섞였는지 봅니다 — 그 문장은 지도안으로</span>` : ``}
+        </div>` : `<div class="empty-action">
+        <span class="mark" aria-hidden="true">${ICON.pen()}</span>
+        <span class="copy"><b>관점이 붙은 활동마다 쓰는 칸을 만듭니다</b>
+          <span>${src.length ? `지금 ${src.length}개 활동이 칸이 됩니다. 동기 유발에는 칸을 만들지 않습니다.`
+            : "흐름에서 무엇을 보는지 먼저 골라 주세요."}</span></span>
+        <span class="actions"><button class="primary" id="d-sheetgen" type="button"${src.length?"":" disabled"}>활동지 원고 만들기</button></span>
+      </div>`}
+      <div class="fl-msg" id="d-sheetmsg" hidden></div>
+    </div>`;
+
+  const g = el("d-sheetgen");
+  if(g) g.onclick = () => genSheet(t, d, g);
+  const goal = el("sh-goal");
+  if(goal) goal.onchange = () => { d.sheet.goal = goal.value.trim(); save(); paintSheet(t, d); };
+  box.querySelectorAll(".sh").forEach(card => {
+    const b = d.sheet.blocks[+card.dataset.si], q = x => card.querySelector(x);
+    q(".st").onchange = e => { b.title = e.target.value.trim(); save(); };
+    q(".sk").onchange = e => { b.kind = e.target.value.trim(); save(); paintSheet(t, d); };
+    q(".sa").onchange = e => { b.ask = e.target.value.trim(); save(); paintSheet(t, d); };
+    q(".sq").onchange = e => { b.q = e.target.value.trim(); save(); paintSheet(t, d); };
+    q(".sl").onchange = e => { b.lines = Math.min(12, Math.max(1, +e.target.value || 3)); save(); paintSheet(t, d); };
+    card.querySelectorAll("textarea").forEach(x => { autoGrow(x); x.oninput = () => autoGrow(x); });
+  });
+  box.querySelectorAll("[data-srm]").forEach(btn => btn.onclick = () => {
+    if(!confirm("이 칸을 지웁니다.")) return;
+    d.sheet.blocks.splice(+btn.dataset.srm, 1); save(); paintSheet(t, d); });
+}
+
+function sheetCard(b, i, d){
+  const from = (d.flow || [])[b.from];
+  const len = askLen(b), over = len > SHEET_LIMITS.ask;
+  return `<div class="fl sh${over ? " nosee" : ""}" data-si="${i}">
+    <div class="fl-head">
+      <input type="text" class="st" value="${esc(b.title || "")}" placeholder="아이가 하는 일로" aria-label="활동 제목">
+      <input type="text" class="sk" value="${esc(b.kind || "")}" placeholder="유형" aria-label="유형"
+        style="width:96px" maxlength="${SHEET_LIMITS.kind}">
+    </div>
+    ${from ? `<div class="sh-from">흐름 ${b.from + 1}. ${esc(from.name || "")}</div>` : ``}
+    <div class="fl-row"><span class="lab">지시</span>
+      <textarea class="sa" placeholder="무엇을 하라는 한 줄">${esc(b.ask || "")}</textarea></div>
+    <div class="fl-row"><span class="lab">물음</span>
+      <textarea class="sq" placeholder="판단·근거를 묻는 말. 어느 쪽을 골라도 채워지는 틀로">${esc(b.q || "")}</textarea></div>
+    <div class="fl-row"><span class="lab">답 칸</span>
+      <input type="text" class="sl" value="${+b.lines || 3}" inputmode="numeric" style="width:64px">
+      <span class="muted" style="align-self:center">줄</span></div>
+    <div class="fl-act">
+      <span class="muted" style="margin-right:auto;font-size:11.5px${over ? ";color:var(--mid)" : ""}">
+        읽는 글자 ${len}자 / ${SHEET_LIMITS.ask}자${over ? " — 설명이 섞였는지 봅니다" : ""}</span>
+      <button class="ghost danger" type="button" data-srm="${i}">지우기</button></div>
+  </div>`;
 }
 
 /* ── 지도안 본문 ──
@@ -2972,6 +3129,41 @@ function planBody(t, d, St){
   line(`다음엔  : ${d.reflect?.next || ""}`);
   return P.join("");
 }
+/* ── 활동지 본문 ──
+   학생이 손에 들고 쓰는 종이다. 차시·성취기준 코드·소요 시간·채점 기준을 넣지 않는다
+   (교육청 배포 실물 9종 중 0건). 그 넷은 지도안이 들고 있으면 된다 */
+function sheetBody(t, d, St){
+  const P = [], sh = d.sheet || {blocks:[]};
+  const line = (x, cp, pp) => P.push(hwpP(x, cp, pp));
+  line("(     )학년 (     )반    이름 (               )");
+  line("");
+  line(sh.goal || "오늘의 목표", St.title, St.center);
+  line("");
+  (sh.blocks || []).forEach((b, i) => {
+    line(`${i + 1}. ${b.title || ""}${b.kind ? `   [ ${b.kind} ]` : ""}`, St.head);
+    if(b.ask) line(b.ask);
+    if(b.q)   line(b.q);
+    /* 밑줄만 그은 빈 줄 — 여기에 학생이 쓴다 */
+    for(let k = 0; k < (+b.lines || 3); k++) line("　".repeat(30), St.ul);
+    line("");
+  });
+  if(!(sh.blocks || []).length) line("(활동지 원고를 아직 만들지 않았습니다)");
+  return P.join("");
+}
+
+async function saveSheet(t, d, btn){
+  const keep = btn.textContent; btn.disabled = true; btn.textContent = "…";
+  try{
+    const blob = await buildHwpx(St => sheetBody(t, d, St));
+    saveBlob(blob, `활동지_${safeName(t.name)}.hwpx`);
+  }catch(e){
+    console.warn("[활동지]", e);
+    const m = el("d-outmsg");
+    if(m){ m.hidden = false; m.style.color = "var(--low)"; m.textContent = e.message; }
+  }
+  btn.disabled = false; btn.textContent = keep;
+}
+
 const klassLine = (t, d) =>
   `${S.klass.grade}학년 ${S.klass.room || ""}반 · ${subjShort(t.subject)} · ${periodsOf(d)}차시(${minutesOf(d)}분)`;
 const safeName = v => String(v || "지도안").replace(/[\/:*?"<>|]/g, "").trim().slice(0, 40) || "지도안";
@@ -3727,11 +3919,14 @@ function withStyles(header){
   const mkP = (id, al) => pp[0]
     .replace('<hh:paraPr id="0"', `<hh:paraPr id="${id}"`)
     .replace(/horizontal="[A-Z_]+"/, `horizontal="${al}"`);
-  const S = {title: cNext, head: cNext + 1, bold: cNext + 2, center: pNext};
+  const S = {title: cNext, head: cNext + 1, bold: cNext + 2, ul: cNext + 3, center: pNext};
   const xml = header
-    .replace(cm[0], `<hh:charProperties itemCnt="${+cm[1] + 3}">`)
+    .replace(cm[0], `<hh:charProperties itemCnt="${+cm[1] + 4}">`)
     .replace("</hh:charProperties>",
-      mkC(S.title, 1800, true) + mkC(S.head, 1200, true) + mkC(S.bold, 1000, true) + "</hh:charProperties>")
+      mkC(S.title, 1800, true) + mkC(S.head, 1200, true) + mkC(S.bold, 1000, true) +
+      /* 학생이 쓰는 칸 — 빈 줄에 밑줄만 그어 둔다 */
+      mkC(S.ul, 1000, false).replace(/<hh:underline type="NONE"/, '<hh:underline type="BOTTOM"') +
+      "</hh:charProperties>")
     .replace(pm[0], `<hh:paraProperties itemCnt="${+pm[1] + 1}">`)
     .replace("</hh:paraProperties>", mkP(S.center, "CENTER") + "</hh:paraProperties>");
   return {xml, S};
