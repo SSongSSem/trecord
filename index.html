@@ -245,6 +245,23 @@ textarea{line-height:1.7}
          border:1px solid var(--rule);font-size:12.5px;line-height:1.6}
 .dsg-std .mono{color:var(--accent);font-size:11.5px;margin-right:5px}
 .dsg-fb{display:block;margin-top:3px;font-style:normal;color:var(--ink-3);font-size:12px}
+/* 활동 카드 — 표가 아니라 카드다. 교사가 고치는 것이 주 작업이라 늘 열려 있다 */
+.fl{border:1px solid var(--rule);border-radius:12px;padding:11px 12px;margin-top:9px;background:var(--surface)}
+.fl.nosee{border-color:var(--mid);background:color-mix(in srgb,var(--mid) 5%,var(--surface))}
+.fl-head{display:flex;gap:7px;align-items:center;flex-wrap:wrap}
+.fl-head select{flex:0 0 auto}.fl-head .nm{flex:1 1 180px;min-width:120px;font-weight:600}
+.fl-head .mn{width:62px;text-align:right}
+.fl-row{display:flex;gap:8px;margin-top:7px;align-items:flex-start}
+.fl-row .lab{flex:0 0 34px;padding-top:7px;font-size:11.5px;color:var(--ink-3)}
+.fl-row textarea,.fl-row input{flex:1;min-width:0}
+.fl-row textarea{min-height:38px;font-size:12.5px;line-height:1.65;resize:none;overflow:hidden}
+.fl-act{display:flex;gap:5px;justify-content:flex-end;margin-top:7px}
+.fl-act button{padding:3px 9px;font-size:11.5px;min-height:0}
+.fl-msg{margin-top:6px;font-size:11.5px;color:var(--mid)}
+.fl-sum{display:flex;align-items:center;gap:9px;margin-top:11px;padding:9px 12px;border-radius:11px;
+        background:var(--raise);border:1px solid var(--rule);font-size:12.5px}
+.fl-sum b{font-family:var(--mono);font-size:14px}
+.fl-sum .over{color:var(--low)}.fl-sum .fit{color:var(--good)}
 /* 고른 평가 — 무엇을 기록하는 중인지 한 줄로 */
 .pickhead{display:flex;gap:10px;align-items:baseline;flex-wrap:wrap;margin-top:10px;
           padding-bottom:9px;border-bottom:1px solid var(--rule)}
@@ -2755,16 +2772,7 @@ function renderDesign(){
       </div>
     </div>
 
-    <div class="panel">
-      <div class="ph"><h2>① 활동 흐름</h2></div>
-      <div class="pb"><div class="empty-action">
-        <span class="mark" aria-hidden="true">${ICON.flow()}</span>
-        <span class="copy"><b>루브릭에서 활동을 역산합니다</b>
-          <span>위 수준 서술이 드러나는 활동만 만들고, 어느 지표도 보지 않는 활동은 넣지 않습니다.</span></span>
-        <span class="actions"><button class="primary" id="d-flow" type="button" disabled>흐름 만들기</button></span>
-      </div>
-      <div class="hint">다음 단계에서 이어 만듭니다.</div></div>
-    </div>
+    <div class="panel" id="d-flowpanel"></div>
   </div>`;
 
   el("d-back").onclick = () => { _dsgId = ""; renderDesign(); };
@@ -2780,7 +2788,158 @@ function renderDesign(){
   };
   goal.oninput = checkGoal; checkGoal();
   goal.onchange = () => { d.goal = goal.value.trim(); d.at = new Date().toISOString(); save(); };
-  el("d-min").onchange = e => { d.minutes = +e.target.value; save(); };
+  /* 분량이 바뀌면 합계 기준이 바뀐다 — 흐름을 다시 그린다 */
+  el("d-min").onchange = e => { d.minutes = +e.target.value; save(); paintFlow(t, d); };
+  paintFlow(t, d);
+}
+
+/* ── 관문① 활동 흐름 ── */
+const PHASES = ["도입", "전개", "정리"];
+const toLines = v => String(v).split("\n").map(s => s.trim()).filter(Boolean);
+const autoGrow = x => { x.style.height = "auto"; x.style.height = (x.scrollHeight + 2) + "px"; };
+/* 루브릭에 실제로 쓴 수준명만 고를 수 있게 한다 */
+const seeLevels = t => (t.rubric || []).filter(r => (r.text || "").trim()).map(r => r.level);
+/* 준비 탭에서 수준명을 고치면 흐름의 sees가 가리킬 곳을 잃는다.
+   그때는 지정되지 않은 것으로 본다 — 옛 이름을 지표인 척 두면 경고가 꺼진다 */
+const seeOK = (r, lv) => r.sees === "hook" || lv.includes(r.sees);
+
+function paintFlow(t, d){
+  const box = el("d-flowpanel"), rows = d.flow || [], lv = seeLevels(t);
+  const sum = rows.reduce((a, r) => a + (+r.min || 0), 0);
+  const nosee = rows.filter(r => !seeOK(r, lv)).length;
+  const want = d.minutes || 40;
+  box.innerHTML = `
+    <div class="ph"><h2>① 활동 흐름</h2>
+      <span class="r">${rows.length ? `<button class="ghost" id="d-add" type="button">＋ 활동</button>
+        <button class="ghost" id="d-regen" type="button">다시 만들기</button>` : ``}</span></div>
+    <div class="pb">
+      ${rows.length ? rows.map((r, i) => flowCard(r, i, lv, rows.length)).join("") + `
+        <div class="fl-sum">
+          <span>합계 <b class="${sum===want?"fit":(sum>want?"over":"")}">${sum}분</b>
+            <span class="muted">/ ${want}분</span></span>
+          ${sum!==want ? `<span class="muted">${sum>want?`${sum-want}분 넘습니다`:`${want-sum}분 남았습니다`}</span>` : ``}
+          ${nosee ? `<span style="margin-left:auto;color:var(--mid)">지표 없는 활동 ${nosee}개</span>` : ``}
+        </div>` : `<div class="empty-action">
+        <span class="mark" aria-hidden="true">${ICON.flow()}</span>
+        <span class="copy"><b>루브릭에서 활동을 역산합니다</b>
+          <span>위 수준 서술이 드러나는 활동만 만들고, 어느 지표도 보지 않는 활동은 넣지 않습니다.</span></span>
+        <span class="actions">
+          <button class="primary" id="d-gen" type="button">AI로 흐름 만들기</button>
+          <button class="ghost" id="d-add" type="button">직접 쓰기</button></span></div>
+        ${aiOn() ? `` : `<div class="hint">AI로 만들려면 「AI 연결」이 필요합니다. 직접 써도 됩니다.</div>`}`}
+      <div class="fl-msg" id="d-flowmsg" hidden></div>
+    </div>`;
+  bindFlow(t, d);
+}
+
+function flowCard(r, i, lv, n){
+  const ok = seeOK(r, lv);
+  return `<div class="fl${ok?"":" nosee"}" data-fi="${i}">
+    <div class="fl-head">
+      <select class="ph2" aria-label="단계">${PHASES.map(p =>
+        `<option${p===r.phase?" selected":""}>${p}</option>`).join("")}</select>
+      <input type="text" class="nm" value="${esc(r.name||"")}" placeholder="활동 이름" aria-label="활동 이름">
+      <input type="text" class="mn" value="${+r.min||0}" inputmode="numeric" aria-label="분"><span class="muted">분</span>
+      <select class="se" aria-label="무엇을 보나">
+        <option value=""${ok?"":" selected"}>— 무엇을 보나</option>
+        ${lv.map(l => `<option value="${esc(l)}"${r.sees===l?" selected":""}>‘${esc(l)}’이 드러남</option>`).join("")}
+        <option value="hook"${r.sees==="hook"?" selected":""}>동기 유발 (지표 없음)</option>
+      </select>
+    </div>
+    <div class="fl-row"><span class="lab">발문</span>
+      <textarea class="ak" placeholder="한 줄에 하나씩. 답이 갈리는 물음을 절반 이상">${esc((r.asks||[]).join("\n"))}</textarea></div>
+    <div class="fl-row"><span class="lab">세부</span>
+      <textarea class="st" placeholder="한 줄에 하나씩">${esc((r.steps||[]).join("\n"))}</textarea></div>
+    <div class="fl-row"><span class="lab">처방</span>
+      <input type="text" class="ad" value="${esc(r.aid||"")}" placeholder="못 따라오는 학생에게 줄 한 걸음"></div>
+    ${ok?``:`<div class="fl-msg">어느 지표도 보지 않는 활동입니다 — 동기 유발이 아니면 빼세요.</div>`}
+    <div class="fl-act">
+      <button class="ghost" type="button" data-up="${i}"${i?"":" disabled"} aria-label="위로">↑</button>
+      <button class="ghost" type="button" data-dn="${i}"${i<n-1?"":" disabled"} aria-label="아래로">↓</button>
+      <button class="ghost danger" type="button" data-rm="${i}">지우기</button></div>
+  </div>`;
+}
+
+function bindFlow(t, d){
+  const box = el("d-flowpanel");
+  const gen = el("d-gen") || el("d-regen");
+  if(gen) gen.onclick = () => genFlow(t, d, gen);
+  const add = el("d-add");
+  if(add) add.onclick = () => {
+    (d.flow ||= []).push({phase: d.flow.length ? "전개" : "도입",
+      name:"", min:5, asks:[], steps:[], sees:"", aid:""});
+    save(); paintFlow(t, d); };
+
+  box.querySelectorAll(".fl").forEach(card => {
+    const r = d.flow[+card.dataset.fi], g = s => card.querySelector(s);
+    g(".ph2").onchange = e => { r.phase = e.target.value; save(); };
+    g(".nm").onchange = e => { r.name = e.target.value.trim(); save(); };
+    /* 합계와 경고가 바뀌는 둘만 다시 그린다 — 글 칸은 다시 그리면 커서가 튄다 */
+    g(".mn").onchange = e => { r.min = Math.max(0, +e.target.value || 0); save(); paintFlow(t, d); };
+    g(".se").onchange = e => { r.sees = e.target.value; save(); paintFlow(t, d); };
+    g(".ak").onchange = e => { r.asks = toLines(e.target.value); save(); };
+    g(".st").onchange = e => { r.steps = toLines(e.target.value); save(); };
+    g(".ad").onchange = e => { r.aid = e.target.value.trim(); save(); };
+    card.querySelectorAll("textarea").forEach(x => { autoGrow(x); x.oninput = () => autoGrow(x); });
+  });
+  const swap = (i, j) => { const f = d.flow; [f[i], f[j]] = [f[j], f[i]]; save(); paintFlow(t, d); };
+  box.querySelectorAll("[data-up]").forEach(b => b.onclick = () => swap(+b.dataset.up, +b.dataset.up - 1));
+  box.querySelectorAll("[data-dn]").forEach(b => b.onclick = () => swap(+b.dataset.dn, +b.dataset.dn + 1));
+  box.querySelectorAll("[data-rm]").forEach(b => b.onclick = () => {
+    const i = +b.dataset.rm;
+    if(!confirm(`‘${d.flow[i].name || "이 활동"}’을 지웁니다.`)) return;
+    d.flow.splice(i, 1); save(); paintFlow(t, d); });
+}
+
+/* 루브릭 → 활동. 규칙은 skill의 activity_design·backward_design에서 그대로 옮겨 온 것이다 */
+async function genFlow(t, d, btn){
+  if(!aiOn()){ S.ui.tab = "ai"; save(); render(); return; }
+  const msg = el("d-flowmsg");
+  const keep = btn.textContent; btn.disabled = true; btn.textContent = "…";
+  if(msg) msg.hidden = true;
+  try{
+    const rb = (t.rubric || []).filter(r => (r.text || "").trim());
+    const lv = rb.map(r => r.level);
+    const r = await aiJSON(`한국 초등학교 ${S.klass.grade}학년 ${subjShort(t.subject)} 한 차시(${d.minutes||40}분) 수업의 활동 흐름을 짠다.
+
+[학습목표] ${d.goal || "(아직 정하지 않음 — 성취기준에서 끌어낸다)"}
+[성취기준]
+${t.standards.map(c => `- [${c}] ${CODEMAP[c]?.text || ""}`).join("\n") || "- (없음)"}
+[관찰 관점] ${t.criteria || "(없음)"}
+[루브릭 — 활동은 이 수준들이 드러나게 짠다]
+${rb.map(x => `- ${x.level}: ${x.text}`).join("\n")}
+
+규칙
+- 활동마다 무엇을 보는지를 sees에 적는다. 위 수준명(${lv.join(" / ")}) 중 하나이거나, 동기 유발이면 "hook"이다.
+- 어느 수준도 드러내지 못하는 활동은 넣지 않는다. 재미있어도 넣지 않는다. 예외는 동기 유발 하나뿐이다.
+- 손으로 해 볼 수 있는 일은 반드시 먼저 한다. 몸과 구체물로 해 보기 → 말과 기호로 옮기기 → 디지털 도구 순서다.
+  도구는 손으로 이미 해 본 일을 반복하거나 완성할 때만 쓴다. 개념을 처음 만나는 자리에 두지 않는다.
+- 발문(asks)은 답이 갈리는 물음을 절반 이상 넣는다. 예·아니오로 닫히는 물음만 늘어놓지 않는다.
+- 세부(steps)는 교사가 그대로 따라 할 수 있는 동작으로 쓴다.
+- 처방(aid)은 그 활동에서 못 따라오는 학생에게 줄 한 걸음이다. 한 번 빗대어 설명한 뒤 좁혀 준다.
+- 분(min)의 합이 정확히 ${d.minutes||40}이 되게 한다.
+- 단계(phase)는 도입·전개·정리 중 하나다.
+
+JSON만 출력한다:
+{"flow":[{"phase":"도입","name":"활동 이름","min":5,"asks":["발문"],"steps":["세부"],"sees":"hook","aid":""}]}`);
+
+    const made = (Array.isArray(r.flow) ? r.flow : []).map(x => ({
+      phase: PHASES.includes(x.phase) ? x.phase : "전개",
+      name:  String(x.name || "").trim(),
+      min:   Math.max(0, Math.round(+x.min || 0)),
+      asks:  Array.isArray(x.asks)  ? x.asks.map(s => String(s).trim()).filter(Boolean)  : [],
+      steps: Array.isArray(x.steps) ? x.steps.map(s => String(s).trim()).filter(Boolean) : [],
+      /* 루브릭에 없는 수준명이 오면 비운다 — 지어낸 지표를 그대로 들이지 않는다 */
+      sees:  (x.sees === "hook" || lv.includes(x.sees)) ? x.sees : "",
+      aid:   String(x.aid || "").trim()
+    })).filter(x => x.name);
+    if(!made.length) throw new Error("활동을 만들지 못했습니다. 다시 시도해 주세요.");
+    d.flow = made; d.at = new Date().toISOString(); save(); paintFlow(t, d);
+  }catch(e){
+    btn.disabled = false; btn.textContent = keep;
+    const m = el("d-flowmsg");
+    if(m){ m.hidden = false; m.style.color = "var(--low)"; m.textContent = e.message; }
+  }
 }
 
 function renderDesignList(){
