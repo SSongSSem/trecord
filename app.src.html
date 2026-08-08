@@ -2778,11 +2778,12 @@ function ensureDesign(t){
 /* 관문 순서대로만 올라간다. 삽화는 선택이므로 단계를 만들지 않는다 */
 function designStage(d){
   if(!d || !(d.flow || []).length) return 0;
-  if(!(d.slides || []).length && !(d.sheet?.blocks || []).length) return 1;
-  return 2;
+  if(!(d.sheet?.blocks || []).length) return 1;
+  if(!(d.slides || []).length) return 2;
+  return 3;
 }
-const DSG_STEPS = ["지도안 설계", "활동지 설계", "완성"];
-const DSG_STAGE = ["설계 전", "지도안까지", "활동지까지"];
+const DSG_STEPS = ["지도안 설계", "활동지 설계", "수업자료 설계", "완성"];
+const DSG_STAGE = ["설계 전", "지도안까지", "활동지까지", "수업자료까지"];
 /* 수준 서술이 하나라도 있어야 역산이 된다. 이름과 코드만 있는 과제로는 못 짠다 */
 const designable = t => (t.rubric || []).some(r => (r.text || "").trim());
 
@@ -2844,6 +2845,7 @@ function renderDesign(){
 
     <div class="panel" id="d-flowpanel"></div>
     <div class="panel" id="d-sheetpanel"></div>
+    <div class="panel" id="d-deckpanel"></div>
 
     <div class="panel" id="d-outpanel"></div>
   </div>`;
@@ -2873,6 +2875,7 @@ function renderDesign(){
   };
   paintFlow(t, d);
   paintSheet(t, d);
+  paintDeck(t, d);
   paintOut(t, d);
   paintBar(t, d);
 }
@@ -3006,6 +3009,130 @@ ${src.map(({r, i}) => `${i}. ${r.name}${(r.asks||[]).length ? " / 교사 발문:
     const m = el("d-sheetmsg");
     if(m){ m.hidden = false; m.style.color = "var(--low)"; m.textContent = e.message; }
   }
+}
+
+/* ══ 관문③ 수업자료 원고 ══
+   교사가 띄우는 화면이다. 활동지의 규칙을 그대로 옮기지 않는다 —
+   활동지에는 성취기준 코드가 0건이었지만 PPT는 96%가 표지에 싣는다.
+   같은 '학생이 본다'라도 자리가 다르면 관행이 다르다(ppt_guide, 실물 50종·403장 실측). */
+const SLIDE_KINDS = {title:"표지", big:"한 문장", bullets:"목록", quote:"발문", steps:"흐름"};
+const SLIDE_MAX = 120;   // 한 장의 글자 수 눈금. 실물 75%가 121자 안쪽이었다
+const slideLen = sl => (sl.title || "").length +
+  (sl.body || []).reduce((a, x) => a + String(x).length, 0);
+
+function normSlide(x){
+  const k = String(pickKey(x, "kind", "종류") || "");
+  return {
+    kind: SLIDE_KINDS[k] ? k : "bullets",
+    title: String(pickKey(x, "title", "제목") || "").trim(),
+    body: asList(pickKey(x, "body", "내용", "본문")),
+    note: String(pickKey(x, "note", "말", "발표자노트", "talk") || "").trim()
+  };
+}
+
+async function genDeck(t, d, btn){
+  if(!aiOn()){ S.ui.tab = "ai"; save(); render(); return; }
+  const opts = seeOpts(t), msg = el("d-deckmsg");
+  const keep = btn.textContent; btn.disabled = true; btn.textContent = "…";
+  if(msg) msg.hidden = true;
+  try{
+    const r = await aiJSON2(`한국 초등학교 ${S.klass.grade}학년 ${subjShort(t.subject)} 수업에서 교사가 띄울 화면(슬라이드)을 쓴다.
+
+[학습목표] ${d.goal || ""}
+[성취기준] ${t.standards.map(c => `[${c}] ${CODEMAP[c]?.text || ""}`).join(" / ") || "(없음)"}
+[활동 흐름]
+${(d.flow || []).map((x, i) => `${i + 1}. [${x.phase} ${x.min}분] ${x.name}${
+  (x.asks||[]).length ? "\n   발문: " + x.asks.join(" / ") : ""}`).join("\n") || "(없음)"}
+[학생이 볼 수준 서술 — 학생 말로 옮겨 한 장에 싣는다]
+${(t.rubric || []).filter(x => (x.text||"").trim()).map(x => `- ${x.level}: ${x.text}`).join("\n")}
+
+규칙
+- 표지(title)에 성취기준 코드를 싣는다. 화면은 교사가 띄우는 것이라 활동지와 반대다.
+- 차시와 소요 시간은 넣지 않는다. 아이를 재촉하는 글자가 된다.
+- 한 장에 한 가지만. 제목과 본문을 합쳐 ${SLIDE_MAX}자를 넘기지 않는다.
+  넘칠 것 같으면 장을 나누거나 note로 내린다.
+- 교사가 할 설명·근거·까닭은 화면이 아니라 note에 적는다. 화면은 학생이 본다.
+- 수준 서술을 학생 말로 바꿔 한 장 싣는다("제한적으로 수행한다" 같은 말을 아이에게 주지 않는다).
+- 차례는 표지 → 학습문제 → 활동마다 발문과 안내 → 정리다.
+- kind는 ${Object.keys(SLIDE_KINDS).join(" / ")} 가운데 하나다.
+
+아래 모양 그대로, 키 이름을 번역하지 말고 영문 그대로 쓴다. JSON만 출력한다:
+{"slides":[{"kind":"title","title":"제목","body":["줄"],"note":"교사만 보는 말"}]}`);
+
+    const arr = Array.isArray(r?.slides) ? r.slides : pickFlowArray(r);
+    const slides = arr.map(normSlide).filter(x => x.title || x.body.length);
+    if(!slides.length){ console.warn("[수업자료] 이해하지 못한 응답:", r);
+      throw new Error("슬라이드를 만들지 못했습니다. 다시 시도해 주세요. (F12 콘솔에 받은 답이 남습니다)"); }
+    d.slides = slides; d.at = new Date().toISOString(); save(); paintDeck(t, d);
+  }catch(e){
+    btn.disabled = false; btn.textContent = keep;
+    const m = el("d-deckmsg");
+    if(m){ m.hidden = false; m.style.color = "var(--low)"; m.textContent = e.message; }
+  }
+}
+
+function paintDeck(t, d){
+  const box = el("d-deckpanel"); if(!box) return;
+  const slides = d.slides || [], over = slides.filter(x => slideLen(x) > SLIDE_MAX).length;
+  const noNote = slides.length >= 4 && !slides.some(x => x.note);
+  box.innerHTML = `
+    <div class="ph"><h2>③ 수업자료 설계</h2>
+      <span class="r">${slides.length ? `<span class="muted">${slides.length}장</span>
+        <button class="ghost" id="d-deckgen" type="button">다시 만들기</button>` : ``}</span></div>
+    <div class="pb">
+      ${slides.length ? slides.map((x, i) => slideCard(x, i, slides.length)).join("") + `
+        <div class="fl-sum">
+          <span>${slides.length}장${over ? ` · <b class="over">${over}장이 ${SLIDE_MAX}자를 넘습니다</b>` : ``}</span>
+          ${noNote ? `<span class="muted" style="margin-left:auto">교사가 놓치면 수업이 어긋나는 곳은 「할 말」에 적어 두세요</span>` : ``}
+        </div>` : `<div class="empty-action">
+        <span class="mark" aria-hidden="true">${ICON.subject()}</span>
+        <span class="copy"><b>교사가 띄울 화면을 만듭니다</b>
+          <span>흐름의 발문이 화면으로 옮겨 갑니다. 교사가 할 설명은 「할 말」에 따로 담깁니다.</span></span>
+        <span class="actions"><button class="primary" id="d-deckgen" type="button"${
+          (d.flow||[]).length?"":" disabled"}>수업자료 원고 만들기</button></span>
+      </div>${(d.flow||[]).length ? `` : `<div class="hint">지도안을 먼저 설계해 주세요.</div>`}`}
+      <div class="fl-msg" id="d-deckmsg" hidden></div>
+    </div>`;
+
+  const g = el("d-deckgen");
+  if(g) g.onclick = () => genDeck(t, d, g);
+  box.querySelectorAll(".sd").forEach(card => {
+    const x = d.slides[+card.dataset.di], q = v => card.querySelector(v);
+    q(".dk").onchange = e => { x.kind = e.target.value; save(); };
+    q(".dt").onchange = e => { x.title = e.target.value.trim(); save(); paintDeck(t, d); };
+    q(".db").onchange = e => { x.body = toLines(e.target.value); save(); paintDeck(t, d); };
+    q(".dn").onchange = e => { x.note = e.target.value.trim(); save(); };
+    card.querySelectorAll("textarea").forEach(v => { autoGrow(v); v.oninput = () => autoGrow(v); });
+  });
+  const swap = (i, j) => { const f = d.slides; [f[i], f[j]] = [f[j], f[i]]; save(); paintDeck(t, d); };
+  box.querySelectorAll("[data-dup]").forEach(b => b.onclick = () => swap(+b.dataset.dup, +b.dataset.dup - 1));
+  box.querySelectorAll("[data-ddn]").forEach(b => b.onclick = () => swap(+b.dataset.ddn, +b.dataset.ddn + 1));
+  box.querySelectorAll("[data-drm]").forEach(b => b.onclick = () => {
+    if(!confirm("이 장을 지웁니다.")) return;
+    d.slides.splice(+b.dataset.drm, 1); save(); paintDeck(t, d); });
+  paintOut(t, d);
+}
+
+function slideCard(x, i, n){
+  const len = slideLen(x), over = len > SLIDE_MAX;
+  return `<div class="fl sd${over ? " nosee" : ""}" data-di="${i}">
+    <div class="fl-head">
+      <span class="muted mono" style="flex:0 0 auto">${i + 1}</span>
+      <select class="dk" aria-label="종류" style="flex:0 0 auto">${Object.entries(SLIDE_KINDS).map(([k, v]) =>
+        `<option value="${k}"${x.kind === k ? " selected" : ""}>${v}</option>`).join("")}</select>
+      <input type="text" class="dt" value="${esc(x.title || "")}" placeholder="화면 제목" aria-label="제목">
+    </div>
+    <div class="fl-row"><span class="lab">화면</span>
+      <textarea class="db" placeholder="한 줄에 하나씩. 학생이 보는 글입니다">${esc((x.body || []).join("\n"))}</textarea></div>
+    <div class="fl-row"><span class="lab">할 말</span>
+      <textarea class="dn" placeholder="교사만 보는 발표자 노트">${esc(x.note || "")}</textarea></div>
+    <div class="fl-act">
+      <span class="muted" style="margin-right:auto;font-size:11.5px${over ? ";color:var(--mid)" : ""}">
+        ${len}자 / ${SLIDE_MAX}자${over ? " — 장을 나누거나 「할 말」로 내리세요" : ""}</span>
+      <button class="ghost" type="button" data-dup="${i}"${i ? "" : " disabled"} aria-label="위로">↑</button>
+      <button class="ghost" type="button" data-ddn="${i}"${i < n - 1 ? "" : " disabled"} aria-label="아래로">↓</button>
+      <button class="ghost danger" type="button" data-drm="${i}">지우기</button></div>
+  </div>`;
 }
 
 /* ══ 활동지 그림 그리기 ══
@@ -3683,7 +3810,7 @@ ${rules}
 function paintBar(t, d){
   const bar = el("dbar"); if(!bar) return;
   const stage = designStage(d);
-  const to = ["d-flowpanel", "d-sheetpanel", "d-outpanel"];
+  const to = ["d-flowpanel", "d-sheetpanel", "d-deckpanel", "d-outpanel"];
   bar.hidden = false;
   bar.innerHTML = `<div class="dbar-in">
     <button class="dbar-back" id="dbar-back" type="button" aria-label="목록으로">◀</button>
