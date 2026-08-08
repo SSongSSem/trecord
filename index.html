@@ -1410,7 +1410,7 @@ async function aiCall(prompt, opt){
   opt = opt || {};
   if(!AI.key && !AI_PROXY) throw new Error("먼저 AI 연결 탭에서 키를 넣어 주세요.");
   const m = opt.model || AI.model || AI_MODELS[0];
-  const cfg = {temperature:0.3, maxOutputTokens:8192};
+  const cfg = {temperature:0.3, maxOutputTokens: opt.maxTokens || 8192};
   if(opt.json) cfg.responseMimeType = "application/json";   // 최신 모델은 생각 토큰을 쓰므로 여유 있게
   let res;
   try{
@@ -2917,17 +2917,43 @@ function bindFlow(t, d){
 }
 
 /* 루브릭 → 활동. 규칙은 skill의 activity_design·backward_design에서 그대로 옮겨 온 것이다 */
+/* 흐름은 활동마다 발문과 세부가 붙어 답이 길다. 기본 8192로는 도중에 잘리고,
+   잘린 JSON은 부분만 복구돼 빈 배열로 보인다 — 그래서 여유를 준다 */
+const aiJSON2 = (prompt, opt) => aiJSON(prompt, Object.assign({maxTokens:24576}, opt || {}));
+
+/* 답에서 활동 배열을 찾아낸다. 한국어로 물었으니 키도 한국어로 오는 일이 잦고,
+   배열만 덜렁 오기도 한다. 키 이름을 하나로 못 박아 두면 그때마다 빈손이 된다 */
+function pickFlowArray(r){
+  if(Array.isArray(r)) return r;
+  if(!r || typeof r !== "object") return [];
+  for(const k of ["flow","활동","활동흐름","흐름","수업흐름","activities","activity"])
+    if(Array.isArray(r[k])) return r[k];
+  /* 이름이 무엇이든 객체가 담긴 배열이 하나뿐이면 그것이다 */
+  const arrs = Object.values(r).filter(v =>
+    Array.isArray(v) && v.some(x => x && typeof x === "object" && !Array.isArray(x)));
+  return arrs.length === 1 ? arrs[0] : [];
+}
+/* 여러 키 이름 가운데 값이 든 것을 고른다 */
+function pickKey(x, ...keys){
+  for(const k of keys){ const v = x?.[k]; if(v !== undefined && v !== null && v !== "") return v; }
+  return undefined;
+}
+const asList = v => Array.isArray(v) ? v.map(s => String(s).trim()).filter(Boolean)
+  : (typeof v === "string" && v.trim() ? toLines(v) : []);
+
 /* 모델이 어떤 모양으로 보내오든 한 칸씩 걸러 담는다. 두 갈래가 같이 쓴다 */
 function normFlowRow(x, lv){
+  const ph = String(pickKey(x, "phase", "단계") || "");
+  const sees = String(pickKey(x, "sees", "무엇을보나", "관찰", "지표", "수준") || "");
   return {
-    phase: PHASES.includes(x.phase) ? x.phase : "전개",
-    name:  String(x.name || "").trim(),
-    min:   Math.max(0, Math.round(+x.min || 0)),
-    asks:  Array.isArray(x.asks)  ? x.asks.map(s => String(s).trim()).filter(Boolean)  : [],
-    steps: Array.isArray(x.steps) ? x.steps.map(s => String(s).trim()).filter(Boolean) : [],
+    phase: PHASES.includes(ph) ? ph : "전개",
+    name:  String(pickKey(x, "name", "활동명", "활동", "이름") || "").trim(),
+    min:   Math.max(0, Math.round(+pickKey(x, "min", "분", "시간", "소요시간") || 0)),
+    asks:  asList(pickKey(x, "asks", "발문", "질문")),
+    steps: asList(pickKey(x, "steps", "세부", "활동내용", "내용", "절차")),
     /* 루브릭에 없는 수준명이 오면 비운다 — 지어낸 지표를 그대로 들이지 않는다 */
-    sees:  (x.sees === "hook" || lv.includes(x.sees)) ? x.sees : "",
-    aid:   String(x.aid || "").trim()
+    sees:  (sees === "hook" || lv.includes(sees)) ? sees : "",
+    aid:   String(pickKey(x, "aid", "처방", "도움", "미도달처방") || "").trim()
   };
 }
 /* 한 칸이라도 비어 있나 — 「빈칸 채우기」를 띄울지 정한다 */
@@ -2971,7 +2997,7 @@ ${rb.map(x => `- ${x.level}: ${x.text}`).join("\n")}`;
       const cur = (d.flow || []).map((r, i) => ({i, phase:r.phase||"", name:r.name||"",
         min:+r.min||0, asks:r.asks||[], steps:r.steps||[],
         sees:seeOK(r, lv) ? r.sees : "", aid:r.aid||""}));
-      const r = await aiJSON(`한국 초등학교 ${S.klass.grade}학년 ${subjShort(t.subject)} ${p}차시(${want}분) 수업이다.
+      const r = await aiJSON2(`한국 초등학교 ${S.klass.grade}학년 ${subjShort(t.subject)} ${p}차시(${want}분) 수업이다.
 아래는 교사가 짜다 만 활동 흐름이다. **빈 칸만 채운다.**
 
 ${head}
@@ -2986,13 +3012,16 @@ ${JSON.stringify(cur)}
 - 분(min)이 비어 있는 활동에만 분을 넣되, 전체 합이 ${want}에 가깝게 한다.
 ${rules}
 
-JSON만 출력한다:
+아래 모양 그대로, 키 이름을 번역하지 말고 영문 그대로 쓴다. JSON만 출력한다:
 {"flow":[{"i":0,"phase":"도입","name":"활동 이름","min":5,"asks":["발문"],"steps":["세부"],"sees":"hook","aid":""}]}`);
 
       const by = new Map();
-      (Array.isArray(r.flow) ? r.flow : []).forEach(x => {
-        if(Number.isInteger(x.i)) by.set(x.i, normFlowRow(x, lv)); });
-      if(!by.size) throw new Error("채울 내용을 받지 못했습니다. 다시 시도해 주세요.");
+      pickFlowArray(r).forEach((x, k) => {
+        /* i를 빠뜨리고 순서대로만 보내는 일이 있다 — 그때는 온 순서를 자리로 본다 */
+        const at = Number.isInteger(x?.i) ? x.i : (Number.isInteger(+x?.i) ? +x.i : k);
+        if(at >= 0 && at < (d.flow || []).length) by.set(at, normFlowRow(x, lv)); });
+      if(!by.size){ console.warn("[흐름] 이해하지 못한 응답:", r);
+        throw new Error("채울 내용을 받지 못했습니다. 다시 시도해 주세요."); }
       /* 교사가 쓴 값이 언제나 이긴다. 모델의 답은 빈 자리에만 들어간다 */
       d.flow = d.flow.map((r0, i) => {
         const x = by.get(i) || {};
@@ -3007,7 +3036,7 @@ JSON만 출력한다:
         };
       });
     } else {
-      const r = await aiJSON(`한국 초등학교 ${S.klass.grade}학년 ${subjShort(t.subject)} ${p}차시(${want}분) 수업의 활동 흐름을 짠다.
+      const r = await aiJSON2(`한국 초등학교 ${S.klass.grade}학년 ${subjShort(t.subject)} ${p}차시(${want}분) 수업의 활동 흐름을 짠다.
 
 ${head}
 
@@ -3015,12 +3044,15 @@ ${head}
 ${rules}
 - 분(min)의 합이 정확히 ${want}가 되게 한다.
 
-JSON만 출력한다:
+아래 모양 그대로, 키 이름을 번역하지 말고 영문 그대로 쓴다. JSON만 출력한다:
 {"flow":[{"phase":"도입","name":"활동 이름","min":5,"asks":["발문"],"steps":["세부"],"sees":"hook","aid":""}]}`);
 
-      const made = (Array.isArray(r.flow) ? r.flow : [])
-        .map(x => normFlowRow(x, lv)).filter(x => x.name);
-      if(!made.length) throw new Error("활동을 만들지 못했습니다. 다시 시도해 주세요.");
+      const made = pickFlowArray(r).map(x => normFlowRow(x, lv)).filter(x => x.name);
+      if(!made.length){
+        /* 무엇이 왔는지 콘솔에 남긴다 — 이 갈래는 화면에 보일 것이 없어 진단이 막힌다 */
+        console.warn("[흐름] 이해하지 못한 응답:", r);
+        throw new Error("활동을 만들지 못했습니다. 다시 시도해 주세요. (F12 콘솔에 받은 답이 남습니다)");
+      }
       d.flow = made;
     }
     d.at = new Date().toISOString(); save(); paintFlow(t, d);
