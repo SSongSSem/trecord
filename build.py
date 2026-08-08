@@ -8,11 +8,14 @@ HERE = OUTDIR = Path(__file__).parent
 src = (HERE / "app.src.html").read_text(encoding="utf-8")
 data = (HERE / "standards.compact.json").read_text(encoding="utf-8").strip()
 kw   = (HERE / "keywords.json").read_text(encoding="utf-8").strip()
+skel = (HERE / "hwpx-skeleton.b64").read_text(encoding="utf-8").strip()
 
 if "/*__STD__*/" not in src:
     sys.exit("자리표시자 /*__STD__*/ 를 찾지 못했습니다.")
 out = re.sub(r"/\*__STD__\*/.*?/\*__/STD__\*/", lambda m: data, src, flags=re.S)
 out = re.sub(r"/\*__KW__\*/.*?/\*__/KW__\*/", lambda m: kw, out, flags=re.S)
+# 한글 문서 골격(python-hwpx, Apache-2.0). THIRD-PARTY-NOTICES.md 참고
+out = re.sub(r"/\*__SKEL__\*/.*?/\*__/SKEL__\*/", lambda m: '"' + skel + '"', out, flags=re.S)
 
 # 삽입 검증
 n = out.count('"s":[[')

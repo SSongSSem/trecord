@@ -851,6 +851,9 @@ input.elnew{border:1px solid var(--accent-line);border-radius:999px;padding:3px 
 
 /* ══ 성취기준 원문 (2022 개정 초등 611건) ══ */
 const STD = /*__STD__*/{}/*__/STD__*/;
+/* 한글 문서 골격(python-hwpx의 Skeleton.hwpx, Apache-2.0 · THIRD-PARTY-NOTICES.md).
+   글꼴과 문단모양 정의를 그대로 쓰고 본문만 갈아 끼운다 — 스타일을 손으로 짜지 않는다 */
+const HWPX_SKEL = /*__SKEL__*/""/*__/SKEL__*/;
 
 /* ══ 교과·창체·행동특성 평가 키워드 (v1 확장 자료, 688개) ══ */
 const KW = /*__KW__*/{"subj":{},"cca":{"auto":[],"career":[]},"behavior":[]}/*__/KW__*/;
@@ -2794,6 +2797,19 @@ function renderDesign(){
     </div>
 
     <div class="panel" id="d-flowpanel"></div>
+
+    <div class="panel">
+      <div class="ph"><h2>④ 파일</h2></div>
+      <div class="pb">
+        <div class="rowbtns">
+          <button class="ghost" id="d-hwpx" type="button"${(d.flow||[]).length?"":" disabled"}>지도안 한글파일(HWPX)</button>
+        </div>
+        <div class="hint" style="margin-top:8px">${(d.flow||[]).length
+          ? "한글에서 열어 고칠 수 있습니다. 활동지와 수업자료는 원고를 만든 뒤에 나옵니다."
+          : "활동 흐름을 먼저 만들어 주세요."}</div>
+        <div class="fl-msg" id="d-outmsg" hidden></div>
+      </div>
+    </div>
   </div>`;
 
   el("d-back").onclick = () => { _dsgId = ""; renderDesign(); };
@@ -2819,6 +2835,8 @@ function renderDesign(){
     el("d-permin").textContent = "= " + v * PERIOD_MIN + "분";
     save(); paintFlow(t, d);
   };
+  const hw = el("d-hwpx");
+  if(hw) hw.onclick = () => saveHwpx(t, d, hw);
   paintFlow(t, d);
 }
 
@@ -2861,6 +2879,69 @@ function paintFlow(t, d){
       <div class="fl-msg" id="d-flowmsg" hidden></div>
     </div>`;
   bindFlow(t, d);
+}
+
+/* ── 지도안 본문 ──
+   수업 중에 펴 보는 나침반이다(lesson_plan_guide). 설계 해설은 넣지 않는다 */
+function planParas(t, d){
+  const P = [], push = (...a) => P.push(...a);
+  const rb = (t.rubric || []).filter(r => (r.text || "").trim());
+  const p = periodsOf(d);
+  push(t.name || "수업 지도안", "");
+  push(`${S.klass.grade}학년 ${esc0(S.klass.room || "")}반 · ${subjShort(t.subject)} · ${p}차시(${minutesOf(d)}분)`);
+  push("");
+  push("■ 성취기준");
+  if(t.standards.length) t.standards.forEach(c => push(`[${c}] ${CODEMAP[c]?.text || ""}`));
+  else push("(걸린 성취기준 없음)");
+  push("");
+  push("■ 학습목표");
+  push(d.goal || "(아직 쓰지 않음)");
+  push("");
+  push("■ 평가 계획");
+  if(t.criteria) push(`관점 : ${t.criteria}`);
+  rb.forEach(r => { push(`${r.level} : ${r.text}`);
+    if(r.fb) push(`   → 피드백 : ${r.fb}`); });
+  push("");
+  push("■ 평가하지 않는 것");
+  const na = (d.notAssessed || []).filter(Boolean);
+  if(na.length) na.forEach(x => push(`- ${x}`));
+  else push("- (수업 전에 적어 둘 것)");
+  push("");
+  push(`■ 활동 흐름`);
+  (d.flow || []).forEach(r => {
+    const see = r.sees === "hook" ? "동기 유발" : (r.sees ? `보는 것 : ${r.sees}` : "지표 없음");
+    push(`[${r.phase} ${r.min}분] ${r.name}  (${see})`);
+    (r.asks || []).forEach(a => push(`   • ${a}`));
+    (r.steps || []).forEach(x => push(`   - ${x}`));
+    if(r.aid) push(`   ▸ 못 따라올 때 : ${r.aid}`);
+    push("");
+  });
+  if(d.hands && d.hands.gate && d.hands.gate !== "fix"){
+    push("■ 도구를 먼저 쓰는 까닭");
+    push(`${HAND_WHY[d.hands.gate] || d.hands.gate}${d.hands.why ? ` — ${d.hands.why}` : ""}`);
+    push("");
+  }
+  push("■ 수업 뒤 환류 (수업을 해 본 뒤 채운다)");
+  push(`본 것   : ${d.reflect?.saw  || ""}`);
+  push(`왜?     : ${d.reflect?.why  || ""}`);
+  push(`다음엔  : ${d.reflect?.next || ""}`);
+  return P;
+}
+/* 파일 이름에 못 쓰는 글자를 덜어 낸다 */
+const esc0 = v => String(v == null ? "" : v);
+const safeName = v => String(v || "지도안").replace(/[\/:*?"<>|]/g, "").trim().slice(0, 40) || "지도안";
+
+async function saveHwpx(t, d, btn){
+  const keep = btn.textContent; btn.disabled = true; btn.textContent = "…";
+  try{
+    const blob = await buildHwpx(planParas(t, d).map(hwpP).join(""));
+    saveBlob(blob, `지도안_${safeName(t.name)}.hwpx`);
+  }catch(e){
+    console.warn("[지도안]", e);
+    const m = el("d-outmsg");
+    if(m){ m.hidden = false; m.style.color = "var(--low)"; m.textContent = e.message; }
+  }
+  btn.disabled = false; btn.textContent = keep;
 }
 
 /* 도구가 먼저 오는 자리에서만 뜬다. 막지 않고 판단을 남기게 한다 —
@@ -3507,6 +3588,89 @@ async function unzip(buf, want){
   }
   return out;
 }
+/* ══ 압축해 내보내기 — unzip()의 짝 ══ */
+let _crcT = null;
+function crc32(u8){
+  if(!_crcT){ _crcT = new Uint32Array(256);
+    for(let n = 0; n < 256; n++){ let c = n;
+      for(let k = 0; k < 8; k++) c = (c & 1) ? (0xEDB88320 ^ (c >>> 1)) : (c >>> 1);
+      _crcT[n] = c >>> 0; } }
+  let crc = 0xFFFFFFFF;
+  for(let i = 0; i < u8.length; i++) crc = _crcT[(crc ^ u8[i]) & 0xFF] ^ (crc >>> 8);
+  return (crc ^ 0xFFFFFFFF) >>> 0;
+}
+const b64bytes = b64 => { const bin = atob(b64), u = new Uint8Array(bin.length);
+  for(let i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i); return u; };
+
+/* files: [{name, data:Uint8Array, store}] — store면 압축하지 않는다.
+   시각을 고정값으로 둔다. 같은 내용이면 같은 파일이 나오는 편이 낫다 */
+const ZIP_TIME = 0, ZIP_DATE = ((2026 - 1980) << 9) | (1 << 5) | 1;
+async function zip(files){
+  const enc = new TextEncoder(), parts = [], central = [];
+  let off = 0;
+  for(const f of files){
+    const nm = enc.encode(f.name), crc = crc32(f.data);
+    let body = f.data, method = 0;
+    if(!f.store){
+      body = new Uint8Array(await new Response(new Blob([f.data]).stream()
+        .pipeThrough(new CompressionStream("deflate-raw"))).arrayBuffer());
+      method = 8;
+    }
+    const lh = new Uint8Array(30 + nm.length), lv = new DataView(lh.buffer);
+    lv.setUint32(0, 0x04034b50, true); lv.setUint16(4, 20, true); lv.setUint16(6, 0, true);
+    lv.setUint16(8, method, true); lv.setUint16(10, ZIP_TIME, true); lv.setUint16(12, ZIP_DATE, true);
+    lv.setUint32(14, crc, true); lv.setUint32(18, body.length, true); lv.setUint32(22, f.data.length, true);
+    lv.setUint16(26, nm.length, true); lv.setUint16(28, 0, true);
+    lh.set(nm, 30);
+    parts.push(lh, body);
+
+    const ch = new Uint8Array(46 + nm.length), cv = new DataView(ch.buffer);
+    cv.setUint32(0, 0x02014b50, true); cv.setUint16(4, 20, true); cv.setUint16(6, 20, true);
+    cv.setUint16(8, 0, true); cv.setUint16(10, method, true);
+    cv.setUint16(12, ZIP_TIME, true); cv.setUint16(14, ZIP_DATE, true);
+    cv.setUint32(16, crc, true); cv.setUint32(20, body.length, true); cv.setUint32(24, f.data.length, true);
+    cv.setUint16(28, nm.length, true); cv.setUint16(30, 0, true); cv.setUint16(32, 0, true);
+    cv.setUint16(34, 0, true); cv.setUint16(36, 0, true); cv.setUint32(38, 0, true);
+    cv.setUint32(42, off, true);
+    ch.set(nm, 46);
+    central.push(ch);
+    off += lh.length + body.length;
+  }
+  const csize = central.reduce((a, c) => a + c.length, 0);
+  const eo = new Uint8Array(22), ev = new DataView(eo.buffer);
+  ev.setUint32(0, 0x06054b50, true); ev.setUint16(4, 0, true); ev.setUint16(6, 0, true);
+  ev.setUint16(8, files.length, true); ev.setUint16(10, files.length, true);
+  ev.setUint32(12, csize, true); ev.setUint32(16, off, true); ev.setUint16(20, 0, true);
+  return new Blob([...parts, ...central, eo], {type:"application/hwp+zip"});
+}
+
+/* 골격을 풀어 본문만 갈아 끼운다. mimetype은 무압축으로 맨 앞에 둔다 —
+   ZIP 안에서 그 자리에 있어야 한글이 형식을 알아본다 */
+async function buildHwpx(bodyXml){
+  if(!HWPX_SKEL) throw new Error("문서 골격이 빠져 있습니다. 빌드를 다시 해 주세요.");
+  const all = await unzip(b64bytes(HWPX_SKEL).buffer, () => true);
+  const key = "Contents/section0.xml";
+  if(!all[key]) throw new Error("문서 골격이 온전하지 않습니다.");
+  const sec = new TextDecoder().decode(all[key]);
+  if(!sec.includes("</hs:sec>")) throw new Error("문서 골격의 본문을 찾지 못했습니다.");
+  /* 골격의 첫 문단에 쪽 설정(secPr)이 들어 있으므로 그것을 남기고 뒤에 붙인다 */
+  all[key] = new TextEncoder().encode(sec.replace("</hs:sec>", bodyXml + "</hs:sec>"));
+  const names = Object.keys(all);
+  return zip([{name:"mimetype", data:all["mimetype"], store:true},
+    ...names.filter(n => n !== "mimetype").map(n => ({name:n, data:all[n]}))]);
+}
+const xesc = v => String(v == null ? "" : v)
+  .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+/* 문단 하나. 골격이 쓰는 기본 모양(0번)을 그대로 쓴다 */
+const hwpP = txt => `<hp:p id="0" paraPrIDRef="0" styleIDRef="0" pageBreak="0" columnBreak="0" merged="0">` +
+  `<hp:run charPrIDRef="0"><hp:t>${xesc(txt)}</hp:t></hp:run></hp:p>`;
+
+function saveBlob(blob, name){
+  const u = URL.createObjectURL(blob), a = document.createElement("a");
+  a.href = u; a.download = name; document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(u), 4000);
+}
+
 /* 문단은 한 줄, 표는 한 행을 탭으로 이어 붙인다 — readPlan()이 셀 위치로 읽을 수 있게 */
 function hwpxLines(root){
   const out = [], kids = e => [...e.children];
