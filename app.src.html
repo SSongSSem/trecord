@@ -264,6 +264,19 @@ textarea.goal{width:100%;min-height:66px;font-size:13.5px;line-height:1.7;resize
         background:var(--raise);border:1px solid var(--rule);font-size:12.5px}
 .fl-sum b{font-family:var(--mono);font-size:14px}
 .fl-sum .over{color:var(--low)}.fl-sum .fit{color:var(--good)}
+/* 손이 먼저다 — 막지 않는다. 자리를 보여 주고 판단은 교사가 한다 */
+.hands{margin-top:11px;padding:12px 13px;border-radius:12px;border:1px solid var(--mid);
+       background:color-mix(in srgb,var(--mid) 6%,var(--surface))}
+.hands h4{margin:0 0 4px;font-size:13.5px;color:var(--ink);display:flex;align-items:center;gap:7px}
+.hands h4 .ic{width:17px;height:17px;color:var(--mid)}
+.hands p{margin:0 0 9px;font-size:12.5px;line-height:1.65;color:var(--ink-2)}
+.hands label{display:flex;gap:7px;align-items:flex-start;margin-top:5px;font-size:12.5px;
+             line-height:1.55;color:var(--ink-2);cursor:pointer}
+.hands label input{margin-top:3px;flex:0 0 auto}
+.hands .why{width:100%;margin-top:8px}
+.hands .act{display:flex;gap:7px;justify-content:flex-end;margin-top:9px}
+.hands.done{border-color:var(--rule);background:var(--raise)}
+.hands.done h4 .ic{color:var(--ink-3)}
 /* 고른 평가 — 무엇을 기록하는 중인지 한 줄로 */
 .pickhead{display:flex;gap:10px;align-items:baseline;flex-wrap:wrap;margin-top:10px;
           padding-bottom:9px;border-bottom:1px solid var(--rule)}
@@ -2837,7 +2850,7 @@ function paintFlow(t, d){
             <span class="muted">/ ${want}분</span></span>
           ${sum!==want ? `<span class="muted">${sum>want?`${sum-want}분 넘습니다`:`${want-sum}분 남았습니다`}</span>` : ``}
           ${nosee ? `<span style="margin-left:auto;color:var(--mid)">지표 없는 활동 ${nosee}개</span>` : ``}
-        </div>` : `<div class="empty-action">
+        </div>` + handsCard(d) : `<div class="empty-action">
         <span class="mark" aria-hidden="true">${ICON.flow()}</span>
         <span class="copy"><b>루브릭에서 활동을 역산합니다</b>
           <span>위 수준 서술이 드러나는 활동만 만들고, 어느 지표도 보지 않는 활동은 넣지 않습니다.</span></span>
@@ -2848,6 +2861,28 @@ function paintFlow(t, d){
       <div class="fl-msg" id="d-flowmsg" hidden></div>
     </div>`;
   bindFlow(t, d);
+}
+
+/* 도구가 먼저 오는 자리에서만 뜬다. 막지 않고 판단을 남기게 한다 —
+   판정 단위는 도구가 아니라 조작이라 기계가 옳고 그름을 정할 수 없다 */
+function handsCard(d){
+  const g = handsGate(d.flow);
+  if(!g || g.ok) return "";
+  const h = d.hands;
+  /* 판정한 뒤 흐름이 바뀌어 다른 활동이 첫 도구가 되었으면 다시 묻는다 */
+  if(h && h.for === g.name) return `<div class="hands done">
+    <h4>${ICON.hand()}손이 먼저다 — 판단을 남김</h4>
+    <p><b>${esc(g.name)}</b> · ${esc(HAND_WHY[h.gate] || h.gate)}${h.why ? ` — ${esc(h.why)}` : ``}</p>
+    <div class="act"><button class="ghost" id="h-redo" type="button">다시 보기</button></div></div>`;
+  return `<div class="hands">
+    <h4>${ICON.hand()}손이 먼저인가</h4>
+    <p><b>${esc(g.name)}</b>이(가) 화면에서 시작합니다. 그 앞에 같은 일을 손으로 해 보는 활동이 없습니다.
+      손으로 만져 본 적 없는 것을 화면으로 먼저 만나면, 아이는 만드는 사람이 아니라 고르는 사람이 됩니다.</p>
+    ${Object.entries(HAND_WHY).map(([k, v], i) => `<label>
+      <input type="radio" name="hgate" value="${k}"${i ? `` : ` checked`}><span>${esc(v)}</span></label>`).join("")}
+    <input type="text" class="why" id="h-why" placeholder="무엇으로 대체하는지 · 축약형은 무엇인지 (골랐다면 적어 주세요)">
+    <div class="act"><button class="ghost" id="h-ok" type="button">이 판단을 남깁니다</button></div>
+  </div>`;
 }
 
 function flowCard(r, i, lv, n){
@@ -2889,6 +2924,15 @@ function bindFlow(t, d){
     genFlow(t, d, gen, false); };
   const fill = el("d-fill");
   if(fill) fill.onclick = () => genFlow(t, d, fill, true);
+  const hok = el("h-ok");
+  if(hok) hok.onclick = () => {
+    const g = handsGate(d.flow); if(!g) return;
+    const sel = box.querySelector("input[name=hgate]:checked");
+    d.hands = {gate: sel ? sel.value : "fix", why: (el("h-why")?.value || "").trim(),
+               for: g.name, at: new Date().toISOString()};
+    save(); paintFlow(t, d); };
+  const hredo = el("h-redo");
+  if(hredo) hredo.onclick = () => { d.hands = null; save(); paintFlow(t, d); };
   const add = el("d-add");
   if(add) add.onclick = () => {
     (d.flow ||= []).push({phase: d.flow.length ? "전개" : "도입",
@@ -2963,6 +3007,29 @@ const hasBlank = (r, lv) => !r.name || !r.min || !(r.asks||[]).length ||
    그때는 카드 개수에 갇히지 않도록 새로 짠다(＋활동이 넣어 두는 기본 분은 쓴 것이 아니다) */
 const flowWritten = (flow, lv) => (flow || []).some(r =>
   r.name || (r.asks||[]).length || (r.steps||[]).length || r.aid || seeOK(r, lv));
+
+/* ── 손이 먼저다(§2-1) ──
+   초등은 구체적 조작기에 걸쳐 있어, 손으로 만져 본 적 없는 것을 화면으로 먼저 만나면
+   개념이 서지 않는다. 기계가 보는 것은 딱 하나 — 도구를 여는 그 시점에 같은 일을
+   손으로 해 본 활동이 앞에 있는가. 판정 단위는 도구가 아니라 조작이므로,
+   맞고 틀림은 기계가 정하지 않고 교사가 정한다. */
+const DIGITAL = /스프레드시트|엑셀|구글\s*시트|프레젠테이션|파워포인트|키노트|한글\s*프로그램|앱|어플|프로그램|소프트웨어|태블릿|컴퓨터|노트북|크롬북|아이패드|패드|스마트폰|인공지능|AI|챗봇|생성형|검색|타이핑|자판|코딩|엔트리|스크래치|영상\s*(제작|편집|촬영)|녹음|온라인|웹\s*사이트|누리집|플랫폼|디지털|전자칠판|미러링|QR/i;
+const isDigital = r => DIGITAL.test([r.name || "", ...(r.steps||[]), ...(r.asks||[])].join(" "));
+/* 손 활동으로 치는 것은 지표를 보는 활동뿐이다 — 동기 유발만 앞에 둔 것은
+   "같은 일을 해 봤다"가 아니다 */
+function handsGate(flow){
+  const rows = flow || [];
+  const at = rows.findIndex(isDigital);
+  if(at < 0) return null;
+  const done = rows.slice(0, at).some(r => !isDigital(r) && r.sees && r.sees !== "hook");
+  return {at, ok: done, name: rows[at].name || "이 활동"};
+}
+const HAND_WHY = {
+  fix:   "흐름을 고치겠다",
+  risk:  "위험하거나 민감해서 실물로 못 한다",
+  scale: "교실 규모로 줄이면 개념이 사라진다",
+  time:  "축약형도 시간에 들어가지 않는다"
+};
 
 /* 흐름 만들기 두 갈래.
    fill=false 새로 짠다 / fill=true 교사가 쓴 것은 그대로 두고 빈 칸만 채운다.
