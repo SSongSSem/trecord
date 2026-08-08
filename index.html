@@ -267,6 +267,11 @@ textarea.goal{width:100%;min-height:66px;font-size:13.5px;line-height:1.7;resize
 .dsg-elem{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;padding:9px 12px;margin-bottom:4px;
           border-radius:11px;background:var(--raise);border:1px solid var(--rule);font-size:13px}
 .dsg-elem .lab{margin:0;flex:0 0 auto}.dsg-elem b{color:var(--ink)}
+/* 평가 요소 → 관찰 관점은 위아래가 아니라 안팎이다. 선으로 매어 둔다 */
+.dsg-name{font-size:14px;font-weight:650;color:var(--ink)}
+.dsg-crit{margin-top:3px;font-size:12.5px;color:var(--ink-2);line-height:1.6}
+.dsg-sub{margin:9px 0 0 4px;padding-left:13px;border-left:2px solid var(--accent-line)}
+.dsg-sub .lab{margin-bottom:5px}
 .fl-sum{display:flex;align-items:center;gap:9px;margin-top:11px;padding:9px 12px;border-radius:11px;
         background:var(--raise);border:1px solid var(--rule);font-size:12.5px}
 .fl-sum b{font-family:var(--mono);font-size:14px}
@@ -2777,12 +2782,17 @@ function renderDesign(){
           ${t.standards.length ? t.standards.map(c => `<div class="dsg-std">
             <span class="mono">${esc(c)}</span> ${esc(CODEMAP[c]?.text || "")}</div>`).join("")
             : `<div class="muted">성취기준이 걸려 있지 않습니다.</div>`}</div>
-        ${t.criteria ? `<div class="field"><span class="lab">평가 내용</span>
-          <div>${esc(t.criteria)}</div></div>` : ``}
-        <div class="field"><span class="lab">관찰 관점 <span class="muted">— 평가 요소를 한 층 잘게 쪼갠 것. 활동마다 무엇을 보는지 고릅니다</span></span>
-          ${seeOpts(t).length ? `<div class="tags">${seeOpts(t).map(k =>
-            `<span class="chip">${esc(k)}</span>`).join("")}</div>`
-            : `<div style="color:var(--mid)">아직 없습니다 — 「준비 탭에서 고치기」에서 골라 주세요.</div>`}</div>
+        <div class="field">
+          <span class="lab">평가 요소</span>
+          <div class="dsg-name">${esc(t.name || "(이름 없음)")}</div>
+          ${t.criteria ? `<div class="dsg-crit">${esc(t.criteria)}</div>` : ``}
+          <div class="dsg-sub">
+            <span class="lab">관찰 관점 <span class="muted">— 위 요소를 한 층 잘게 쪼갠 것. 활동마다 이 가운데 무엇을 보는지 고릅니다</span></span>
+            ${seeOpts(t).length ? `<div class="tags">${seeOpts(t).map(k =>
+              `<span class="chip">${esc(k)}</span>`).join("")}</div>`
+              : `<div style="color:var(--mid)">아직 없습니다 — 「준비 탭에서 고치기」에서 골라 주세요.</div>`}
+          </div>
+        </div>
         <div class="field" style="margin-bottom:0">
           <span class="lab">루브릭 — 활동은 이 수준들이 드러나게 짠다</span>
           ${(t.rubric||[]).map(r => `<div class="rline"><b>${esc(r.level)}</b><span>${esc(r.text)}${
@@ -2882,9 +2892,10 @@ function paintFlow(t, d){
         <button class="ghost" id="d-gen" type="button">AI로 흐름 만들기</button>` : ``}</span></div>
     <div class="pb">
       <div class="dsg-elem"><span class="lab">평가 요소</span>
-        <b>${esc(t.name || "(이름 없음)")}</b>${lv.length
-          ? `<span class="muted">· 관점 ${lv.length}개</span>`
-          : `<span style="color:var(--mid)">· 관찰 관점이 없습니다 — 준비 탭에서 골라 주세요</span>`}</div>
+        <b>${esc(t.name || "(이름 없음)")}</b>
+        <span class="muted">└ 관점</span>${lv.length
+          ? `<span class="muted">${esc(lv.join(" · "))}</span>`
+          : `<span style="color:var(--mid)">없습니다 — 준비 탭에서 골라 주세요</span>`}</div>
       ${rows.length ? rows.map((r, i) => flowCard(r, i, lv, rows.length)).join("") + `
         <div class="fl-sum">
           <span>합계 <b class="${sum===want?"fit":(sum>want?"over":"")}">${sum}분</b>
