@@ -3086,10 +3086,10 @@ function drawSheetPages(t, d){
     y += Math.round(1.5 * PX);
     if(b.ask) put(b.ask, 11.5, false, "#111", Math.round(4 * PX));
     if(b.q)   put(b.q,   11.5, false, "#111", Math.round(4 * PX));
-    y += Math.round(3 * PX);
+    y += Math.round(5 * PX);
 
     /* 학생이 쓰는 줄 */
-    const gap = Math.round(11 * PX);
+    const gap = Math.round(15 * PX);
     ctx.strokeStyle = "#9AA7B4"; ctx.lineWidth = 1;
     for(let k = 0; k < (+b.lines || 3); k++){
       room(gap);
@@ -3099,7 +3099,7 @@ function drawSheetPages(t, d){
       ctx.lineTo(A4.w - A4.pad, y);
       ctx.stroke();
     }
-    y += Math.round(9 * PX);
+    y += Math.round(12 * PX);
   });
 
   if(!blocks.length) put("(활동지 원고를 아직 만들지 않았습니다)", 12, false, "#7C8DA0");
