@@ -3030,6 +3030,7 @@ ${(sh.blocks || []).map((b, i) => `${i+1}. ${b.title}${b.kind ? ` (${b.kind})` :
   const b2 = el("d-imgprompt"); if(b2){ b2.disabled = false; b2.textContent = keep; }
 }
 
+const mk2 = () => el("d-imgmake");
 async function genSheetImage(t, d, btn){
   if(!aiOn()){ S.ui.tab = "ai"; save(); render(); return; }
   const pr = (d.sheetImg?.prompt || "").trim();
@@ -3040,10 +3041,12 @@ async function genSheetImage(t, d, btn){
   if(msg) msg.hidden = true;
   try{
     const models = d.sheetImg?.model ? [d.sheetImg.model] : await aiImageModels();
+    console.info("[활동지 그림] 시도할 모델:", models);
     let blob = null, last = null;
-    for(const m of models.slice(0, 3)){
+    for(const m of models.slice(0, 4)){
+      if(mk2()) mk2().textContent = `${m} …`;
       try{ blob = await aiImage(pr, m); d.sheetImg.model = m; break; }
-      catch(e){ last = e; }
+      catch(e){ last = e; console.warn("[활동지 그림]", m, "실패 —", e.message); }
     }
     if(!blob) throw last || new Error("그림을 만들지 못했습니다.");
     const id = "sheetimg:" + uid();
@@ -3117,6 +3120,8 @@ function paintSheet(t, d){
   if(pt) autoGrow(pt);
   const mk = el("d-imgmake");
   if(mk) mk.onclick = () => genSheetImage(t, d, mk);
+  const ig = el("d-imggo");
+  if(ig) ig.onclick = () => { S.ui.tab = "ai"; save(); render(); };
   const dl = el("d-imgsave");
   if(dl) dl.onclick = async () => {
     const rec = await fileGet(d.sheetImg.key);
@@ -3155,6 +3160,9 @@ function sheetImgHTML(d){
     </div>
     <div class="hint" style="margin-top:6px">그림 모델은 글자를 흘리는 일이 있습니다.
       뽑은 뒤 <b>글자가 원고와 같은지 눈으로 확인</b>하세요 — 고칠 일이 생기면 한글파일 쪽이 정본입니다.</div>
+    ${aiShared() ? `<div class="hint" style="color:var(--mid)">지금은 <b>공용 연결</b>로 이어져 있습니다.
+      그림 만들기는 글보다 훨씬 값이 비싸 공용 연결에서는 대개 막힙니다 —
+      <button class="link" id="d-imggo" type="button">AI 연결 탭</button>에서 본인 키를 넣어 주세요.</div>` : ``}
     <div class="fl-msg" id="d-imgmsg" hidden></div>
     <div class="imgprev" id="d-imgprev"></div>
   </div>`;
@@ -3458,10 +3466,26 @@ async function aiImage(prompt, model){
       method:"POST", headers:Object.assign({"Content-Type":"application/json"}, aiHead()),
       body:JSON.stringify(body)});
   }
-  if(res.status === 429) throw new Error(aiShared()
-    ? "공용 연결이 오늘 한도에 닿았습니다. AI 연결 탭에서 본인 키를 넣어 주세요."
-    : "사용 한도를 넘었습니다. 잠시 뒤 다시 시도해 주세요.");
-  if(!res.ok) throw new Error("그림을 받지 못했습니다 (" + res.status + ")");
+  if(!res.ok){
+    /* 구글이 까닭을 본문에 적어 보낸다. 읽지 않고 "한도"로 뭉뚱그리면
+       무료 판에서 못 쓰는 모델인지, 정말 한도인지 가릴 수 없다 */
+    let why = "";
+    try{ const j = await res.clone().json(); why = j?.error?.message || ""; }
+    catch(e){ try{ why = (await res.text()).slice(0, 300); }catch(e2){} }
+    console.warn("[활동지 그림] 모델", model, "· HTTP", res.status, "·", why);
+    if(res.status === 429){
+      const free = /free tier|free_tier|quota|billing|not supported/i.test(why);
+      throw new Error(aiShared()
+        ? `공용 연결로는 그림을 만들 수 없습니다. AI 연결 탭에서 본인 키를 넣어 주세요. (${why.slice(0, 120)})`
+        : (free
+          ? `이 그림 모델은 무료 사용 범위 밖입니다. 구글 AI 스튜디오에서 결제를 연결하거나 다른 모델을 골라 주세요. (${why.slice(0, 120)})`
+          : `사용 한도를 넘었습니다. 잠시 뒤 다시 시도해 주세요. (${why.slice(0, 120)})`));
+    }
+    if(res.status === 400 || res.status === 403)
+      throw new Error(`이 키로는 ‘${model}’을 쓸 수 없습니다. (${why.slice(0, 140)})`);
+    if(res.status === 404) throw new Error(`‘${model}’ 모델을 찾지 못했습니다.`);
+    throw new Error(`그림을 받지 못했습니다 (${res.status}) ${why.slice(0, 140)}`);
+  }
   const j = await res.json();
   const parts = j?.candidates?.[0]?.content?.parts || [];
   const img = parts.find(x => x.inlineData?.data);
