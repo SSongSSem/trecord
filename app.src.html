@@ -2917,60 +2917,69 @@ function paintFlow(t, d){
 
 /* ── 지도안 본문 ──
    수업 중에 펴 보는 나침반이다(lesson_plan_guide). 설계 해설은 넣지 않는다 */
-function planParas(t, d){
-  const P = [], push = (...a) => P.push(...a);
-  const rb = (t.rubric || []).filter(r => (r.text || "").trim());
+function planBody(t, d, St){
+  const P = [], rb = (t.rubric || []).filter(r => (r.text || "").trim());
   const opts = seeOpts(t), p = periodsOf(d);
-  push(t.name || "수업 지도안", "");
-  push(`${S.klass.grade}학년 ${S.klass.room || ""}반 · ${subjShort(t.subject)} · ${p}차시(${minutesOf(d)}분)`);
-  push("");
-  push("■ 성취기준");
-  if(t.standards.length) t.standards.forEach(c => push(`[${c}] ${CODEMAP[c]?.text || ""}`));
-  else push("(걸린 성취기준 없음)");
-  push("");
-  push("■ 학습목표");
-  push(d.goal || "(아직 쓰지 않음)");
-  push("");
-  push("■ 평가 계획");
-  push(`평가 요소 : ${t.name || ""}`);
-  if(t.criteria) push(`평가 내용 : ${t.criteria}`);
-  push(`  └ 관찰 관점 : ${opts.length ? opts.join(" · ") : "(아직 없음)"}`);
-  rb.forEach(r => { push(`${r.level} : ${r.text}`);
-    if(r.fb) push(`   → 피드백 : ${r.fb}`); });
-  push("");
-  push("■ 평가하지 않는 것");
+  const line  = x => P.push(hwpP(x));
+  const head  = x => { P.push(hwpP("")); P.push(hwpP(x, St.head)); };
+  const bold  = x => P.push(hwpP(x, St.bold));
+
+  P.push(hwpP(t.name || "수업 지도안", St.title, St.center));
+  P.push(hwpP(klassLine(t, d), 0, St.center));
+
+  head("평가 계획");
+  bold(`평가 요소 : ${t.name || ""}`);
+  if(t.criteria) line(`평가 내용 : ${t.criteria}`);
+  line(`  └ 관찰 관점 : ${opts.length ? opts.join(" · ") : "(아직 없음)"}`);
+  line("");
+  line("성취기준");
+  if(t.standards.length) t.standards.forEach(c => line(`  [${c}] ${CODEMAP[c]?.text || ""}`));
+  else line("  (걸린 성취기준 없음)");
+  line("");
+  line(`학습목표 : ${d.goal || "(아직 쓰지 않음)"}`);
+  line("");
+  line("기준과 피드백");
+  rb.forEach(r => { line(`  ${r.level} : ${r.text}`);
+    if(r.fb) line(`      → ${r.fb}`); });
+  if(!rb.length) line("  (수준 서술 없음)");
+  line("");
+  line("평가하지 않는 것");
   const na = (d.notAssessed || []).filter(Boolean);
-  if(na.length) na.forEach(x => push(`- ${x}`));
-  else push("- (수업 전에 적어 둘 것)");
-  push("");
-  push(`■ 활동 흐름`);
+  if(na.length) na.forEach(x => line(`  - ${x}`));
+  else line("  - (수업 전에 적어 둘 것)");
+
+  head(`교수·학습 과정  (${p}차시 · ${minutesOf(d)}분)`);
   (d.flow || []).forEach(r => {
     const k = seesLive(r, opts);
     const see = k.includes("hook") ? "동기 유발" : (k.length ? `관점 : ${k.join(" · ")}` : "관점 없음");
-    push(`[${r.phase} ${r.min}분] ${r.name}  (${see})`);
-    (r.asks || []).forEach(a => push(`   • ${a}`));
-    (r.steps || []).forEach(x => push(`   - ${x}`));
-    if(r.aid) push(`   ▸ 못 따라올 때 : ${r.aid}`);
-    push("");
+    bold(`[${r.phase} ${r.min}분] ${r.name}`);
+    line(`   ${see}`);
+    (r.asks  || []).forEach(a => line(`   • ${a}`));
+    (r.steps || []).forEach(x => line(`   - ${x}`));
+    if(r.aid) line(`   ▸ 못 따라올 때 : ${r.aid}`);
+    line("");
   });
+  if(!(d.flow || []).length) line("(활동을 아직 짜지 않았습니다)");
+
   if(d.hands && d.hands.gate && d.hands.gate !== "fix"){
-    push("■ 도구를 먼저 쓰는 까닭");
-    push(`${HAND_WHY[d.hands.gate] || d.hands.gate}${d.hands.why ? ` — ${d.hands.why}` : ""}`);
-    push("");
+    head("도구를 먼저 쓰는 까닭");
+    line(`${HAND_WHY[d.hands.gate] || d.hands.gate}${d.hands.why ? ` — ${d.hands.why}` : ""}`);
   }
-  push("■ 수업 뒤 환류 (수업을 해 본 뒤 채운다)");
-  push(`본 것   : ${d.reflect?.saw  || ""}`);
-  push(`왜?     : ${d.reflect?.why  || ""}`);
-  push(`다음엔  : ${d.reflect?.next || ""}`);
-  return P;
+
+  head("수업 뒤 환류  (수업을 해 본 뒤 채운다)");
+  line(`본 것   : ${d.reflect?.saw  || ""}`);
+  line(`왜?     : ${d.reflect?.why  || ""}`);
+  line(`다음엔  : ${d.reflect?.next || ""}`);
+  return P.join("");
 }
-/* 파일 이름에 못 쓰는 글자를 덜어 낸다 */
+const klassLine = (t, d) =>
+  `${S.klass.grade}학년 ${S.klass.room || ""}반 · ${subjShort(t.subject)} · ${periodsOf(d)}차시(${minutesOf(d)}분)`;
 const safeName = v => String(v || "지도안").replace(/[\/:*?"<>|]/g, "").trim().slice(0, 40) || "지도안";
 
 async function saveHwpx(t, d, btn){
   const keep = btn.textContent; btn.disabled = true; btn.textContent = "…";
   try{
-    const blob = await buildHwpx(planParas(t, d).map(hwpP).join(""));
+    const blob = await buildHwpx(St => planBody(t, d, St));
     saveBlob(blob, `지도안_${safeName(t.name)}.hwpx`);
   }catch(e){
     console.warn("[지도안]", e);
@@ -3699,26 +3708,60 @@ async function zip(files){
 
 /* 골격을 풀어 본문만 갈아 끼운다. mimetype은 무압축으로 맨 앞에 둔다 —
    ZIP 안에서 그 자리에 있어야 한글이 형식을 알아본다 */
-/* 골격을 풀어 본문만 갈아 끼운다. mimetype은 무압축으로 맨 앞에 둔다 —
-   ZIP 안에서 그 자리에 있어야 한글이 형식을 알아본다 */
-async function buildHwpx(bodyXml){
+/* 골격에는 굵은 글씨도 가운데 정렬도 없다 — 글자가 죄다 10pt 민짜라 제목과
+   본문이 구별되지 않는다. 골격 파일은 그대로 두고 필요한 모양을 여기서 만든다.
+   0번(본문)은 골격 것을 그대로 쓴다 */
+function withStyles(header){
+  const cp = header.match(/<hh:charPr id="0"[\s\S]*?<\/hh:charPr>/);
+  const pp = header.match(/<hh:paraPr id="0"[\s\S]*?<\/hh:paraPr>/);
+  const cm = header.match(/<hh:charProperties itemCnt="(\d+)">/);
+  const pm = header.match(/<hh:paraProperties itemCnt="(\d+)">/);
+  if(!cp || !pp || !cm || !pm) return {xml: header, S:{title:0, head:0, bold:0, center:0}};
+  const cNext = Math.max(...[...header.matchAll(/<hh:charPr id="(\d+)"/g)].map(m => +m[1])) + 1;
+  const pNext = Math.max(...[...header.matchAll(/<hh:paraPr id="(\d+)"/g)].map(m => +m[1])) + 1;
+  /* 굵게는 밑줄 앞자리에 온다 — 한글이 낸 문서가 그 자리에 둔다 */
+  const mkC = (id, h, bold) => cp[0]
+    .replace('<hh:charPr id="0"', `<hh:charPr id="${id}"`)
+    .replace(/height="\d+"/, `height="${h}"`)
+    .replace("<hh:underline", (bold ? "<hh:bold/>" : "") + "<hh:underline");
+  const mkP = (id, al) => pp[0]
+    .replace('<hh:paraPr id="0"', `<hh:paraPr id="${id}"`)
+    .replace(/horizontal="[A-Z_]+"/, `horizontal="${al}"`);
+  const S = {title: cNext, head: cNext + 1, bold: cNext + 2, center: pNext};
+  const xml = header
+    .replace(cm[0], `<hh:charProperties itemCnt="${+cm[1] + 3}">`)
+    .replace("</hh:charProperties>",
+      mkC(S.title, 1800, true) + mkC(S.head, 1200, true) + mkC(S.bold, 1000, true) + "</hh:charProperties>")
+    .replace(pm[0], `<hh:paraProperties itemCnt="${+pm[1] + 1}">`)
+    .replace("</hh:paraProperties>", mkP(S.center, "CENTER") + "</hh:paraProperties>");
+  return {xml, S};
+}
+
+/* body는 글자·문단 모양 id를 받아 XML을 돌려주는 함수다.
+   mimetype은 무압축으로 맨 앞에 둔다 — 그 자리에 있어야 한글이 형식을 알아본다 */
+async function buildHwpx(body){
   if(!HWPX_SKEL) throw new Error("문서 골격이 빠져 있습니다. 빌드를 다시 해 주세요.");
   const all = await unzip(b64bytes(HWPX_SKEL).buffer, () => true);
-  const key = "Contents/section0.xml";
-  if(!all[key]) throw new Error("문서 골격이 온전하지 않습니다.");
-  const sec = new TextDecoder().decode(all[key]);
+  const key = "Contents/section0.xml", hkey = "Contents/header.xml";
+  if(!all[key] || !all[hkey]) throw new Error("문서 골격이 온전하지 않습니다.");
+  const td = new TextDecoder(), te = new TextEncoder();
+  const st = withStyles(td.decode(all[hkey]));
+  all[hkey] = te.encode(st.xml);
+  const sec = td.decode(all[key]);
   if(!sec.includes("</hs:sec>")) throw new Error("문서 골격의 본문을 찾지 못했습니다.");
+  const xml = typeof body === "function" ? body(st.S) : body;
   /* 골격의 첫 문단에 쪽 설정(secPr)이 들어 있으므로 그것을 남기고 뒤에 붙인다 */
-  all[key] = new TextEncoder().encode(sec.replace("</hs:sec>", bodyXml + "</hs:sec>"));
+  all[key] = te.encode(sec.replace("</hs:sec>", xml + "</hs:sec>"));
   const names = Object.keys(all);
   return zip([{name:"mimetype", data:all["mimetype"], store:true},
     ...names.filter(n => n !== "mimetype").map(n => ({name:n, data:all[n]}))]);
 }
 const xesc = v => String(v == null ? "" : v)
   .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-/* 문단 하나. 골격이 쓰는 기본 모양(0번)을 그대로 쓴다 */
-const hwpP = txt => `<hp:p id="0" paraPrIDRef="0" styleIDRef="0" pageBreak="0" columnBreak="0" merged="0">` +
-  `<hp:run charPrIDRef="0"><hp:t>${xesc(txt)}</hp:t></hp:run></hp:p>`;
+/* 문단 하나. cp는 글자 모양, pp는 문단 모양 — 안 주면 골격의 기본(0번)이다 */
+const hwpP = (txt, cp, pp) =>
+  `<hp:p id="0" paraPrIDRef="${pp || 0}" styleIDRef="0" pageBreak="0" columnBreak="0" merged="0">` +
+  `<hp:run charPrIDRef="${cp || 0}"><hp:t>${xesc(txt)}</hp:t></hp:run></hp:p>`;
 
 function saveBlob(blob, name){
   const u = URL.createObjectURL(blob), a = document.createElement("a");
