@@ -3157,7 +3157,7 @@ function paintSheet(t, d){
       ${blocks.length ? `
         <div class="field">
           <span class="lab">학생용 목표 <span class="muted">— 오늘 할 일만. 교사용 학습목표와 다른 문장입니다</span></span>
-          <input type="text" id="sh-goal" value="${esc(sh.goal || "")}" placeholder="예) 우리 반 이야기를 리듬으로 만들어 봅시다">
+          <textarea id="sh-goal" class="goal" placeholder="예) 우리 반 이야기를 리듬으로 만들어 봅시다">${esc(sh.goal || "")}</textarea>
           <div class="hint${gLen > SHEET_LIMITS.goal ? " over" : ""}">${gLen}자 / ${SHEET_LIMITS.goal}자${
             gLen > SHEET_LIMITS.goal ? " — 두 가지를 담았다면 하나는 지도안으로 보내세요" : ""}</div>
         </div>
@@ -3180,7 +3180,8 @@ function paintSheet(t, d){
   const g = el("d-sheetgen");
   if(g) g.onclick = () => genSheet(t, d, g);
   const goal = el("sh-goal");
-  if(goal) goal.onchange = () => { d.sheet.goal = goal.value.trim(); save(); paintSheet(t, d); };
+  if(goal){ autoGrow(goal); goal.oninput = () => autoGrow(goal);
+    goal.onchange = () => { d.sheet.goal = goal.value.trim(); save(); paintSheet(t, d); }; }
   box.querySelectorAll(".sh").forEach(card => {
     const b = d.sheet.blocks[+card.dataset.si], q = x => card.querySelector(x);
     q(".st").onchange = e => { b.title = e.target.value.trim(); save(); };
