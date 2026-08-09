@@ -267,6 +267,16 @@ textarea{line-height:1.7}
      padding:3px 12px;font-size:12px;color:var(--ink-2)}
 .lvc:hover{border-color:var(--rule-strong);color:var(--ink)}
 .lvc[aria-pressed="true"]{border-color:var(--rule-strong);color:var(--ink);font-weight:600;background:var(--raise)}
+/* 성장은 교사가 고른 것이 아니라 쌓인 기록에서 읽은 것이다 — 수준 옆에 조용히 붙는다 */
+.gtag{font-size:11px;border-radius:999px;padding:1px 7px;white-space:nowrap;border:1px solid transparent}
+.gtag.up{color:var(--good);background:var(--good-soft);border-color:var(--good-soft)}
+.gtag.flat{color:var(--ink-3);background:var(--sink)}
+.gtag.down{color:var(--mid);background:var(--mid-soft)}
+/* 복사한 자국 — 어디까지 넘겼는지 알려 준다 */
+.foot .moved{font-size:11.5px;color:var(--good);background:var(--good-soft);border-radius:999px;padding:2px 9px;white-space:nowrap}
+.progress-table .mvtag{font-family:var(--mono);font-size:11.5px;color:var(--ink-3);background:var(--sink);border-radius:999px;padding:1px 8px}
+.progress-table .mvtag.all{color:var(--good);background:var(--good-soft)}
+.ph .sep{margin:0 6px;color:var(--rule-strong)}
 .lvtag{font-size:11.5px;color:var(--ink-2);border:1px solid var(--rule);border-radius:999px;
        padding:1px 8px;white-space:nowrap}
 .lvc:disabled{opacity:.35}
@@ -1223,7 +1233,7 @@ function switchClass(id){
   save(); render();
 }
 const klassName = c => `${c.klass.grade}학년 ${c.klass.room||""}반`.replace(/\s+반$/, "반");
-let S = blank(), pendingStd = [], pendingFile = null, _taskId = "", _src = "직접관찰", _role = "", dlgState = null, upload = null;
+let S = blank(), pendingStd = [], pendingFile = null, _taskId = "", _src = "직접관찰", _roles = [], dlgState = null, upload = null;
 /* AI 검토 결과는 초안 레코드(S.drafts[k].review)에 함께 저장한다.
    문장과 근거가 그대로면 다시 부르지 않는다 — 무료 키의 병목은 토큰이 아니라 호출 횟수다. */
 const revOf = k => S.drafts[k]?.review || null;
@@ -1310,8 +1320,9 @@ function logCount(sid, k){ return (S.drafts[dkey(sid,k)]?.log || []).length; }
 /* AI에 넘기는 [근거] 본문 — 검토 캐시의 서명에도 같은 값을 쓴다(근거가 늘면 다시 검토해야 한다) */
 function evidOf(sid, k){
   return notesOf(sid, k).map(n =>
-    `- (${n.source})${n.role?` [역할: ${n.role}]`:""} ${n.text}${n.level?` (수준: ${n.level} — ${levelText(n)})`:""}${n.standards?.length?` [${n.standards.join(" ")}: ${n.standards.map(c=>CODEMAP[c]?.text||"").join(" / ")}]`:""}`).join("\n");
+    `- (${n.source})${rolesOf(n).length?` [역할: ${rolesOf(n).join(" · ")}]`:""} ${n.text}${n.level?` (수준: ${n.level} — ${levelText(n)}${growthOf(n)?`, 지난 기록보다 ${GROWTH_LABEL[growthOf(n)]}`:""})`:""}${n.standards?.length?` [${n.standards.join(" ")}: ${n.standards.map(c=>CODEMAP[c]?.text||"").join(" / ")}]`:""}`).join("\n");
 }
+const movedAt = (sid, k) => S.drafts[dkey(sid,k)]?.moved || "";
 function draftDone(sid, k){
   const d = S.drafts[dkey(sid,k)];
   return !!(d && d.text.trim() && d.gate.every(Boolean) && !check(d.text).some(f => f.lv === "block"));
@@ -1901,7 +1912,7 @@ function detailHTML(){
       <div class="rolebar" id="c-role">
         <span class="rl">역할</span>
         ${roleOrder().map(v => `<button class="rlc" type="button" data-role="${esc(v)}"
-          aria-pressed="${_role === v}">${esc(v)}</button>`).join("")}
+          aria-pressed="${_roles.includes(v)}">${esc(v)}</button>`).join("")}
       </div>` : ``}
       ${_sweepMsg ? `<div class="hint" id="c-sweepmsg">${esc(_sweepMsg)}</div>` : ``}
       ${!ready ? `` : (() => {
@@ -1952,7 +1963,7 @@ function detailHTML(){
     ${ns.length ? ns.map(n => `<div class="memo">
         <span class="dt" title="${esc(n.date)}">${esc(n.date.slice(5))}</span>
         <span class="src">${esc(n.source)}</span>
-        ${n.role?`<span class="rtag">${esc(n.role)}</span>`:""}
+        ${rolesOf(n).map(v=>`<span class="rtag">${esc(v)}</span>`).join("")}
         <span class="body">
           ${(n.standards||[]).length?`<span class="code">${n.standards.map(esc).join(" ")}</span>`:""}
           ${(n.legacy||[]).length?`<span class="code legacy">${n.legacy.map(esc).join(" ")} <em>2015</em></span>`:""}
@@ -1961,6 +1972,8 @@ function detailHTML(){
             : `<span class="muted">${n.level ? esc(levelText(n) || "수준만 담김")
                 : n.fileId ? "산출물만 담김 — 눌러서 볼 수 있습니다" : "(빈 관찰)"}</span>`}</span>
           ${n.level?`<span class="lvtag" title="${esc(levelText(n))}">${esc(n.level)}</span>`:""}
+          ${(() => { const g = growthOf(n); return g
+            ? `<span class="gtag ${g}" title="같은 평가과제의 지난 기록과 견준 것입니다">${GROWTH_LABEL[g]}</span>` : ""; })()}
           ${taskOf(n)?`<span class="task">${esc(taskOf(n).name)}</span>`:""}
           ${n.fileId?`<button class="clip" type="button" data-open="${esc(n.fileId)}" title="붙어 있는 산출물 보기">첨부</button>`:""}</span>
         <span style="display:flex;gap:2px;align-items:baseline;justify-content:flex-end">
@@ -2023,6 +2036,9 @@ function detailHTML(){
                 data-tip="지금 문장을 누가기록으로 남깁니다. 학기말에 모아 이어 붙일 수 있습니다">저장</button>
         <span class="msg${nb?" warn":""}">${nb?`위반 ${nb}건을 먼저 고쳐 주세요`
           : !d.text.trim()?"문장을 먼저 쓰세요" : ok?"복사할 수 있습니다":"네 항목을 확인해 주세요"}</span>
+        ${(() => { const mv = movedAt(s.id, S.ui.slot); return mv
+          ? `<span class="moved" title="복사한 때입니다. 나이스에 붙여넣었는지까지는 이 도구가 알 수 없습니다"
+               >${esc(mv.replace("T"," ").slice(5,16))} 복사함</span>` : ""; })()}
       </div>
       ${(d.log||[]).length ? `<div class="log">
         <div class="loghead"><span class="lab">누가기록 ${d.log.length}</span>
@@ -2081,6 +2097,27 @@ function modeLevel(ns){
   return best;
 }
 /* 수준은 홀로 뜨지 않는다 — 언제나 서술어를 달고 다닌다 (§10-5 울타리) */
+/* 성장 — 교사에게 묻지 않는다. 같은 과제의 루브릭 서열로만 읽는다.
+   과제가 다르면 잣대가 달라 비교가 되지 않는다. 비교하는 척하지 않는다.
+   값을 저장하지 않고 그때그때 센다 — 기록 하나를 지우면 판정도 함께 사라져야 한다.
+   같은 날 여러 건이 있을 수 있어 날짜가 아니라 담긴 차례로 앞뒤를 가른다. */
+function growthOf(n){
+  if(!n || !n.level || !n.taskId) return "";
+  const rb = (taskOfId(n.taskId)?.rubric || []);
+  const rank = v => rb.findIndex(r => r.level === v);
+  const now = rank(n.level);
+  if(now < 0) return "";
+  const i = S.notes.indexOf(n);
+  for(let j = i - 1; j >= 0; j--){
+    const m = S.notes[j];
+    if(m.studentId !== n.studentId || m.taskId !== n.taskId || !m.level) continue;
+    const was = rank(m.level);
+    if(was < 0) continue;
+    return now < was ? "up" : now > was ? "down" : "flat";
+  }
+  return "";
+}
+const GROWTH_LABEL = {up:"나아짐", flat:"유지", down:"낮아짐"};
 function levelText(n){
   const t = taskOf(n);
   const r = (t?.rubric || []).find(x => x.level === n.level);
@@ -2296,9 +2333,10 @@ function bindDetail(){
   const rbar = el("c-role");
   if(rbar) rbar.onclick = e => {
     const b = e.target.closest("[data-role]"); if(!b) return;
-    _role = _role === b.dataset.role ? "" : b.dataset.role;
+    const v = b.dataset.role;
+    _roles = _roles.includes(v) ? _roles.filter(x => x !== v) : [..._roles, v];
     rbar.querySelectorAll("[data-role]").forEach(x =>
-      x.setAttribute("aria-pressed", String(x.dataset.role === _role)));
+      x.setAttribute("aria-pressed", String(_roles.includes(x.dataset.role))));
     el("c-text")?.focus();
   };
   const many = el("c-many"); if(many) many.onclick = addNoteMany;
@@ -2437,8 +2475,9 @@ JSON만 출력한다: {"text":"옮겨 적은 글","memos":["메모1","메모2"],
       if(!t || seen.has(t)) return;
       seen.add(t);
       /* 같은 역할이 잇달으면 한 번만 적는다 — 두 번 적으면 말이 겹쳐 읽힌다 */
-      const ph = n.role && n.role !== last ? ROLE_PHRASE[n.role] : "";
-      if(n.role) last = n.role;
+      const first = rolesOf(n)[0] || "";
+      const ph = first && first !== last ? ROLE_PHRASE[first] : "";
+      if(first) last = first;
       parts.push((ph ? ph + " " : "") + (toNominal(t) || t));
     });
     const d2 = S.drafts[k] || (S.drafts[k] = {text:"", gate:[false,false,false,false]});
@@ -2594,7 +2633,11 @@ ${S.drafts[k].text}`);
   if(cp) cp.onclick = async () => {
     try{ await navigator.clipboard.writeText(S.drafts[k].text.trim()); }
     catch(e){ ta.select(); document.execCommand("copy"); }
-    cp.textContent = "복사했습니다"; setTimeout(()=>{ cp.textContent = "문장 복사"; }, 1500); };
+    /* 복사한 때를 남긴다. 나이스로 옮겼다는 표시로 쓰인다 —
+       붙여넣기까지 지켜볼 수는 없으니 '옮겼다'가 아니라 '복사했다'가 정확한 말이다 */
+    const d3 = S.drafts[k];
+    if(d3){ d3.moved = new Date().toISOString(); save(); }
+    cp.textContent = "복사했습니다"; setTimeout(()=>{ repaint(); }, 900); };
 
   function repaint(){ wrap.innerHTML = detailHTML(); bindDetail(); }
 }
@@ -2603,9 +2646,10 @@ ${S.drafts[k].text}`);
    withLevel이 false면 수준을 붙이지 않는다(함께 담기에서 쓴다, §일괄의 경계). */
 /* 자주 쓰는 역할이 앞에 온다 — 최근 30건에서 세어 본다.
    목록 자체는 바뀌지 않는다. 자리만 바뀐다(자리가 매번 달라지면 손이 헤맨다). */
+const rolesOf = n => n.roles || (n.role ? [n.role] : []);
 function roleOrder(){
   const c = {};
-  for(const n of S.notes.slice(-30)) if(n.role) c[n.role] = (c[n.role] || 0) + 1;
+  for(const n of S.notes.slice(-30)) for(const v of rolesOf(n)) c[v] = (c[v] || 0) + 1;
   const hot = ROLES.filter(v => c[v]).sort((a, b) => c[b] - c[a]).slice(0, 3);
   return [...hot, ...ROLES.filter(v => !hot.includes(v))];
 }
@@ -2623,7 +2667,7 @@ function buildNote(sid, text, cur, withLevel){
   else n.axis = "behavior";
   /* 역할은 그 아이가 그 장면에서 맡은 것이다. 수준과 같은 이유로 함께 담기에는 딸려가지 않는다 —
      한 클릭이 N명의 역할을 정하면 그중 N−1명은 보지 않고 정해진 것이다 */
-  if(withLevel && _role) n.role = _role;
+  if(withLevel && _roles.length) n.roles = _roles.slice();
   return n;
 }
 function addNote(){
@@ -2635,7 +2679,7 @@ function addNote(){
   const n = buildNote(S.ui.sid, text, cur, true);
   if(pendingFile) n.fileId = pendingFile.id;
   /* 수준은 한 건에 한 번이다 — 비우지 않으면 다음 학생에게 판정이 조용히 따라간다(§10-5) */
-  S.notes.push(n); pendingStd = []; _noteLevel = ""; _role = ""; save();
+  S.notes.push(n); pendingStd = []; _noteLevel = ""; _roles = []; save();
   if(_sweep){ sweepNext(); return; }
   renderWrite(); el("c-text").focus();
 }
@@ -2794,6 +2838,8 @@ const ethList = () => { const v = S.ui.ethics; return [0,1,2].map(i => !!(Array.
 function renderCheck(){
   const sl = slots(), pts = pointers();
   const done = S.students.reduce((a,s) => a + sl.filter(x => draftDone(s.id,x.key)).length, 0);
+  /* 나이스로 넘긴 칸 — 문장을 다 쓴 것과는 다른 셈이다 */
+  const movedN = S.students.reduce((a,s) => a + sl.filter(x => movedAt(s.id,x.key)).length, 0);
   const eth = ethList(), ethN = eth.filter(Boolean).length;
   const total = S.students.length * sl.length;
   const noteTotal = S.notes.length;
@@ -2838,9 +2884,9 @@ function renderCheck(){
 
 
     <div class="panel">
-      <div class="ph"><h2>진행</h2><span class="r muted">${done}/${S.students.length*sl.length}칸 확인 완료</span></div>
+      <div class="ph"><h2>진행</h2><span class="r muted">${done}/${S.students.length*sl.length}칸 확인 완료<span class="sep">·</span>${movedN}칸 복사함</span></div>
       <div class="scroll"><table class="progress-table">
-        <thead><tr><th>학생</th><th>담긴 근거</th><th>문장</th></tr></thead>
+        <thead><tr><th>학생</th><th>담긴 근거</th><th>문장</th><th>복사</th></tr></thead>
         <tbody>${S.students.map(s=>{
           const ns = notesOf(s.id);
           const srcs = [...new Set(ns.map(n=>n.source))].filter(v => SRC_ICON[v]);
@@ -2848,7 +2894,9 @@ function renderCheck(){
             <td><span class="stu"><span class="no">${esc(String(s.no).padStart(2,"0"))}</span>${S.klass.numbersOnly?"":esc(s.name||"")}</span></td>
             <td>${ns.length ? `<span class="srcs" title="${esc(srcs.join(" · "))}">${srcs.map(v=>ICON[SRC_ICON[v]]()).join("")}
                  <span class="tot">${ns.length}</span></span>` : `<span class="muted">—</span>`}</td>
-            <td>${gauge(sl.filter(x=>draftDone(s.id,x.key)).length, sl.length)}</td></tr>`;}).join("")}</tbody>
+            <td>${gauge(sl.filter(x=>draftDone(s.id,x.key)).length, sl.length)}</td>
+            <td>${(() => { const mv = sl.filter(x=>movedAt(s.id,x.key)).length, dn = sl.filter(x=>draftDone(s.id,x.key)).length;
+              return mv ? `<span class="mvtag${mv>=dn&&dn?" all":""}">${mv}</span>` : `<span class="muted">—</span>`; })()}</td></tr>`;}).join("")}</tbody>
       </table></div>
       ${thinN ? `<div class="tsum">관찰이 3회 미만인 학생 ${thinN}명</div>` : ``}
     </div>
