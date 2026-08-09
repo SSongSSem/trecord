@@ -525,6 +525,12 @@ tr:hover .rowact,tr:focus-within .rowact{opacity:1}
 @media (prefers-reduced-motion:reduce){tr .rowact{transition:none}}
 .muted{color:var(--ink-3);font-size:12.5px}
 .rowbtns{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+/* 활동지·수업자료는 파일이 아니라 만드는 법으로 나간다 */
+.promptbox{margin-top:12px;padding:11px 13px;border:1px solid var(--rule);border-radius:12px;background:var(--raise)}
+.promptbox .prow{display:flex;align-items:center;gap:10px;padding:5px 0}
+.promptbox .prow + .prow{border-top:1px solid var(--rule)}
+.promptbox .pname{flex:1;font-size:13.5px;font-weight:600;color:var(--ink)}
+.promptbox .hint{margin-top:7px;padding-top:8px;border-top:1px solid var(--rule)}
 .help{margin-top:10px;font-size:12.5px;color:var(--ink-2)}
 .help summary{font-size:12px;color:var(--ink-3)}
 .help div{padding-top:8px;line-height:1.7}
@@ -2775,15 +2781,15 @@ function ensureDesign(t){
     reflect:{saw:"", why:"", next:""}, stale:{}, at:new Date().toISOString()};
   return t.design;
 }
-/* 관문 순서대로만 올라간다. 삽화는 선택이므로 단계를 만들지 않는다 */
+/* 관문은 하나다 — 활동 흐름을 짜면 지도안이 나온다.
+   활동지와 수업자료는 이 도구가 만들지 않는다. 브라우저가 A4를 직접 그리고
+   OOXML을 손으로 짜는 길은 품질 상한이 낮아, 지금은 '무엇을 어떻게 만들지'를
+   프롬프트로 알려 주는 데까지만 한다. 만든 프롬프트는 지도안 끝에 함께 실린다. */
 function designStage(d){
-  if(!d || !(d.flow || []).length) return 0;
-  if(!(d.sheet?.blocks || []).length) return 1;
-  if(!(d.slides || []).length) return 2;
-  return 3;
+  return (d && (d.flow || []).length) ? 1 : 0;
 }
-const DSG_STEPS = ["지도안 설계", "활동지 설계", "수업자료 설계", "완성"];
-const DSG_STAGE = ["설계 전", "지도안까지", "활동지까지", "수업자료까지"];
+const DSG_STEPS = ["지도안 설계", "완성"];
+const DSG_STAGE = ["설계 전", "지도안까지"];
 /* 수준 서술이 하나라도 있어야 역산이 된다. 이름과 코드만 있는 과제로는 못 짠다 */
 const designable = t => (t.rubric || []).some(r => (r.text || "").trim());
 
@@ -2844,8 +2850,6 @@ function renderDesign(){
     </div>
 
     <div class="panel" id="d-flowpanel"></div>
-    <div class="panel" id="d-sheetpanel"></div>
-    <div class="panel" id="d-deckpanel"></div>
 
     <div class="panel" id="d-outpanel"></div>
   </div>`;
@@ -2874,8 +2878,6 @@ function renderDesign(){
     save(); paintFlow(t, d);
   };
   paintFlow(t, d);
-  paintSheet(t, d);
-  paintDeck(t, d);
   paintOut(t, d);
   paintBar(t, d);
 }
@@ -2932,762 +2934,118 @@ function paintFlow(t, d){
       <div class="fl-msg" id="d-flowmsg" hidden></div>
     </div>`;
   bindFlow(t, d);
-  /* 흐름이 바뀌면 활동지가 가리키는 활동도 달라진다 */
-  if(el("d-sheetpanel")) paintSheet(t, d);
+  /* 흐름이 바뀌면 프롬프트에 실릴 활동도 달라진다 */
   paintOut(t, d);
 }
 
-/* ══ 관문② 활동지 원고 ══
-   활동지는 학생이 손에 들고 쓰는 종이다. 교사가 말로 할 것은 적지 않는다 —
-   남는 글은 지시문과 물음뿐이다(worksheet_guide, 교육청 배포 실물 9종 실측). */
-const SHEET_LIMITS = {goal: 20, ask: 60, kind: 8, total: 400};
-/* 활동 하나를 시작하기 전에 읽는 글자. 60자면 6학년이 10초 안에 읽는다 */
-const askLen = b => (b.ask || "").length + (b.q || "").length;
-const sheetLen = sh => (sh.blocks || []).reduce((a, b) =>
-  a + (b.title || "").length + askLen(b), 0);
-/* 지표가 붙은 활동만 칸이 된다. 동기 유발에는 쓸 칸을 만들지 않는다 */
-const sheetSrc = (d, opts) => (d.flow || [])
-  .map((r, i) => ({r, i}))
-  .filter(({r}) => { const k = seesLive(r, opts); return k.length && !k.includes("hook"); });
-
-function normSheetBlock(x, i){
-  return {
-    from:  Number.isInteger(x?.from) ? x.from : i,
-    title: String(pickKey(x, "title", "제목", "활동제목") || "").trim(),
-    kind:  String(pickKey(x, "kind", "유형", "하는일") || "").trim().slice(0, SHEET_LIMITS.kind),
-    ask:   String(pickKey(x, "ask", "지시", "지시문") || "").trim(),
-    q:     String(pickKey(x, "q", "물음", "질문") || "").trim(),
-    lines: Math.min(12, Math.max(1, Math.round(+pickKey(x, "lines", "줄수") || 3)))
-  };
-}
-
-async function genSheet(t, d, btn){
-  if(!aiOn()){ S.ui.tab = "ai"; save(); render(); return; }
-  const opts = seeOpts(t), src = sheetSrc(d, opts);
-  const msg = el("d-sheetmsg");
-  if(!src.length){
-    if(msg){ msg.hidden = false; msg.style.color = "var(--mid)";
-      msg.textContent = "관점이 붙은 활동이 없습니다. 흐름에서 무엇을 보는지 먼저 골라 주세요."; }
-    return;
-  }
-  const keep = btn.textContent; btn.disabled = true; btn.textContent = "…";
-  if(msg) msg.hidden = true;
-  try{
-    const r = await aiJSON2(`한국 초등학교 ${S.klass.grade}학년 ${subjShort(t.subject)} 활동지를 쓴다.
-학생이 손에 들고 연필로 쓰는 종이다.
-
-[교사의 학습목표] ${d.goal || "(없음)"}
-[칸을 만들 활동 — 이 순서 그대로, from을 그대로 돌려준다]
-${src.map(({r, i}) => `${i}. ${r.name}${(r.asks||[]).length ? " / 교사 발문: " + r.asks.join(" ") : ""}${
-  (r.steps||[]).length ? " / 하는 일: " + r.steps.join(" ") : ""} / 볼 관점: ${seesLive(r, opts).join(" · ")}`).join("\n")}
-
-규칙
-- 교사가 말로 할 것을 종이에 적지 않는다. 상황·배경·왜 하는지는 넣지 않는다.
-  종이에 남는 글은 무엇을 하라는 지시(ask)와 판단을 묻는 물음(q)뿐이다.
-- 한 칸에서 활동을 시작하기 전에 읽는 글자는 지시와 물음을 합쳐 ${SHEET_LIMITS.ask}자 안쪽이다.
-- 한 문장에 한 가지만. 25자를 넘기면 자른다.
-- 제목(title)은 아이가 하는 일로 적는다. 설계 의도를 이름으로 삼지 않는다.
-- 유형(kind)은 아이가 할 동작을 ${SHEET_LIMITS.kind}자 안쪽으로 한 낱말 — 표시하기 · 골라 쓰기 ·
-  서술하기 · 그려 보기 · 재어 보기 · 이야기하기처럼. 한 칸에 하나만.
-- 물음은 결론을 심지 않는다. 어느 쪽을 골라도 채워지는 틀로 쓴다.
-- 채점 기준, 성취기준 코드, 차시, 소요 시간을 적지 않는다. 아이 종이에 없는 것들이다.
-- 학생용 목표(goal)는 ${SHEET_LIMITS.goal}자 안쪽으로 오늘 할 일만 적는다. 조건을 붙이지 않는다.
-- lines는 답 칸 줄 수다. ${S.klass.grade}학년이 3분 안에 채울 분량으로 정한다.
-- 처음 나오는 어려운 말에는 괄호로 예를 붙인다.
-
-아래 모양 그대로, 키 이름을 번역하지 말고 영문 그대로 쓴다. JSON만 출력한다:
-{"goal":"학생용 목표","blocks":[{"from":0,"title":"제목","kind":"골라 쓰기","ask":"지시 한 줄","q":"묻는 말","lines":3}]}`);
-
-    const arr = Array.isArray(r?.blocks) ? r.blocks : pickFlowArray(r);
-    const blocks = arr.map((x, i) => normSheetBlock(x, src[i]?.i ?? i)).filter(b => b.title || b.ask);
-    if(!blocks.length){ console.warn("[활동지] 이해하지 못한 응답:", r);
-      throw new Error("활동지를 만들지 못했습니다. 다시 시도해 주세요. (F12 콘솔에 받은 답이 남습니다)"); }
-    d.sheet = {goal: String(r?.goal || "").trim(), blocks};
-    d.at = new Date().toISOString(); save(); paintSheet(t, d);
-  }catch(e){
-    btn.disabled = false; btn.textContent = keep;
-    const m = el("d-sheetmsg");
-    if(m){ m.hidden = false; m.style.color = "var(--low)"; m.textContent = e.message; }
-  }
-}
-
-/* ══ 수업자료 파일(PPTX) ══
-   OOXML을 손으로 짠다. 라이브러리를 담으면 700KB가 넘는데, 우리가 낼 것은
-   글상자뿐이라 그만한 값을 하지 않는다. 규약(본문 22pt 이상·노트는 교사만)을
-   우리가 쥐고 있는 편이 오히려 지키기 쉽다. */
-const EMU = 914400;                       // 1인치
-const DECK = {w: 12192000, h: 6858000};   // 16:9
-const PAD = Math.round(EMU * 0.72);
-
-const pptRun = (txt, sz, b, color) =>
-  `<a:r><a:rPr lang="ko-KR" altLang="en-US" sz="${sz}"${b ? ` b="1"` : ``} dirty="0">` +
-  `<a:solidFill><a:srgbClr val="${color || "1A2733"}"/></a:solidFill></a:rPr>` +
-  `<a:t>${xesc(txt)}</a:t></a:r>`;
-function pptBox(id, name, x, y, cx, cy, paras, align){
-  return `<p:sp><p:nvSpPr><p:cNvPr id="${id}" name="${xesc(name)}"/>` +
-    `<p:cNvSpPr txBox="1"/><p:nvPr/></p:nvSpPr>` +
-    `<p:spPr><a:xfrm><a:off x="${x}" y="${y}"/><a:ext cx="${cx}" cy="${cy}"/></a:xfrm>` +
-    `<a:prstGeom prst="rect"><a:avLst/></a:prstGeom><a:noFill/></p:spPr>` +
-    `<p:txBody><a:bodyPr wrap="square" lIns="0" tIns="0" rIns="0" bIns="0" anchor="t">` +
-    `<a:normAutofit/></a:bodyPr><a:lstStyle/>` +
-    (paras.length ? paras.join("") : `<a:p><a:endParaRPr lang="ko-KR"/></a:p>`) +
-    `</p:txBody></p:sp>`;
-}
-
-/* 한 장. 표지만 가운데 크게 두고 나머지는 제목+본문 한 벌이다 */
-function pptSlideXml(sl){
-  const W = DECK.w - PAD * 2;
-  const body = [];
-  let id = 2;
-  if(sl.kind === "title"){
-    body.push(pptBox(id++, "제목", PAD, Math.round(DECK.h * 0.30), W, 1600000,
-      [`<a:p><a:pPr algn="ctr"><a:buNone/></a:pPr>` + pptRun(sl.title || "", 4000, true, "1A2733") + `</a:p>`]));
-    body.push(pptBox(id++, "부제", PAD, Math.round(DECK.h * 0.30) + 1700000, W, 1400000,
-      (sl.body || []).map(x =>
-        `<a:p><a:pPr algn="ctr"><a:buNone/></a:pPr>` + pptRun(x, 2400, false, "55677C") + `</a:p>`)));
-  } else {
-    body.push(pptBox(id++, "제목", PAD, PAD, W, 900000,
-      [`<a:p><a:pPr><a:buNone/></a:pPr>` + pptRun(sl.title || "", 3200, true, "1A2733") + `</a:p>`]));
-    /* 본문 22pt 아래로 내려가지 않는다. 줄이 많으면 24 → 22까지만 줄인다 */
-    const n = (sl.body || []).length;
-    const sz = sl.kind === "big" ? 3600 : (n > 5 ? 2200 : 2400);
-    body.push(pptBox(id++, "본문", PAD, PAD + 1100000, W, DECK.h - PAD * 2 - 1100000,
-      (sl.body || []).map(x => {
-        const bul = sl.kind === "bullets" || sl.kind === "steps";
-        return `<a:p><a:pPr${bul ? ` marL="285750" indent="-285750"` : ``}>` +
-          (bul ? `<a:buChar char="·"/>` : `<a:buNone/>`) + `</a:pPr>` +
-          pptRun(x, sz, sl.kind === "big", sl.kind === "quote" ? "1558B0" : "1A2733") + `</a:p>`;
-      })));
-  }
-  return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>` +
-    `<p:sld xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" ` +
-    `xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" ` +
-    `xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main">` +
-    `<p:cSld><p:spTree><p:nvGrpSpPr><p:cNvPr id="1" name=""/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr>` +
-    `<p:grpSpPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="0" cy="0"/>` +
-    `<a:chOff x="0" y="0"/><a:chExt cx="0" cy="0"/></a:xfrm></p:grpSpPr>` +
-    body.join("") + `</p:spTree></p:cSld><p:clrMapOvr><a:masterClrMapping/></p:clrMapOvr></p:sld>`;
-}
-
-/* 발표자 노트. 교사만 보는 자리라 화면 규약과 무관하게 길어도 된다 */
-function pptNotesXml(note){
-  return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>` +
-    `<p:notes xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" ` +
-    `xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" ` +
-    `xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main">` +
-    `<p:cSld><p:spTree><p:nvGrpSpPr><p:cNvPr id="1" name=""/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr>` +
-    `<p:grpSpPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="0" cy="0"/>` +
-    `<a:chOff x="0" y="0"/><a:chExt cx="0" cy="0"/></a:xfrm></p:grpSpPr>` +
-    `<p:sp><p:nvSpPr><p:cNvPr id="2" name="Notes Placeholder"/>` +
-    `<p:cNvSpPr><a:spLocks noGrp="1"/></p:cNvSpPr><p:nvPr><p:ph type="body" idx="1"/></p:nvPr></p:nvSpPr>` +
-    `<p:spPr/><p:txBody><a:bodyPr/><a:lstStyle/>` +
-    String(note || "").split("\n").map(x =>
-      `<a:p><a:r><a:rPr lang="ko-KR" dirty="0"/><a:t>${xesc(x)}</a:t></a:r></a:p>`).join("") +
-    `</p:txBody></p:sp></p:spTree></p:cSld><p:clrMapOvr><a:masterClrMapping/></p:clrMapOvr></p:notes>`;
-}
-
-/* 파워포인트가 열려면 있어야 하는 최소 한 벌.
-   테마·마스터·레이아웃은 내용이 없어도 자리는 있어야 한다 */
-const PPT_NS_A = "http://schemas.openxmlformats.org/drawingml/2006/main";
-const PPT_NS_P = "http://schemas.openxmlformats.org/presentationml/2006/main";
-const PPT_NS_R = "http://schemas.openxmlformats.org/officeDocument/2006/relationships";
-const XMLH = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>`;
-
-const pptTheme = (nm) => {
-  const c = (n, v) => `<a:${n}><a:srgbClr val="${v}"/></a:${n}>`;
-  const fill3 = `<a:solidFill><a:schemeClr val="phClr"/></a:solidFill>`.repeat(3);
-  const ln1 = `<a:ln w="9525" cap="flat" cmpd="sng" algn="ctr"><a:solidFill>` +
-    `<a:schemeClr val="phClr"/></a:solidFill><a:prstDash val="solid"/></a:ln>`;
-  const font = t => `<a:${t}Font><a:latin typeface="맑은 고딕"/><a:ea typeface="맑은 고딕"/>` +
-    `<a:cs typeface=""/></a:${t}Font>`;
-  return XMLH + `<a:theme xmlns:a="${PPT_NS_A}" name="${xesc(nm || "T-record")}"><a:themeElements>` +
-    `<a:clrScheme name="T-record"><a:dk1><a:sysClr val="windowText" lastClr="000000"/></a:dk1>` +
-    `<a:lt1><a:sysClr val="window" lastClr="FFFFFF"/></a:lt1>` +
-    c("dk2", "1A2733") + c("lt2", "F2F6FB") + c("accent1", "1E6FD9") + c("accent2", "1558B0") +
-    c("accent3", "1E7A55") + c("accent4", "8F6410") + c("accent5", "B3372A") + c("accent6", "55677C") +
-    c("hlink", "1E6FD9") + c("folHlink", "55677C") + `</a:clrScheme>` +
-    `<a:fontScheme name="T-record">${font("major")}${font("minor")}</a:fontScheme>` +
-    `<a:fmtScheme name="T-record"><a:fillStyleLst>${fill3}</a:fillStyleLst>` +
-    `<a:lnStyleLst>${ln1.repeat(3)}</a:lnStyleLst>` +
-    `<a:effectStyleLst>${`<a:effectStyle><a:effectLst/></a:effectStyle>`.repeat(3)}</a:effectStyleLst>` +
-    `<a:bgFillStyleLst>${fill3}</a:bgFillStyleLst></a:fmtScheme>` +
-    `</a:themeElements></a:theme>`;
-};
-
-const pptEmptyTree = () =>
-  `<p:cSld><p:spTree><p:nvGrpSpPr><p:cNvPr id="1" name=""/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr>` +
-  `<p:grpSpPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="0" cy="0"/>` +
-  `<a:chOff x="0" y="0"/><a:chExt cx="0" cy="0"/></a:xfrm></p:grpSpPr></p:spTree></p:cSld>`;
-
-const PPT_CLRMAP = `<p:clrMap bg1="lt1" tx1="dk1" bg2="lt2" tx2="dk2" accent1="accent1" ` +
-  `accent2="accent2" accent3="accent3" accent4="accent4" accent5="accent5" accent6="accent6" ` +
-  `hlink="hlink" folHlink="folHlink"/>`;
-
-/* 아홉 수준까지 채워 둔다. 파워포인트는 lvl1만 있는 문서를 물리는 일이 있다 */
-const pptLvls = sz => Array.from({length: 9}, (_, i) =>
-  `<a:lvl${i + 1}pPr marL="${i * 342900}" algn="l" rtl="0">` +
-  `<a:defRPr sz="${Math.max(1800, sz - i * 200)}" kern="1200">` +
-  `<a:solidFill><a:schemeClr val="tx1"/></a:solidFill>` +
-  `<a:latin typeface="+mn-lt"/><a:ea typeface="+mn-ea"/><a:cs typeface="+mn-cs"/>` +
-  `</a:defRPr></a:lvl${i + 1}pPr>`).join("");
-const pptTxStyles = () =>
-  `<p:txStyles><p:titleStyle><a:lvl1pPr algn="l" rtl="0">` +
-  `<a:defRPr sz="4400" kern="1200"><a:solidFill><a:schemeClr val="tx1"/></a:solidFill>` +
-  `<a:latin typeface="+mj-lt"/><a:ea typeface="+mj-ea"/><a:cs typeface="+mj-cs"/></a:defRPr>` +
-  `</a:lvl1pPr></p:titleStyle>` +
-  `<p:bodyStyle>${pptLvls(2800)}</p:bodyStyle>` +
-  `<p:otherStyle>${pptLvls(1800)}</p:otherStyle></p:txStyles>`;
-
-const pptMaster = () => XMLH +
-  `<p:sldMaster xmlns:a="${PPT_NS_A}" xmlns:r="${PPT_NS_R}" xmlns:p="${PPT_NS_P}">` +
-  `<p:cSld><p:bg><p:bgPr><a:solidFill><a:schemeClr val="bg1"/></a:solidFill>` +
-  `<a:effectLst/></p:bgPr></p:bg>` +
-  `<p:spTree><p:nvGrpSpPr><p:cNvPr id="1" name=""/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr>` +
-  `<p:grpSpPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="0" cy="0"/>` +
-  `<a:chOff x="0" y="0"/><a:chExt cx="0" cy="0"/></a:xfrm></p:grpSpPr></p:spTree></p:cSld>` +
-  PPT_CLRMAP +
-  `<p:sldLayoutIdLst><p:sldLayoutId id="2147483649" r:id="rId1"/></p:sldLayoutIdLst>` +
-  pptTxStyles() + `</p:sldMaster>`;
-
-const pptLayout = () => XMLH +
-  `<p:sldLayout xmlns:a="${PPT_NS_A}" xmlns:r="${PPT_NS_R}" xmlns:p="${PPT_NS_P}" type="blank" preserve="1">` +
-  `<p:cSld name="빈 화면"><p:spTree>` +
-  `<p:nvGrpSpPr><p:cNvPr id="1" name=""/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr>` +
-  `<p:grpSpPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="0" cy="0"/>` +
-  `<a:chOff x="0" y="0"/><a:chExt cx="0" cy="0"/></a:xfrm></p:grpSpPr></p:spTree></p:cSld>` +
-  `<p:clrMapOvr><a:masterClrMapping/></p:clrMapOvr></p:sldLayout>`;
-
-const pptNotesMaster = () => XMLH +
-  `<p:notesMaster xmlns:a="${PPT_NS_A}" xmlns:r="${PPT_NS_R}" xmlns:p="${PPT_NS_P}">` +
-  `<p:cSld><p:spTree><p:nvGrpSpPr><p:cNvPr id="1" name=""/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr>` +
-  `<p:grpSpPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="0" cy="0"/>` +
-  `<a:chOff x="0" y="0"/><a:chExt cx="0" cy="0"/></a:xfrm></p:grpSpPr>` +
-  `<p:sp><p:nvSpPr><p:cNvPr id="2" name="Notes Placeholder"/>` +
-  `<p:cNvSpPr><a:spLocks noGrp="1"/></p:cNvSpPr><p:nvPr><p:ph type="body" idx="1"/></p:nvPr></p:nvSpPr>` +
-  `<p:spPr><a:xfrm><a:off x="685800" y="1143000"/><a:ext cx="5486400" cy="4114800"/></a:xfrm>` +
-  `<a:prstGeom prst="rect"><a:avLst/></a:prstGeom></p:spPr>` +
-  `<p:txBody><a:bodyPr/><a:lstStyle/><a:p><a:endParaRPr lang="ko-KR"/></a:p></p:txBody></p:sp>` +
-  `</p:spTree></p:cSld>` + PPT_CLRMAP +
-  `<p:notesStyle>${pptLvls(1200)}</p:notesStyle></p:notesMaster>`;
-
-const REL_OPEN = `<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">`;
-
-/* 슬라이드를 묶어 pptx 한 벌로 만든다 */
-async function buildPptx(slides, title){
-  if(!slides.length) throw new Error("슬라이드가 없습니다.");
-  const enc = new TextEncoder(), F = [];
-  const put = (name, xml) => F.push({name, data: enc.encode(xml)});
-  const hasNote = i => !!(slides[i].note || "").trim();
-  const n = slides.length;
-
-  put("[Content_Types].xml", XMLH +
-    `<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">` +
-    `<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>` +
-    `<Default Extension="xml" ContentType="application/xml"/>` +
-    `<Override PartName="/ppt/presentation.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.presentation.main+xml"/>` +
-    `<Override PartName="/ppt/slideMasters/slideMaster1.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.slideMaster+xml"/>` +
-    `<Override PartName="/ppt/slideLayouts/slideLayout1.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.slideLayout+xml"/>` +
-    `<Override PartName="/ppt/notesMasters/notesMaster1.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.notesMaster+xml"/>` +
-    `<Override PartName="/ppt/theme/theme1.xml" ContentType="application/vnd.openxmlformats-officedocument.theme+xml"/>` +
-    `<Override PartName="/ppt/theme/theme2.xml" ContentType="application/vnd.openxmlformats-officedocument.theme+xml"/>` +
-    `<Override PartName="/ppt/presProps.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.presProps+xml"/>` +
-    `<Override PartName="/ppt/viewProps.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.viewProps+xml"/>` +
-    `<Override PartName="/ppt/tableStyles.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.tableStyles+xml"/>` +
-    slides.map((_, i) => `<Override PartName="/ppt/slides/slide${i+1}.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.slide+xml"/>`).join("") +
-    slides.map((_, i) => hasNote(i) ? `<Override PartName="/ppt/notesSlides/notesSlide${i+1}.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.notesSlide+xml"/>` : ``).join("") +
-    `<Override PartName="/docProps/core.xml" ContentType="application/vnd.openxmlformats-package.core-properties+xml"/>` +
-    `<Override PartName="/docProps/app.xml" ContentType="application/vnd.openxmlformats-officedocument.extended-properties+xml"/>` +
-    `</Types>`);
-
-  put("_rels/.rels", XMLH + REL_OPEN +
-    `<Relationship Id="rId1" Type="${PPT_NS_R}/officeDocument" Target="ppt/presentation.xml"/>` +
-    `<Relationship Id="rId2" Type="${PPT_NS_R}/metadata/core-properties" Target="docProps/core.xml"/>` +
-    `<Relationship Id="rId3" Type="${PPT_NS_R}/extended-properties" Target="docProps/app.xml"/>` +
-    `</Relationships>`);
-
-  put("docProps/core.xml", XMLH +
-    `<cp:coreProperties xmlns:cp="http://schemas.openxmlformats.org/package/2006/metadata/core-properties" ` +
-    `xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:dcterms="http://purl.org/dc/terms/" ` +
-    `xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">` +
-    `<dc:title>${xesc(title || "수업자료")}</dc:title></cp:coreProperties>`);
-  put("docProps/app.xml", XMLH +
-    `<Properties xmlns="http://schemas.openxmlformats.org/officeDocument/2006/extended-properties" ` +
-    `xmlns:vt="http://schemas.openxmlformats.org/officeDocument/2006/docPropsVTypes">` +
-    `<Slides>${n}</Slides></Properties>`);
-
-  put("ppt/presentation.xml", XMLH +
-    `<p:presentation xmlns:a="${PPT_NS_A}" xmlns:r="${PPT_NS_R}" xmlns:p="${PPT_NS_P}" saveSubsetFonts="1">` +
-    `<p:sldMasterIdLst><p:sldMasterId id="2147483648" r:id="rId1"/></p:sldMasterIdLst>` +
-    `<p:notesMasterIdLst><p:notesMasterId r:id="rId${n + 2}"/></p:notesMasterIdLst>` +
-    `<p:sldIdLst>${slides.map((_, i) => `<p:sldId id="${256 + i}" r:id="rId${i + 2}"/>`).join("")}</p:sldIdLst>` +
-    `<p:sldSz cx="${DECK.w}" cy="${DECK.h}"/><p:notesSz cx="6858000" cy="9144000"/>` +
-    `<p:defaultTextStyle>${pptLvls(1800)}</p:defaultTextStyle>` +
-    `</p:presentation>`);
-  put("ppt/_rels/presentation.xml.rels", XMLH + REL_OPEN +
-    `<Relationship Id="rId1" Type="${PPT_NS_R}/slideMaster" Target="slideMasters/slideMaster1.xml"/>` +
-    slides.map((_, i) => `<Relationship Id="rId${i + 2}" Type="${PPT_NS_R}/slide" Target="slides/slide${i + 1}.xml"/>`).join("") +
-    `<Relationship Id="rId${n + 2}" Type="${PPT_NS_R}/notesMaster" Target="notesMasters/notesMaster1.xml"/>` +
-    `<Relationship Id="rId${n + 3}" Type="${PPT_NS_R}/theme" Target="theme/theme1.xml"/>` +
-    `<Relationship Id="rId${n + 4}" Type="${PPT_NS_R}/presProps" Target="presProps.xml"/>` +
-    `<Relationship Id="rId${n + 5}" Type="${PPT_NS_R}/viewProps" Target="viewProps.xml"/>` +
-    `<Relationship Id="rId${n + 6}" Type="${PPT_NS_R}/tableStyles" Target="tableStyles.xml"/>` +
-    `</Relationships>`);
-
-  put("ppt/presProps.xml", XMLH +
-    `<p:presentationPr xmlns:a="${PPT_NS_A}" xmlns:r="${PPT_NS_R}" xmlns:p="${PPT_NS_P}"/>`);
-  put("ppt/viewProps.xml", XMLH +
-    `<p:viewPr xmlns:a="${PPT_NS_A}" xmlns:r="${PPT_NS_R}" xmlns:p="${PPT_NS_P}"/>`);
-  put("ppt/tableStyles.xml", XMLH +
-    `<a:tblStyleLst xmlns:a="${PPT_NS_A}" def="{5C22544A-7EE6-4342-B048-85BDC9FD1C3A}"/>`);
-  put("ppt/theme/theme1.xml", pptTheme());
-  put("ppt/slideMasters/slideMaster1.xml", pptMaster());
-  put("ppt/slideMasters/_rels/slideMaster1.xml.rels", XMLH + REL_OPEN +
-    `<Relationship Id="rId1" Type="${PPT_NS_R}/slideLayout" Target="../slideLayouts/slideLayout1.xml"/>` +
-    `<Relationship Id="rId2" Type="${PPT_NS_R}/theme" Target="../theme/theme1.xml"/>` +
-    `</Relationships>`);
-  put("ppt/slideLayouts/slideLayout1.xml", pptLayout());
-  put("ppt/slideLayouts/_rels/slideLayout1.xml.rels", XMLH + REL_OPEN +
-    `<Relationship Id="rId1" Type="${PPT_NS_R}/slideMaster" Target="../slideMasters/slideMaster1.xml"/>` +
-    `</Relationships>`);
-  put("ppt/notesMasters/notesMaster1.xml", pptNotesMaster());
-  put("ppt/theme/theme2.xml", pptTheme("T-record 노트"));
-  put("ppt/notesMasters/_rels/notesMaster1.xml.rels", XMLH + REL_OPEN +
-    `<Relationship Id="rId1" Type="${PPT_NS_R}/theme" Target="../theme/theme2.xml"/>` +
-    `</Relationships>`);
-
-  slides.forEach((sl, i) => {
-    put(`ppt/slides/slide${i + 1}.xml`, pptSlideXml(sl));
-    put(`ppt/slides/_rels/slide${i + 1}.xml.rels`, XMLH + REL_OPEN +
-      `<Relationship Id="rId1" Type="${PPT_NS_R}/slideLayout" Target="../slideLayouts/slideLayout1.xml"/>` +
-      (hasNote(i) ? `<Relationship Id="rId2" Type="${PPT_NS_R}/notesSlide" Target="../notesSlides/notesSlide${i + 1}.xml"/>` : ``) +
-      `</Relationships>`);
-    if(hasNote(i)){
-      put(`ppt/notesSlides/notesSlide${i + 1}.xml`, pptNotesXml(sl.note));
-      put(`ppt/notesSlides/_rels/notesSlide${i + 1}.xml.rels`, XMLH + REL_OPEN +
-        `<Relationship Id="rId1" Type="${PPT_NS_R}/notesMaster" Target="../notesMasters/notesMaster1.xml"/>` +
-        `<Relationship Id="rId2" Type="${PPT_NS_R}/slide" Target="../slides/slide${i + 1}.xml"/>` +
-        `</Relationships>`);
-    }
-  });
-  return zip(F, "application/vnd.openxmlformats-officedocument.presentationml.presentation");
-}
-
-async function savePptx(t, d, btn){
-  const keep = btn.textContent; btn.disabled = true; btn.textContent = "…";
-  try{
-    const blob = await buildPptx(d.slides || [], t.name);
-    saveBlob(blob, `수업자료_${safeName(t.name)}.pptx`);
-  }catch(e){
-    console.warn("[수업자료]", e);
-    const m = el("d-outmsg");
-    if(m){ m.hidden = false; m.style.color = "var(--low)"; m.textContent = e.message; }
-  }
-  btn.disabled = false; btn.textContent = keep;
-}
-
-/* ══ 관문③ 수업자료 원고 ══
-   교사가 띄우는 화면이다. 활동지의 규칙을 그대로 옮기지 않는다 —
-   활동지에는 성취기준 코드가 0건이었지만 PPT는 96%가 표지에 싣는다.
-   같은 '학생이 본다'라도 자리가 다르면 관행이 다르다(ppt_guide, 실물 50종·403장 실측). */
-const SLIDE_KINDS = {title:"표지", big:"한 문장", bullets:"목록", quote:"발문", steps:"흐름"};
-const SLIDE_MAX = 120;   // 한 장의 글자 수 눈금. 실물 75%가 121자 안쪽이었다
-const slideLen = sl => (sl.title || "").length +
-  (sl.body || []).reduce((a, x) => a + String(x).length, 0);
-
-function normSlide(x){
-  const k = String(pickKey(x, "kind", "종류") || "");
-  return {
-    kind: SLIDE_KINDS[k] ? k : "bullets",
-    title: String(pickKey(x, "title", "제목") || "").trim(),
-    body: asList(pickKey(x, "body", "내용", "본문")),
-    note: String(pickKey(x, "note", "말", "발표자노트", "talk") || "").trim()
-  };
-}
-
-async function genDeck(t, d, btn){
-  if(!aiOn()){ S.ui.tab = "ai"; save(); render(); return; }
-  const opts = seeOpts(t), msg = el("d-deckmsg");
-  const keep = btn.textContent; btn.disabled = true; btn.textContent = "…";
-  if(msg) msg.hidden = true;
-  try{
-    const r = await aiJSON2(`한국 초등학교 ${S.klass.grade}학년 ${subjShort(t.subject)} 수업에서 교사가 띄울 화면(슬라이드)을 쓴다.
-
-[학습목표] ${d.goal || ""}
-[성취기준] ${t.standards.map(c => `[${c}] ${CODEMAP[c]?.text || ""}`).join(" / ") || "(없음)"}
-[활동 흐름]
-${(d.flow || []).map((x, i) => `${i + 1}. [${x.phase} ${x.min}분] ${x.name}${
-  (x.asks||[]).length ? "\n   발문: " + x.asks.join(" / ") : ""}`).join("\n") || "(없음)"}
-[학생이 볼 수준 서술 — 학생 말로 옮겨 한 장에 싣는다]
-${(t.rubric || []).filter(x => (x.text||"").trim()).map(x => `- ${x.level}: ${x.text}`).join("\n")}
-
-규칙
-- 표지(title)에 성취기준 코드를 싣는다. 화면은 교사가 띄우는 것이라 활동지와 반대다.
-- 차시와 소요 시간은 넣지 않는다. 아이를 재촉하는 글자가 된다.
-- 한 장에 한 가지만. 제목과 본문을 합쳐 ${SLIDE_MAX}자를 넘기지 않는다.
-  넘칠 것 같으면 장을 나누거나 note로 내린다.
-- 교사가 할 설명·근거·까닭은 화면이 아니라 note에 적는다. 화면은 학생이 본다.
-- 수준 서술을 학생 말로 바꿔 한 장 싣는다("제한적으로 수행한다" 같은 말을 아이에게 주지 않는다).
-- 차례는 표지 → 학습문제 → 활동마다 발문과 안내 → 정리다.
-- kind는 ${Object.keys(SLIDE_KINDS).join(" / ")} 가운데 하나다.
-
-아래 모양 그대로, 키 이름을 번역하지 말고 영문 그대로 쓴다. JSON만 출력한다:
-{"slides":[{"kind":"title","title":"제목","body":["줄"],"note":"교사만 보는 말"}]}`);
-
-    const arr = Array.isArray(r?.slides) ? r.slides : pickFlowArray(r);
-    const slides = arr.map(normSlide).filter(x => x.title || x.body.length);
-    if(!slides.length){ console.warn("[수업자료] 이해하지 못한 응답:", r);
-      throw new Error("슬라이드를 만들지 못했습니다. 다시 시도해 주세요. (F12 콘솔에 받은 답이 남습니다)"); }
-    d.slides = slides; d.at = new Date().toISOString(); save(); paintDeck(t, d);
-  }catch(e){
-    btn.disabled = false; btn.textContent = keep;
-    const m = el("d-deckmsg");
-    if(m){ m.hidden = false; m.style.color = "var(--low)"; m.textContent = e.message; }
-  }
-}
-
-function paintDeck(t, d){
-  const box = el("d-deckpanel"); if(!box) return;
-  const slides = d.slides || [], over = slides.filter(x => slideLen(x) > SLIDE_MAX).length;
-  const noNote = slides.length >= 4 && !slides.some(x => x.note);
-  box.innerHTML = `
-    <div class="ph"><h2>③ 수업자료 설계</h2>
-      <span class="r">${slides.length ? `<span class="muted">${slides.length}장</span>
-        <button class="ghost" id="d-deckgen" type="button">다시 만들기</button>` : ``}</span></div>
-    <div class="pb">
-      ${slides.length ? slides.map((x, i) => slideCard(x, i, slides.length)).join("") + `
-        <div class="fl-sum">
-          <span>${slides.length}장${over ? ` · <b class="over">${over}장이 ${SLIDE_MAX}자를 넘습니다</b>` : ``}</span>
-          ${noNote ? `<span class="muted" style="margin-left:auto">교사가 놓치면 수업이 어긋나는 곳은 「할 말」에 적어 두세요</span>` : ``}
-        </div>` : `<div class="empty-action">
-        <span class="mark" aria-hidden="true">${ICON.subject()}</span>
-        <span class="copy"><b>교사가 띄울 화면을 만듭니다</b>
-          <span>흐름의 발문이 화면으로 옮겨 갑니다. 교사가 할 설명은 「할 말」에 따로 담깁니다.</span></span>
-        <span class="actions"><button class="primary" id="d-deckgen" type="button"${
-          (d.flow||[]).length?"":" disabled"}>수업자료 원고 만들기</button></span>
-      </div>${(d.flow||[]).length ? `` : `<div class="hint">지도안을 먼저 설계해 주세요.</div>`}`}
-      <div class="fl-msg" id="d-deckmsg" hidden></div>
-    </div>`;
-
-  const g = el("d-deckgen");
-  if(g) g.onclick = () => genDeck(t, d, g);
-  box.querySelectorAll(".sd").forEach(card => {
-    const x = d.slides[+card.dataset.di], q = v => card.querySelector(v);
-    q(".dk").onchange = e => { x.kind = e.target.value; save(); };
-    q(".dt").onchange = e => { x.title = e.target.value.trim(); save(); paintDeck(t, d); };
-    q(".db").onchange = e => { x.body = toLines(e.target.value); save(); paintDeck(t, d); };
-    q(".dn").onchange = e => { x.note = e.target.value.trim(); save(); };
-    card.querySelectorAll("textarea").forEach(v => { autoGrow(v); v.oninput = () => autoGrow(v); });
-  });
-  const swap = (i, j) => { const f = d.slides; [f[i], f[j]] = [f[j], f[i]]; save(); paintDeck(t, d); };
-  box.querySelectorAll("[data-dup]").forEach(b => b.onclick = () => swap(+b.dataset.dup, +b.dataset.dup - 1));
-  box.querySelectorAll("[data-ddn]").forEach(b => b.onclick = () => swap(+b.dataset.ddn, +b.dataset.ddn + 1));
-  box.querySelectorAll("[data-drm]").forEach(b => b.onclick = () => {
-    if(!confirm("이 장을 지웁니다.")) return;
-    d.slides.splice(+b.dataset.drm, 1); save(); paintDeck(t, d); });
-  paintOut(t, d);
-}
-
-function slideCard(x, i, n){
-  const len = slideLen(x), over = len > SLIDE_MAX;
-  return `<div class="fl sd${over ? " nosee" : ""}" data-di="${i}">
-    <div class="fl-head">
-      <span class="muted mono" style="flex:0 0 auto">${i + 1}</span>
-      <select class="dk" aria-label="종류" style="flex:0 0 auto">${Object.entries(SLIDE_KINDS).map(([k, v]) =>
-        `<option value="${k}"${x.kind === k ? " selected" : ""}>${v}</option>`).join("")}</select>
-      <input type="text" class="dt" value="${esc(x.title || "")}" placeholder="화면 제목" aria-label="제목">
-    </div>
-    <div class="fl-row"><span class="lab">화면</span>
-      <textarea class="db" placeholder="한 줄에 하나씩. 학생이 보는 글입니다">${esc((x.body || []).join("\n"))}</textarea></div>
-    <div class="fl-row"><span class="lab">할 말</span>
-      <textarea class="dn" placeholder="교사만 보는 발표자 노트">${esc(x.note || "")}</textarea></div>
-    <div class="fl-act">
-      <span class="muted" style="margin-right:auto;font-size:11.5px${over ? ";color:var(--mid)" : ""}">
-        ${len}자 / ${SLIDE_MAX}자${over ? " — 장을 나누거나 「할 말」로 내리세요" : ""}</span>
-      <button class="ghost" type="button" data-dup="${i}"${i ? "" : " disabled"} aria-label="위로">↑</button>
-      <button class="ghost" type="button" data-ddn="${i}"${i < n - 1 ? "" : " disabled"} aria-label="아래로">↓</button>
-      <button class="ghost danger" type="button" data-drm="${i}">지우기</button></div>
-  </div>`;
-}
-
-/* ══ 활동지 그림 그리기 ══
-   A4 210×297mm를 200dpi로 잡는다. 인쇄해도 글자가 또렷하고 파일이 무겁지 않은 선이다.
-   pt를 px로 옮길 때는 200/72을 곱한다 — 10pt가 28px이다. */
-const PX = 200 / 25.4;                    // 1mm
-const PT = 200 / 72;                      // 1pt
-const A4 = {w: Math.round(210 * PX), h: Math.round(297 * PX), pad: Math.round(18 * PX)};
-const SHEET_FONT = `"맑은 고딕","Malgun Gothic","Apple SD Gothic Neo","Noto Sans KR",sans-serif`;
-
-/* 재려면 글꼴이 정해져 있어야 한다 — 재기 전에 늘 폰트를 건다 */
-function wrapText(ctx, text, maxW){
-  const out = [];
-  for(const para of String(text == null ? "" : text).split("\n")){
-    let line = "";
-    for(const ch of para){
-      const t = line + ch;
-      if(ctx.measureText(t).width > maxW && line){ out.push(line); line = ch; }
-      else line = t;
-    }
-    out.push(line);
-  }
-  return out;
-}
-
-/* 활동지 한 벌을 그린다. 한 장을 넘치면 다음 장으로 넘긴다 */
-function drawSheetPages(t, d){
-  const sh = d.sheet || {blocks:[]}, blocks = sh.blocks || [];
-  const pages = [];
-  let cv = null, ctx = null, y = 0;
-
-  const newPage = () => {
-    cv = document.createElement("canvas");
-    cv.width = A4.w; cv.height = A4.h;
-    ctx = cv.getContext("2d");
-    ctx.fillStyle = "#fff"; ctx.fillRect(0, 0, A4.w, A4.h);
-    ctx.textBaseline = "top";
-    pages.push(cv);
-    y = A4.pad;
-  };
-  const room = need => { if(y + need > A4.h - A4.pad) newPage(); };
-  const font = (pt, bold) => { ctx.font = `${bold ? "700 " : ""}${Math.round(pt * PT)}px ${SHEET_FONT}`; };
-  const put = (text, pt, bold, color, indent) => {
-    font(pt, bold);
-    ctx.fillStyle = color || "#111";
-    const x = A4.pad + (indent || 0);
-    const lines = wrapText(ctx, text, A4.w - A4.pad * 2 - (indent || 0));
-    const lh = Math.round(pt * PT * 1.55);
-    for(const ln of lines){ room(lh); ctx.fillText(ln, x, y); y += lh; }
-  };
-
-  newPage();
-
-  /* 이름칸 — 학년·반·이름은 학생이 손으로 쓴다 */
-  font(11, false); ctx.fillStyle = "#111";
-  const name = "(       )학년   (       )반   이름 (                    )";
-  ctx.fillText(name, A4.w - A4.pad - ctx.measureText(name).width, y);
-  y += Math.round(11 * PT * 2.2);
-
-  /* 학생용 목표 — 가운데 */
-  font(17, true); ctx.fillStyle = "#111";
-  const goal = sh.goal || "오늘의 목표";
-  for(const ln of wrapText(ctx, goal, A4.w - A4.pad * 2)){
-    room(Math.round(17 * PT * 1.5));
-    ctx.fillText(ln, (A4.w - ctx.measureText(ln).width) / 2, y);
-    y += Math.round(17 * PT * 1.5);
-  }
-  y += Math.round(6 * PX);
-  ctx.strokeStyle = "#111"; ctx.lineWidth = 2;
-  ctx.beginPath(); ctx.moveTo(A4.pad, y); ctx.lineTo(A4.w - A4.pad, y); ctx.stroke();
-  y += Math.round(7 * PX);
-
-  blocks.forEach((b, i) => {
-    room(Math.round(30 * PX));
-    const top = y;
-    /* 번호와 제목, 그리고 오른쪽 끝에 유형 배지 */
-    font(13, true);
-    const title = `${i + 1}. ${b.title || ""}`;
-    ctx.fillStyle = "#111";
-    const tw = A4.w - A4.pad * 2 - (b.kind ? Math.round(30 * PX) : 0);
-    for(const ln of wrapText(ctx, title, tw)){
-      room(Math.round(13 * PT * 1.5));
-      ctx.fillText(ln, A4.pad + Math.round(3 * PX), y);
-      y += Math.round(13 * PT * 1.5);
-    }
-    if(b.kind){
-      font(9.5, false);
-      const kw = ctx.measureText(b.kind).width, ph = Math.round(9.5 * PT * 1.9);
-      const bx = A4.w - A4.pad - kw - Math.round(6 * PX);
-      ctx.fillStyle = "#EDF2F9"; ctx.strokeStyle = "#B6D0F0"; ctx.lineWidth = 1;
-      roundRect(ctx, bx - Math.round(3 * PX), top, kw + Math.round(6 * PX), ph, Math.round(2 * PX));
-      ctx.fill(); ctx.stroke();
-      ctx.fillStyle = "#1558B0";
-      ctx.fillText(b.kind, bx, top + Math.round(ph * 0.24));
-    }
-    y += Math.round(1.5 * PX);
-    if(b.ask) put(b.ask, 11.5, false, "#111", Math.round(4 * PX));
-    if(b.q)   put(b.q,   11.5, false, "#111", Math.round(4 * PX));
-    y += Math.round(5 * PX);
-
-    /* 학생이 쓰는 줄 */
-    const gap = Math.round(15 * PX);
-    ctx.strokeStyle = "#9AA7B4"; ctx.lineWidth = 1;
-    for(let k = 0; k < (+b.lines || 3); k++){
-      room(gap);
-      y += gap;
-      ctx.beginPath();
-      ctx.moveTo(A4.pad + Math.round(4 * PX), y);
-      ctx.lineTo(A4.w - A4.pad, y);
-      ctx.stroke();
-    }
-    y += Math.round(12 * PX);
-  });
-
-  if(!blocks.length) put("(활동지 원고를 아직 만들지 않았습니다)", 12, false, "#7C8DA0");
-  return pages;
-}
-function roundRect(ctx, x, y, w, h, r){
-  ctx.beginPath();
-  ctx.moveTo(x + r, y);
-  ctx.arcTo(x + w, y, x + w, y + h, r);
-  ctx.arcTo(x + w, y + h, x, y + h, r);
-  ctx.arcTo(x, y + h, x, y, r);
-  ctx.arcTo(x, y, x + w, y, r);
-  ctx.closePath();
-}
-const canvasBlob = cv => new Promise(ok => cv.toBlob(ok, "image/png"));
-
-async function saveSheetPng(t, d, btn){
-  const keep = btn.textContent; btn.disabled = true; btn.textContent = "…";
-  try{
-    const pages = drawSheetPages(t, d);
-    for(let i = 0; i < pages.length; i++){
-      const blob = await canvasBlob(pages[i]);
-      saveBlob(blob, `활동지_${safeName(t.name)}${pages.length > 1 ? `_${i + 1}` : ""}.png`);
-    }
-  }catch(e){
-    console.warn("[활동지 그림]", e);
-    const m = el("d-imgmsg");
-    if(m){ m.hidden = false; m.style.color = "var(--low)"; m.textContent = e.message; }
-  }
-  btn.disabled = false; btn.textContent = keep;
-}
-
-let _sheetPngUrls = [];
-function previewSheetPng(t, d){
-  const box = el("d-imgprev"); if(!box) return;
-  _sheetPngUrls.forEach(u => URL.revokeObjectURL(u)); _sheetPngUrls = [];
-  const pages = drawSheetPages(t, d);
-  Promise.all(pages.map(canvasBlob)).then(blobs => {
-    if(!el("d-imgprev")) return;
-    box.innerHTML = blobs.map(b => {
-      const u = URL.createObjectURL(b); _sheetPngUrls.push(u);
-      return `<img src="${u}" alt="활동지 미리 보기">`; }).join("");
-  });
-}
-
-function paintSheet(t, d){
-  const box = el("d-sheetpanel"); if(!box) return;
-  const opts = seeOpts(t), sh = d.sheet || {blocks:[]}, blocks = sh.blocks || [];
-  const src = sheetSrc(d, opts), total = sheetLen(sh);
-  const gLen = (sh.goal || "").length;
-  box.innerHTML = `
-    <div class="ph"><h2>② 활동지 설계</h2>
-      <span class="r">${blocks.length ? `<button class="ghost" id="d-sheetgen" type="button">다시 만들기</button>` : ``}</span></div>
-    <div class="pb">
-      ${blocks.length ? `
-        <div class="field">
-          <span class="lab">학생용 목표 <span class="muted">— 오늘 할 일만. 교사용 학습목표와 다른 문장입니다</span></span>
-          <textarea id="sh-goal" class="goal" placeholder="예) 우리 반 이야기를 리듬으로 만들어 봅시다">${esc(sh.goal || "")}</textarea>
-          <div class="hint${gLen > SHEET_LIMITS.goal ? " over" : ""}">${gLen}자 / ${SHEET_LIMITS.goal}자${
-            gLen > SHEET_LIMITS.goal ? " — 두 가지를 담았다면 하나는 지도안으로 보내세요" : ""}</div>
-        </div>
-        ${blocks.map((b, i) => sheetCard(b, i, d)).join("")}
-        <div class="fl-sum">
-          <span>활동지 전체 <b class="${total > SHEET_LIMITS.total ? "over" : "fit"}">${total}자</b>
-            <span class="muted">/ ${SHEET_LIMITS.total}자</span></span>
-          ${total > SHEET_LIMITS.total ? `<span class="muted">설명이 섞였는지 봅니다 — 그 문장은 지도안으로</span>` : ``}
-        </div>
-        ${sheetImgHTML(d)}` : `<div class="empty-action">
-        <span class="mark" aria-hidden="true">${ICON.pen()}</span>
-        <span class="copy"><b>관점이 붙은 활동마다 쓰는 칸을 만듭니다</b>
-          <span>${src.length ? `지금 ${src.length}개 활동이 칸이 됩니다. 동기 유발에는 칸을 만들지 않습니다.`
-            : "흐름에서 무엇을 보는지 먼저 골라 주세요."}</span></span>
-        <span class="actions"><button class="primary" id="d-sheetgen" type="button"${src.length?"":" disabled"}>활동지 원고 만들기</button></span>
-      </div>`}
-      <div class="fl-msg" id="d-sheetmsg" hidden></div>
-    </div>`;
-
-  const g = el("d-sheetgen");
-  if(g) g.onclick = () => genSheet(t, d, g);
-  const goal = el("sh-goal");
-  if(goal){ autoGrow(goal); goal.oninput = () => autoGrow(goal);
-    goal.onchange = () => { d.sheet.goal = goal.value.trim(); save(); paintSheet(t, d); }; }
-  box.querySelectorAll(".sh").forEach(card => {
-    const b = d.sheet.blocks[+card.dataset.si], q = x => card.querySelector(x);
-    q(".st").onchange = e => { b.title = e.target.value.trim(); save(); };
-    q(".sk").onchange = e => { b.kind = e.target.value.trim(); save(); paintSheet(t, d); };
-    q(".sa").onchange = e => { b.ask = e.target.value.trim(); save(); paintSheet(t, d); };
-    q(".sq").onchange = e => { b.q = e.target.value.trim(); save(); paintSheet(t, d); };
-    q(".sl").onchange = e => { b.lines = Math.min(12, Math.max(1, +e.target.value || 3)); save(); paintSheet(t, d); };
-    card.querySelectorAll("textarea").forEach(x => { autoGrow(x); x.oninput = () => autoGrow(x); });
-  });
-  box.querySelectorAll("[data-srm]").forEach(btn => btn.onclick = () => {
-    if(!confirm("이 칸을 지웁니다.")) return;
-    d.sheet.blocks.splice(+btn.dataset.srm, 1); save(); paintSheet(t, d); });
-
-  const png = el("d-png");
-  if(png) png.onclick = () => saveSheetPng(t, d, png);
-  const pv = el("d-pngview");
-  if(pv) pv.onclick = () => previewSheetPng(t, d);
-  paintOut(t, d);
-}
-
-/* 활동지를 그림으로 뽑는 자리. 그림 모델에 맡기지 않고 브라우저가 직접 그린다 —
-   활동지는 글자가 한 자도 틀리면 안 되는 종이인데, 그림 모델은 글자를 흘린다.
-   판면도 이쪽이 낫다. 칸 테두리와 답 줄의 자리를 우리가 정할 수 있다 */
-function sheetImgHTML(d){
-  return `<div class="panel-sub">
-    <div class="fieldhead"><span class="lab">그림으로 뽑기</span>
-      <span class="r muted">A4 · 인쇄용 200dpi</span></div>
-    <div class="rowbtns">
-      <button class="primary" id="d-png" type="button">활동지 PNG 내려받기</button>
-      <button class="ghost" id="d-pngview" type="button">미리 보기</button>
-    </div>
-    <div class="hint" style="margin-top:6px">글자는 원고 그대로 나옵니다.
-      클래스팅·e학습터에 그대로 올리거나 태블릿으로 나눠 줄 수 있습니다.</div>
-    <div class="fl-msg" id="d-imgmsg" hidden></div>
-    <div class="imgprev" id="d-imgprev"></div>
-  </div>`;
-}
 
 /* 파일 패널은 흐름·원고가 생길 때마다 다시 그린다 —
    한 번만 그리면 나중에 원고를 만들어도 버튼이 잠긴 채로 남는다 */
 function paintOut(t, d){
   const box = el("d-outpanel"); if(!box) return;
-  const hasFlow = (d.flow || []).length, hasSheet = (d.sheet?.blocks || []).length;
-  const hasDeck = (d.slides || []).length;
+  const hasFlow = (d.flow || []).length;
   box.innerHTML = `
-    <div class="ph"><h2>③ 완성</h2></div>
+    <div class="ph"><h2>② 완성</h2></div>
     <div class="pb">
       <div class="rowbtns">
         <button class="ghost" id="d-hwpx" type="button"${hasFlow?"":" disabled"}>지도안 한글파일</button>
-        <button class="ghost" id="d-sheethwpx" type="button"${hasSheet?"":" disabled"}>활동지 한글파일</button>
-        <button class="ghost" id="d-pptx" type="button"${hasDeck?"":" disabled"}>수업자료 PPTX</button>
       </div>
       <div class="hint" style="margin-top:8px">${hasFlow
-        ? "한글에서 열어 고칠 수 있습니다."
+        ? "한글에서 열어 고칠 수 있습니다. <b>활동지와 수업자료를 만드는 프롬프트가 지도안 끝에 함께 실립니다.</b>"
         : "활동 흐름을 먼저 만들어 주세요."}</div>
+      ${hasFlow ? `<div class="promptbox">
+        ${["sheet","deck"].map(k => `<div class="prow">
+          <span class="pname">${esc(PROMPT_TITLES[k])}</span>
+          <button class="ghost" type="button" data-copy="${k}">복사</button></div>`).join("")}
+        <div class="hint">쓰시는 AI에 그대로 넣으면 됩니다. 이 도구는 활동지·수업자료 파일을 만들지 않습니다 —
+          글자가 한 자도 틀리면 안 되는 종이를 어설프게 그리는 것보다, 만드는 법을 정확히 적어 드리는 편이 낫습니다.</div>
+      </div>` : ``}
       <div class="fl-msg" id="d-outmsg" hidden></div>
     </div>`;
   const hw = el("d-hwpx");
   if(hw) hw.onclick = () => saveHwpx(t, d, hw);
-  const shw = el("d-sheethwpx");
-  if(shw) shw.onclick = () => saveSheet(t, d, shw);
-  const pp = el("d-pptx");
-  if(pp) pp.onclick = () => savePptx(t, d, pp);
+  box.querySelectorAll("[data-copy]").forEach(b => b.onclick = async () => {
+    const txt = b.dataset.copy === "sheet" ? sheetPrompt(t, d) : deckPrompt(t, d);
+    try{ await navigator.clipboard.writeText(txt); }
+    catch(e){
+      /* 클립보드가 막히면 조용히 실패하지 않는다 — 골라 둔 채로 돌려준다 */
+      const ta = document.createElement("textarea");
+      ta.value = txt; document.body.appendChild(ta); ta.select();
+      try{ document.execCommand("copy"); }catch(e2){}
+      ta.remove();
+    }
+    const keep = b.textContent; b.textContent = "복사했습니다";
+    setTimeout(() => { b.textContent = keep; }, 1500);
+  });
 }
 
-function sheetCard(b, i, d){
-  const from = (d.flow || [])[b.from];
-  const len = askLen(b), over = len > SHEET_LIMITS.ask;
-  return `<div class="fl sh${over ? " nosee" : ""}" data-si="${i}">
-    <div class="fl-head">
-      <input type="text" class="st" value="${esc(b.title || "")}" placeholder="아이가 하는 일로" aria-label="활동 제목">
-      <input type="text" class="sk" value="${esc(b.kind || "")}" placeholder="유형" aria-label="유형"
-        style="width:96px" maxlength="${SHEET_LIMITS.kind}">
-    </div>
-    ${from ? `<div class="sh-from">흐름 ${b.from + 1}. ${esc(from.name || "")}</div>` : ``}
-    <div class="fl-row"><span class="lab">지시</span>
-      <textarea class="sa" placeholder="무엇을 하라는 한 줄">${esc(b.ask || "")}</textarea></div>
-    <div class="fl-row"><span class="lab">물음</span>
-      <textarea class="sq" placeholder="판단·근거를 묻는 말. 어느 쪽을 골라도 채워지는 틀로">${esc(b.q || "")}</textarea></div>
-    <div class="fl-row"><span class="lab">답 칸</span>
-      <input type="text" class="sl" value="${+b.lines || 3}" inputmode="numeric" style="width:64px">
-      <span class="muted" style="align-self:center">줄</span></div>
-    <div class="fl-act">
-      <span class="muted" style="margin-right:auto;font-size:11.5px${over ? ";color:var(--mid)" : ""}">
-        읽는 글자 ${len}자 / ${SHEET_LIMITS.ask}자${over ? " — 설명이 섞였는지 봅니다" : ""}</span>
-      <button class="ghost danger" type="button" data-srm="${i}">지우기</button></div>
-  </div>`;
+/* ══ 활동지·수업자료 만들기 프롬프트 ══
+   이 도구는 활동지와 수업자료를 만들지 않는다. 대신 무엇을 어떻게 만들지 적은 글을 준다.
+   교사가 그대로 복사해 쓰던 AI에 넣으면 된다.
+
+   규칙은 교육청 배포 실물을 조사한 결과 그대로다 — 활동지에는 성취기준 코드·차시·
+   소요 시간·채점 기준이 9종 중 0건이었고, 수업자료는 96%가 표지에 성취기준을 싣는다.
+   같은 수업이라도 학생이 손에 드는 종이와 교사가 띄우는 화면은 규칙이 반대다. */
+const PROMPT_TITLES = {sheet:"활동지 만들 때 쓸 프롬프트", deck:"수업자료 만들 때 쓸 프롬프트"};
+
+function promptHead(t, d){
+  const codes = (t.standards || []).map(c => `[${c}] ${CODEMAP[c]?.text || ""}`).join("\n  ");
+  return `초등학교 ${S.klass.grade}학년 ${subjShort(t.subject)} 수업이다.
+
+[학습목표] ${d.goal || "(아직 쓰지 않음)"}
+[성취기준]
+  ${codes || "(없음)"}
+[활동 흐름]
+${(d.flow || []).map((x, i) => `  ${i + 1}. [${x.phase} ${x.min}분] ${x.name}`
+  + ((x.asks || []).length ? `\n     발문: ${x.asks.join(" / ")}` : "")
+  + ((x.steps || []).length ? `\n     하는 일: ${x.steps.join(" / ")}` : "")).join("\n") || "  (아직 없음)"}`;
+}
+function sheetPrompt(t, d){
+  const opts = seeOpts(t);
+  /* 학생이 손으로 무언가 하는 활동이면 칸이 된다. 관점이 아직 없다고 활동을 빠뜨리지 않는다 —
+     관점은 무엇을 볼지 정하는 것이지, 학생이 할 일이 있는지 가리는 잣대가 아니다. */
+  const live = (d.flow || []).filter(r =>
+    seeOK(r, opts) || (r.asks || []).length || (r.steps || []).length);
+  return `${promptHead(t, d)}
+[관찰 관점] ${opts.join(" · ") || "(없음)"}
+
+위 수업에서 학생이 손에 들고 연필로 쓰는 활동지를 만들어 줘.
+칸은 다음 활동마다 하나씩, 이 순서 그대로.
+${live.map((r, i) => `  ${i + 1}. ${r.name}`).join("\n") || "  (활동을 먼저 짜야 한다)"}
+
+규칙
+- 교사가 말로 할 것을 종이에 적지 않는다. 상황·배경·왜 하는지는 넣지 않는다.
+  종이에 남는 글은 무엇을 하라는 지시와 판단을 묻는 물음뿐이다.
+- 한 칸에서 활동을 시작하기 전에 읽는 글자는 지시와 물음을 합쳐 60자 안쪽이다.
+  60자면 6학년이 10초 안에 읽는다.
+- 한 문장에 한 가지만. 25자를 넘기면 자른다.
+- 칸 제목은 아이가 하는 일로 적는다. 설계 의도를 이름으로 삼지 않는다.
+- 물음은 결론을 심지 않는다. 어느 쪽을 골라도 채워지는 틀로 쓴다.
+- 채점 기준·성취기준 코드·차시·소요 시간을 적지 않는다. 아이 종이에 없는 것들이다.
+- 학생용 목표는 20자 안쪽으로 오늘 할 일만. 조건을 붙이지 않는다.
+- 답 칸 줄 수는 ${S.klass.grade}학년이 3분 안에 채울 분량으로 정한다.
+- 처음 나오는 어려운 말에는 괄호로 예를 붙인다.
+- 전체 글자 수는 400자 안쪽으로 한다.
+
+A4 한 장으로 인쇄할 수 있게 만들어 줘.`;
+}
+function deckPrompt(t, d){
+  const rb = (t.rubric || []).filter(x => (x.text || "").trim());
+  return `${promptHead(t, d)}
+[학생이 볼 수준 서술 — 학생 말로 옮겨 한 장에 싣는다]
+${rb.map(x => `  - ${x.level}: ${x.text}`).join("\n") || "  (없음)"}
+
+위 수업에서 교사가 띄울 화면(슬라이드)을 만들어 줘.
+
+규칙
+- 표지에 성취기준 코드를 싣는다. 화면은 교사가 띄우는 것이라 활동지와 반대다.
+- 차시와 소요 시간은 넣지 않는다. 아이를 재촉하는 글자가 된다.
+- 한 장에 한 가지만. 제목과 본문을 합쳐 120자를 넘기지 않는다.
+  실물 75%가 121자 안쪽이었다. 넘칠 것 같으면 장을 나누거나 발표자 노트로 내린다.
+- 교사가 할 설명·근거·까닭은 화면이 아니라 발표자 노트에 적는다. 화면은 학생이 본다.
+- 수준 서술은 학생 말로 바꿔 한 장 싣는다.
+  ‘제한적으로 수행한다’ 같은 말을 아이에게 그대로 주지 않는다.
+- 차례는 표지 → 학습문제 → 활동마다 발문과 안내 → 정리다.`;
 }
 
 /* ── 지도안 본문 ──
@@ -3745,43 +3103,19 @@ function planBody(t, d, St){
   line(`본 것   : ${d.reflect?.saw  || ""}`);
   line(`왜?     : ${d.reflect?.why  || ""}`);
   line(`다음엔  : ${d.reflect?.next || ""}`);
+
+  /* 활동지와 수업자료는 이 도구가 만들지 않는다 — 만드는 법을 지도안 끝에 실어 보낸다.
+     한글파일 하나만 들고 다니면 되도록, 따로 챙길 것을 만들지 않는다. */
+  head("활동지·수업자료 만들기");
+  line("아래 글을 그대로 복사해 쓰시는 AI에 넣으면 됩니다. 이 도구는 파일을 만들지 않습니다.");
+  line("");
+  bold(`▣ ${PROMPT_TITLES.sheet}`);
+  sheetPrompt(t, d).split("\n").forEach(x => line(x));
+  line("");
+  bold(`▣ ${PROMPT_TITLES.deck}`);
+  deckPrompt(t, d).split("\n").forEach(x => line(x));
   return P.join("");
 }
-/* ── 활동지 본문 ──
-   학생이 손에 들고 쓰는 종이다. 차시·성취기준 코드·소요 시간·채점 기준을 넣지 않는다
-   (교육청 배포 실물 9종 중 0건). 그 넷은 지도안이 들고 있으면 된다 */
-function sheetBody(t, d, St){
-  const P = [], sh = d.sheet || {blocks:[]};
-  const line = (x, cp, pp) => P.push(hwpP(x, cp, pp));
-  line("(     )학년 (     )반    이름 (               )");
-  line("");
-  line(sh.goal || "오늘의 목표", St.title, St.center);
-  line("");
-  (sh.blocks || []).forEach((b, i) => {
-    line(`${i + 1}. ${b.title || ""}${b.kind ? `   [ ${b.kind} ]` : ""}`, St.head);
-    if(b.ask) line(b.ask);
-    if(b.q)   line(b.q);
-    /* 밑줄만 그은 빈 줄 — 여기에 학생이 쓴다 */
-    for(let k = 0; k < (+b.lines || 3); k++) line("　".repeat(30), St.ul);
-    line("");
-  });
-  if(!(sh.blocks || []).length) line("(활동지 원고를 아직 만들지 않았습니다)");
-  return P.join("");
-}
-
-async function saveSheet(t, d, btn){
-  const keep = btn.textContent; btn.disabled = true; btn.textContent = "…";
-  try{
-    const blob = await buildHwpx(St => sheetBody(t, d, St));
-    saveBlob(blob, `활동지_${safeName(t.name)}.hwpx`);
-  }catch(e){
-    console.warn("[활동지]", e);
-    const m = el("d-outmsg");
-    if(m){ m.hidden = false; m.style.color = "var(--low)"; m.textContent = e.message; }
-  }
-  btn.disabled = false; btn.textContent = keep;
-}
-
 const klassLine = (t, d) =>
   `${S.klass.grade}학년 ${S.klass.room || ""}반 · ${subjShort(t.subject)} · ${periodsOf(d)}차시(${minutesOf(d)}분)`;
 const safeName = v => String(v || "지도안").replace(/[\/:*?"<>|]/g, "").trim().slice(0, 40) || "지도안";
@@ -4088,7 +3422,7 @@ ${rules}
 function paintBar(t, d){
   const bar = el("dbar"); if(!bar) return;
   const stage = designStage(d);
-  const to = ["d-flowpanel", "d-sheetpanel", "d-deckpanel", "d-outpanel"];
+  const to = ["d-flowpanel", "d-outpanel"];
   bar.hidden = false;
   bar.innerHTML = `<div class="dbar-in">
     <button class="dbar-back" id="dbar-back" type="button" aria-label="목록으로">◀</button>
