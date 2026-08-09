@@ -237,8 +237,66 @@ textarea{line-height:1.7}
 .empty-action .copy{min-width:0;line-height:1.45}.empty-action .copy b{display:block;color:var(--ink);font-size:13.5px}
 .empty-action .copy span{display:block;margin-top:3px;color:var(--ink-3);font-size:12px}
 .empty-action .actions{margin-left:auto;display:flex;gap:7px;flex:0 0 auto}
+.empty-action .mark .ic{width:19px;height:19px}
 .prep-empty{min-height:136px;border-color:var(--rule-strong);background:var(--raise)}
 .record-empty{margin-top:10px}
+/* 수업 설계 — 성취기준 원문은 대조하는 글이라 자르지 않고 통째로 보인다 */
+.dsg-std{margin-top:5px;padding:7px 10px;border-radius:9px;background:var(--raise);
+         border:1px solid var(--rule);font-size:12.5px;line-height:1.6}
+.dsg-std .mono{color:var(--accent);font-size:11.5px;margin-right:5px}
+.dsg-fb{display:block;margin-top:3px;font-style:normal;color:var(--ink-3);font-size:12px}
+/* 학습목표는 한 줄로 끝나지 않는다 — 쓰는 만큼 늘어난다 */
+textarea.goal{width:100%;min-height:66px;font-size:13.5px;line-height:1.7;resize:none;overflow:hidden}
+/* 활동 카드 — 표가 아니라 카드다. 교사가 고치는 것이 주 작업이라 늘 열려 있다 */
+.fl{border:1px solid var(--rule);border-radius:12px;padding:11px 12px;margin-top:9px;background:var(--surface)}
+.fl.nosee{border-color:var(--mid);background:color-mix(in srgb,var(--mid) 5%,var(--surface))}
+.fl-head{display:flex;gap:7px;align-items:center;flex-wrap:wrap}
+.fl-head select{flex:0 0 auto}.fl-head .nm{flex:1 1 180px;min-width:120px;font-weight:600}
+.fl-head .mn{width:62px;text-align:right}
+.fl-row{display:flex;gap:8px;margin-top:7px;align-items:flex-start}
+.fl-row .lab{flex:0 0 34px;padding-top:7px;font-size:11.5px;color:var(--ink-3)}
+.fl-row textarea,.fl-row input{flex:1;min-width:0}
+.fl-row textarea{min-height:38px;font-size:12.5px;line-height:1.65;resize:none;overflow:hidden}
+.fl-act{display:flex;gap:5px;justify-content:flex-end;margin-top:7px}
+.fl-act button{padding:3px 9px;font-size:11.5px;min-height:0}
+.fl-msg{margin-top:6px;font-size:11.5px;color:var(--mid)}
+.fl-see{display:flex;flex-wrap:wrap;gap:5px;padding-top:2px}
+.fl-see .chip{cursor:pointer}
+.fl-see .chip:disabled{opacity:.35;cursor:not-allowed}
+.fl-see .hookc[aria-pressed="true"]{background:var(--ink-3);border-color:var(--ink-3)}
+.dsg-elem{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;padding:9px 12px;margin-bottom:4px;
+          border-radius:11px;background:var(--raise);border:1px solid var(--rule);font-size:13px}
+.dsg-elem .lab{margin:0;flex:0 0 auto}.dsg-elem b{color:var(--ink)}
+/* 평가 요소 → 관찰 관점은 위아래가 아니라 안팎이다. 선으로 매어 둔다 */
+.dsg-name{font-size:14px;font-weight:650;color:var(--ink)}
+.dsg-crit{margin-top:3px;font-size:12.5px;color:var(--ink-2);line-height:1.6}
+.dsg-sub{margin:9px 0 0 4px;padding-left:13px;border-left:2px solid var(--accent-line)}
+.dsg-sub .lab{margin-bottom:5px}
+.fl-sum{display:flex;align-items:center;gap:9px;margin-top:11px;padding:9px 12px;border-radius:11px;
+        background:var(--raise);border:1px solid var(--rule);font-size:12.5px}
+.fl-sum b{font-family:var(--mono);font-size:14px}
+.fl-sum .over{color:var(--low)}.fl-sum .fit{color:var(--good)}
+.hint.over{color:var(--low)}
+.sh .fl-head .st{flex:1 1 200px;font-weight:600}
+.sh-from{margin-top:5px;font-size:11.5px;color:var(--ink-3)}
+.panel-sub{margin-top:12px;padding:12px 13px;border-radius:12px;
+           border:1px solid var(--rule);background:var(--raise)}
+.imgprev:not(:empty){margin-top:10px;padding:9px;border-radius:11px;background:var(--surface);
+                     border:1px solid var(--rule)}
+.imgprev img{display:block;max-width:100%;height:auto;border-radius:7px}
+/* 손이 먼저다 — 막지 않는다. 자리를 보여 주고 판단은 교사가 한다 */
+.hands{margin-top:11px;padding:12px 13px;border-radius:12px;border:1px solid var(--mid);
+       background:color-mix(in srgb,var(--mid) 6%,var(--surface))}
+.hands h4{margin:0 0 4px;font-size:13.5px;color:var(--ink);display:flex;align-items:center;gap:7px}
+.hands h4 .ic{width:17px;height:17px;color:var(--mid)}
+.hands p{margin:0 0 9px;font-size:12.5px;line-height:1.65;color:var(--ink-2)}
+.hands label{display:flex;gap:7px;align-items:flex-start;margin-top:5px;font-size:12.5px;
+             line-height:1.55;color:var(--ink-2);cursor:pointer}
+.hands label input{margin-top:3px;flex:0 0 auto}
+.hands .why{width:100%;margin-top:8px}
+.hands .act{display:flex;gap:7px;justify-content:flex-end;margin-top:9px}
+.hands.done{border-color:var(--rule);background:var(--raise)}
+.hands.done h4 .ic{color:var(--ink-3)}
 /* 고른 평가 — 무엇을 기록하는 중인지 한 줄로 */
 .pickhead{display:flex;gap:10px;align-items:baseline;flex-wrap:wrap;margin-top:10px;
           padding-bottom:9px;border-bottom:1px solid var(--rule)}
@@ -467,6 +525,15 @@ tr:hover .rowact,tr:focus-within .rowact{opacity:1}
 @media (prefers-reduced-motion:reduce){tr .rowact{transition:none}}
 .muted{color:var(--ink-3);font-size:12.5px}
 .rowbtns{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+/* 활동지·수업자료는 파일이 아니라 만드는 법으로 나간다 */
+.promptbox{margin-top:12px;padding:11px 13px;border:1px solid var(--rule);border-radius:12px;background:var(--raise)}
+.promptbox .prow{display:flex;align-items:center;gap:10px;padding:5px 0}
+.promptbox .prow + .prow{border-top:1px solid var(--rule)}
+.promptbox .pname{flex:1;font-size:13.5px;font-weight:600;color:var(--ink)}
+.promptbox .hint{margin-top:7px;padding-top:8px;border-top:1px solid var(--rule)}
+.promptbox .ptext{margin:2px 0 8px;padding:11px 13px;border:1px solid var(--rule);border-radius:10px;
+  background:var(--surface);font-family:var(--mono);font-size:12.5px;line-height:1.7;color:var(--ink-2);
+  white-space:pre-wrap;word-break:break-word;max-height:360px;overflow:auto}
 .help{margin-top:10px;font-size:12.5px;color:var(--ink-2)}
 .help summary{font-size:12px;color:var(--ink-3)}
 .help div{padding-top:8px;line-height:1.7}
@@ -516,6 +583,23 @@ dialog::backdrop{background:rgba(8,12,20,.45)}
 .dsteps i{height:1px;flex:1;max-width:72px;background:var(--rule-strong)}
 .dsteps span[aria-current="step"]{color:var(--accent)}
 .dsteps span[aria-current="step"] b{background:var(--accent);color:var(--on-accent)}
+/* 설계 단계 띠 — 탭 아래에 붙어 스크롤을 따라온다 */
+.dbar{border-top:1px solid var(--rule);background:var(--raise)}
+.dbar-in{max-width:1120px;margin:0 auto;padding:7px 18px;display:flex;align-items:center;gap:10px}
+.dbar-back{background:none;border:0;color:var(--ink-3);padding:2px 6px;border-radius:8px;font-size:12px}
+.dbar-back:hover{background:var(--sink);color:var(--accent)}
+.dbar-name{flex:0 1 auto;min-width:0;font-size:12.5px;font-weight:650;color:var(--ink);
+           white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dbar-steps{margin-left:auto;display:flex;align-items:center;gap:4px;flex:0 0 auto}
+.dstep{display:inline-flex;align-items:center;gap:5px;background:none;border:0;border-radius:9px;
+       padding:4px 9px;font-size:12px;font-weight:600;color:var(--ink-3)}
+.dstep:hover{background:var(--sink);color:var(--ink-2)}
+.dstep i{display:inline-grid;place-items:center;width:17px;height:17px;border-radius:999px;
+         background:var(--sink);color:var(--ink-3);font-style:normal;font-size:10.5px;font-weight:700}
+.dstep.done{color:var(--good)}.dstep.done i{background:var(--good);color:#fff}
+.dstep.now{color:var(--accent);background:var(--accent-soft)}
+.dstep.now i{background:var(--accent);color:var(--on-accent)}
+@media (max-width:640px){ .dbar-name{display:none} .dstep{padding:4px 7px;font-size:11.5px} }
 .dtask{padding:12px 14px;border-bottom:1px solid var(--rule);background:var(--raise);
        max-height:66vh;overflow:auto}
 .dtask input,.dtask textarea{width:100%}
@@ -667,10 +751,13 @@ input.elnew{border:1px solid var(--accent-line);border-radius:999px;padding:3px 
   </div>
   <nav class="tabs" role="tablist">
     <button class="tab" role="tab" id="tab-prep" aria-selected="false" type="button">준비</button>
+    <!-- 평가를 먼저 짜고 수업을 나중에 짠다(백워드). 탭 순서가 그 순서다 -->
+    <button class="tab" role="tab" id="tab-design" aria-selected="false" type="button">수업 설계</button>
     <button class="tab" role="tab" id="tab-write" aria-selected="true" type="button">기록</button>
     <button class="tab" role="tab" id="tab-check" aria-selected="false" type="button">살펴보기</button>
     <button class="tab" role="tab" id="tab-ai" aria-selected="false" type="button">AI 연결</button>
   </nav>
+  <div class="dbar" id="dbar" hidden></div>
 </header>
 
 <main class="wrap" id="main"></main>
@@ -811,6 +898,9 @@ input.elnew{border:1px solid var(--accent-line);border-radius:999px;padding:3px 
 
 /* ══ 성취기준 원문 (2022 개정 초등 611건) ══ */
 const STD = /*__STD__*/{}/*__/STD__*/;
+/* 한글 문서 골격(python-hwpx의 Skeleton.hwpx, Apache-2.0 · THIRD-PARTY-NOTICES.md).
+   글꼴과 문단모양 정의를 그대로 쓰고 본문만 갈아 끼운다 — 스타일을 손으로 짜지 않는다 */
+const HWPX_SKEL = /*__SKEL__*/""/*__/SKEL__*/;
 
 /* ══ 교과·창체·행동특성 평가 키워드 (v1 확장 자료, 688개) ══ */
 const KW = /*__KW__*/{"subj":{},"cca":{"auto":[],"career":[]},"behavior":[]}/*__/KW__*/;
@@ -1102,7 +1192,10 @@ const ICON = {
   cca:      () => SVG('<path d="m21 3.5-18 7.2 7.2 2.3L21 3.5Z"/><path d="m10.2 13 1.8 7.5 3.4-5.4"/>'),
   behavior: () => SVG('<path d="M12 21v-8"/><path d="M12 13C12 9 9.5 6.5 5 6.5c0 4.5 2.5 6.5 7 6.5Z"/><path d="M12 11c0-3.5 2-5.5 6-5.5 0 4-2 5.5-6 5.5Z"/>'),
   /* 주의 — 도로 표지. 위반(stop)과 함께 stroke 2.0 */
-  warn: () => SVG('<path d="M12 3.5 22 20H2L12 3.5Z"/><path d="M12 9.5v5"/><path d="M12 17.3v.2"/>', 2)
+  warn: () => SVG('<path d="M12 3.5 22 20H2L12 3.5Z"/><path d="M12 9.5v5"/><path d="M12 17.3v.2"/>', 2),
+  /* 수업 설계 — 평가에서 활동으로 갈라져 나가는 모양 */
+  flow: () => SVG('<circle cx="5.5" cy="12" r="2.5"/><circle cx="18.5" cy="6" r="2.5"/><circle cx="18.5" cy="18" r="2.5"/><path d="M7.8 10.9 16.2 7"/><path d="M7.8 13.1 16.2 17"/>'),
+  hand: () => SVG('<path d="M9 11V5.2a1.7 1.7 0 0 1 3.4 0V11"/><path d="M12.4 11V6.6a1.7 1.7 0 0 1 3.4 0V11"/><path d="M15.8 11.4V8.6a1.7 1.7 0 0 1 3.4 0V15c0 3.3-2.4 5.8-5.8 5.8-2.4 0-4-1-5.2-2.8l-2.6-4a1.6 1.6 0 0 1 2.5-2L9 13.4"/>')
 };
 /* 근거유형 → 아이콘. 진행 표에서 글자 칩을 대신한다 */
 const SRC_ICON = {"직접관찰":"eye","수업산출물":"paper","자기평가서":"self",
@@ -1380,7 +1473,7 @@ async function aiCall(prompt, opt){
   opt = opt || {};
   if(!AI.key && !AI_PROXY) throw new Error("먼저 AI 연결 탭에서 키를 넣어 주세요.");
   const m = opt.model || AI.model || AI_MODELS[0];
-  const cfg = {temperature:0.3, maxOutputTokens:8192};
+  const cfg = {temperature:0.3, maxOutputTokens: opt.maxTokens || 8192};
   if(opt.json) cfg.responseMimeType = "application/json";   // 최신 모델은 생각 토큰을 쓰므로 여유 있게
   let res;
   try{
@@ -1523,29 +1616,30 @@ function render(){
       `<option value="${c.id}"${c.id===S.curId?" selected":""}>${esc(klassName(c))} · ${c.students.length}명${c.klass.demo?" (예시)":""}</option>`).join("")
     + `<option value="__new">＋ 새 학급 만들기</option>`;
   el("klass").style.display = S.classes.length ? "" : "none";
-  el("tab-prep").setAttribute("aria-selected", String(S.ui.tab === "prep"));
-  el("tab-write").setAttribute("aria-selected", String(S.ui.tab === "write"));
-  el("tab-check").setAttribute("aria-selected", String(S.ui.tab === "check"));
-  el("tab-ai").setAttribute("aria-selected", String(S.ui.tab === "ai"));
+  paintTabs();
   el("tab-ai").innerHTML = "AI 연결" + (aiOn() ? `<span class="dot" style="background:var(--good)"></span>` : "");
   const p = S.klass ? pointers().filter(x => x.sev !== "low").length : 0;
   el("tab-check").innerHTML = "살펴보기" + (p ? `<span class="dot"></span>` : "");
   const ready = !!(S.klass && S.classes.length);
-  // 학급을 만들기 전에는 기록·점검으로 갈 수 없다. 눌러도 안 되는 이유를 보이게 한다.
-  for(const id of ["tab-write","tab-check"]){
+  // 학급을 만들기 전에는 설계·기록·점검으로 갈 수 없다. 눌러도 안 되는 이유를 보이게 한다.
+  for(const id of ["tab-design","tab-write","tab-check"]){
     el(id).disabled = !ready;
     el(id).title = ready ? "" : "먼저 준비 탭에서 우리 반을 등록해 주세요";
   }
   if(!ready && S.ui.tab !== "ai") S.ui.tab = "prep";
-  el("tab-prep").setAttribute("aria-selected", String(S.ui.tab === "prep"));
-  el("tab-write").setAttribute("aria-selected", String(S.ui.tab === "write"));
-  el("tab-check").setAttribute("aria-selected", String(S.ui.tab === "check"));
+  paintTabs();
+  /* 설계 화면을 벗어나면 띠도 걷는다 */
+  const bar = el("dbar"); if(bar && S.ui.tab !== "design") bar.hidden = true;
   if(S.ui.tab === "ai"){ renderAI(); return; }
   if(!ready){ renderSetup(); return; }
   if(S.ui.tab === "prep") renderPrep();
+  else if(S.ui.tab === "design") renderDesign();
   else if(S.ui.tab === "check") renderCheck();
   else renderWrite();
 }
+const TABS = ["prep","design","write","check","ai"];
+const paintTabs = () => TABS.forEach(t =>
+  el("tab-" + t).setAttribute("aria-selected", String(S.ui.tab === t)));
 
 /* ── 설정 ── */
 function renderSetup(edit){
@@ -2672,6 +2766,733 @@ function renderPrep(){
   bindUpload();
 }
 
+/* ══ 수업 설계 — 백워드 3단계 ══
+   준비 탭에서 정한 루브릭을 활동으로 역산하는 자리다. 순서가 뒤집히지 않도록
+   루브릭이 없는 과제는 설계를 시작할 수 없게 막는다 — 역산할 지표가 없으면
+   활동 고르기가 다시 ‘재미있는 것’ 고르기로 돌아간다. */
+let _dsgId = "";
+/* 어느 프롬프트를 펴 두었나 — 확인하지 않고 복사하게 두지 않는다 */
+let _promptOpen = "";
+
+/* 초등 한 차시는 40분이다. 차시가 본디 단위이고 분은 거기서 나온다 —
+   프로젝트 수업이면 차시가 얼마든지 늘 수 있으므로 위를 막지 않는다 */
+const PERIOD_MIN = 40;
+const periodsOf = d => Math.max(1, d.periods || Math.round((d.minutes || 40) / PERIOD_MIN) || 1);
+const minutesOf = d => periodsOf(d) * PERIOD_MIN;
+
+function ensureDesign(t){
+  if(!t.design) t.design = {v:1, goal:"", periods:1, hands:null, flow:[],
+    sheet:{goal:"", blocks:[]}, slides:[], images:[], notAssessed:[],
+    reflect:{saw:"", why:"", next:""}, stale:{}, at:new Date().toISOString()};
+  return t.design;
+}
+/* 관문은 하나다 — 활동 흐름을 짜면 지도안이 나온다.
+   활동지와 수업자료는 이 도구가 만들지 않는다. 브라우저가 A4를 직접 그리고
+   OOXML을 손으로 짜는 길은 품질 상한이 낮아, 지금은 '무엇을 어떻게 만들지'를
+   프롬프트로 알려 주는 데까지만 한다. 만든 프롬프트는 지도안 끝에 함께 실린다. */
+function designStage(d){
+  return (d && (d.flow || []).length) ? 1 : 0;
+}
+const DSG_STEPS = ["지도안 설계", "완성"];
+const DSG_STAGE = ["설계 전", "지도안까지"];
+/* 수준 서술이 하나라도 있어야 역산이 된다. 이름과 코드만 있는 과제로는 못 짠다 */
+const designable = t => (t.rubric || []).some(r => (r.text || "").trim());
+
+function renderDesign(){
+  const t = S.tasks.find(x => x.id === _dsgId);
+  if(!t){ const b = el("dbar"); if(b) b.hidden = true; renderDesignList(); return; }
+  const d = ensureDesign(t), stage = designStage(d);
+
+  el("main").innerHTML = `<div class="stack">
+    <div class="panel">
+      <div class="ph"><h2>${esc(t.name)}</h2>
+        <span class="r"><span class="muted">${esc(subjShort(t.subject))}${t.when?` · ${esc(t.when)}`:""}</span>
+          <button class="ghost" id="d-back" type="button">목록</button></span></div>
+
+    </div>
+
+    <div class="panel">
+      <div class="ph"><h2>역산할 재료</h2>
+        <span class="r"><button class="ghost" id="d-editrub" type="button">준비 탭에서 고치기</button></span></div>
+      <div class="pb">
+        <div class="field"><span class="lab">성취기준</span>
+          ${t.standards.length ? t.standards.map(c => `<div class="dsg-std">
+            <span class="mono">${esc(c)}</span> ${esc(CODEMAP[c]?.text || "")}</div>`).join("")
+            : `<div class="muted">성취기준이 걸려 있지 않습니다.</div>`}</div>
+        <div class="field">
+          <span class="lab">평가 요소</span>
+          <div class="dsg-name">${esc(t.name || "(이름 없음)")}</div>
+          ${t.criteria ? `<div class="dsg-crit">${esc(t.criteria)}</div>` : ``}
+          <div class="dsg-sub">
+            <span class="lab">관찰 관점 <span class="muted">— 위 요소를 한 층 잘게 쪼갠 것. 활동마다 이 가운데 무엇을 보는지 고릅니다</span></span>
+            ${seeOpts(t).length ? `<div class="tags">${seeOpts(t).map(k =>
+              `<span class="chip">${esc(k)}</span>`).join("")}</div>`
+              : `<div style="color:var(--mid)">아직 없습니다 — 「준비 탭에서 고치기」에서 골라 주세요.</div>`}
+          </div>
+        </div>
+        <div class="field" style="margin-bottom:0">
+          <span class="lab">루브릭 — 활동은 이 수준들이 드러나게 짠다</span>
+          ${(t.rubric||[]).map(r => `<div class="rline"><b>${esc(r.level)}</b><span>${esc(r.text)}${
+            r.fb ? `<em class="dsg-fb">→ ${esc(r.fb)}</em>` : ``}</span></div>`).join("")}</div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="ph"><h2>이 차시</h2></div>
+      <div class="pb">
+        <div class="field">
+          <span class="lab">학습목표 <span class="muted">— 주제를 얹은 문장은 여기에 씁니다</span></span>
+          <textarea id="d-goal" class="goal"
+            placeholder="예) 주변에서 만날 수 있는 직업인을 찾아, 매체를 고려하여 면담해 봅시다">${esc(d.goal||"")}</textarea>
+          <div class="hint" id="d-goalmsg"></div>
+        </div>
+        <div class="field inline" style="margin-bottom:0">
+          <span><span class="lab">차시</span><br>
+            <input type="number" id="d-per" min="1" step="1" value="${periodsOf(d)}" style="width:76px">
+            <span class="muted" id="d-permin">= ${minutesOf(d)}분</span></span>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel" id="d-flowpanel"></div>
+
+    <div class="panel" id="d-outpanel"></div>
+  </div>`;
+
+  el("d-back").onclick = () => { _dsgId = ""; renderDesign(); };
+  el("d-editrub").onclick = () => openTask(t.subject, t, () => renderDesign());
+
+  /* 재구성 문장이 성취기준 칸으로 새는 것을 막는 자리 — 새면 그대로
+     평가 계획과 나이스 기록까지 흘러간다 */
+  const goal = el("d-goal"), gmsg = el("d-goalmsg");
+  const checkGoal = () => {
+    gmsg.innerHTML = /\[\s*\d[가-힣]{1,4}\d{2}-\d{2}\s*\]/.test(goal.value)
+      ? `<span style="color:var(--mid)">성취기준 코드가 들어 있습니다. 학습목표 칸에는 <b>학생에게 줄 문장</b>만 씁니다 — 코드와 원문은 위 재료 칸이 들고 있습니다.</span>`
+      : ``;
+  };
+  goal.oninput = () => { checkGoal(); autoGrow(goal); };
+  checkGoal(); autoGrow(goal);
+  goal.onchange = () => { d.goal = goal.value.trim(); d.at = new Date().toISOString(); save(); };
+  /* 차시가 바뀌면 합계 기준이 바뀐다 — 흐름을 다시 그린다 */
+  const per = el("d-per");
+  per.oninput = () => { el("d-permin").textContent = "= " + Math.max(1, +per.value || 1) * PERIOD_MIN + "분"; };
+  per.onchange = () => {
+    const v = Math.max(1, Math.round(+per.value || 1));
+    per.value = v; d.periods = v; delete d.minutes;   // 옛 필드는 남기지 않는다
+    el("d-permin").textContent = "= " + v * PERIOD_MIN + "분";
+    save(); paintFlow(t, d);
+  };
+  paintFlow(t, d);
+  paintOut(t, d);
+  paintBar(t, d);
+}
+
+/* ── 관문① 활동 흐름 ── */
+const PHASES = ["도입", "전개", "정리"];
+const toLines = v => String(v).split("\n").map(s => s.trim()).filter(Boolean);
+const autoGrow = x => { x.style.height = "auto"; x.style.height = (x.scrollHeight + 2) + "px"; };
+/* 루브릭에 실제로 쓴 수준명만 고를 수 있게 한다 */
+/* 활동이 보는 것은 관찰 관점이다. 한 장면에서 여러 관점을 볼 수 있으므로 여럿 담는다.
+   수준(잘함·보통)이 아니다 — 한 활동에서 학생들이 그 수준으로 갈리는 것이지,
+   활동이 어느 한 수준만 드러내지는 않는다. */
+const seeOpts = t => (t.kw || []).filter(Boolean);
+/* 옛 데이터는 sees가 루브릭 수준명 하나였다. 그 값은 관점이 아니므로 버리고 다시 고르게 한다 */
+function seesOf(r){
+  if(Array.isArray(r?.sees)) return r.sees.filter(Boolean);
+  return r?.sees === "hook" ? ["hook"] : [];
+}
+/* 준비 탭에서 관점을 지우면 흐름이 가리킬 곳을 잃는다 — 남은 것만 인정한다 */
+const seesLive = (r, opts) => seesOf(r).filter(k => k === "hook" || opts.includes(k));
+const seeOK = (r, opts) => seesLive(r, opts).length > 0;
+
+function paintFlow(t, d){
+  const box = el("d-flowpanel"), rows = d.flow || [], lv = seeOpts(t);
+  const sum = rows.reduce((a, r) => a + (+r.min || 0), 0);
+  const nosee = rows.filter(r => !seeOK(r, lv)).length;
+  const want = minutesOf(d);
+  box.innerHTML = `
+    <div class="ph"><h2>① 지도안 설계</h2>
+      <span class="r">${rows.length ? `<button class="ghost" id="d-add" type="button">＋ 활동</button>
+        ${flowWritten(rows, lv) && rows.some(r => hasBlank(r, lv))
+          ? `<button class="ghost" id="d-fill" type="button">빈칸 채우기</button>` : ``}
+        <button class="ghost" id="d-gen" type="button">AI로 흐름 만들기</button>` : ``}</span></div>
+    <div class="pb">
+      <div class="dsg-elem"><span class="lab">평가 요소</span>
+        <b>${esc(t.name || "(이름 없음)")}</b>
+        <span class="muted">└ 관점</span>${lv.length
+          ? `<span class="muted">${esc(lv.join(" · "))}</span>`
+          : `<span style="color:var(--mid)">없습니다 — 준비 탭에서 골라 주세요</span>`}</div>
+      ${rows.length ? rows.map((r, i) => flowCard(r, i, lv, rows.length)).join("") + `
+        <div class="fl-sum">
+          <span>합계 <b class="${sum===want?"fit":(sum>want?"over":"")}">${sum}분</b>
+            <span class="muted">/ ${want}분</span></span>
+          ${sum!==want ? `<span class="muted">${sum>want?`${sum-want}분 넘습니다`:`${want-sum}분 남았습니다`}</span>` : ``}
+          ${nosee ? `<span style="margin-left:auto;color:var(--mid)">지표 없는 활동 ${nosee}개</span>` : ``}
+        </div>` + handsCard(d) : `<div class="empty-action">
+        <span class="mark" aria-hidden="true">${ICON.flow()}</span>
+        <span class="copy"><b>루브릭에서 활동을 역산합니다</b>
+          <span>위 수준 서술이 드러나는 활동만 만들고, 어느 지표도 보지 않는 활동은 넣지 않습니다.</span></span>
+        <span class="actions">
+          <button class="primary" id="d-gen" type="button">AI로 흐름 만들기</button>
+          <button class="ghost" id="d-add" type="button">직접 쓰기</button></span></div>
+        ${aiOn() ? `` : `<div class="hint">AI로 만들려면 「AI 연결」이 필요합니다. 직접 써도 됩니다.</div>`}`}
+      <div class="fl-msg" id="d-flowmsg" hidden></div>
+    </div>`;
+  bindFlow(t, d);
+  /* 흐름이 바뀌면 프롬프트에 실릴 활동도 달라진다 */
+  paintOut(t, d);
+}
+
+
+/* 파일 패널은 흐름·원고가 생길 때마다 다시 그린다 —
+   한 번만 그리면 나중에 원고를 만들어도 버튼이 잠긴 채로 남는다 */
+function paintOut(t, d){
+  const box = el("d-outpanel"); if(!box) return;
+  const hasFlow = (d.flow || []).length;
+  box.innerHTML = `
+    <div class="ph"><h2>② 완성</h2></div>
+    <div class="pb">
+      <div class="rowbtns">
+        <button class="ghost" id="d-hwpx" type="button"${hasFlow?"":" disabled"}>지도안 한글파일</button>
+      </div>
+      <div class="hint" style="margin-top:8px">${hasFlow
+        ? "한글에서 열어 고칠 수 있습니다. <b>활동지와 수업자료를 만드는 프롬프트가 지도안 끝에 함께 실립니다.</b>"
+        : "활동 흐름을 먼저 만들어 주세요."}</div>
+      ${hasFlow ? `<div class="promptbox">
+        ${["sheet","deck"].map(k => `<div class="prow">
+          <span class="pname">${esc(PROMPT_TITLES[k])}</span>
+          <button class="ghost" type="button" data-see="${k}">${_promptOpen === k ? "접기" : "보기"}</button>
+          <button class="ghost" type="button" data-copy="${k}">복사</button></div>
+          ${_promptOpen === k
+            ? `<pre class="ptext">${esc(k === "sheet" ? sheetPrompt(t, d) : deckPrompt(t, d))}</pre>`
+            : ``}`).join("")}
+        <div class="hint">쓰시는 AI에 그대로 넣으면 됩니다. 이 도구는 활동지·수업자료 파일을 만들지 않습니다 —
+          글자가 한 자도 틀리면 안 되는 종이를 어설프게 그리는 것보다, 만드는 법을 정확히 적어 드리는 편이 낫습니다.</div>
+      </div>` : ``}
+      <div class="fl-msg" id="d-outmsg" hidden></div>
+    </div>`;
+  const hw = el("d-hwpx");
+  if(hw) hw.onclick = () => saveHwpx(t, d, hw);
+  box.querySelectorAll("[data-see]").forEach(b => b.onclick = () => {
+    _promptOpen = _promptOpen === b.dataset.see ? "" : b.dataset.see;
+    paintOut(t, d);
+  });
+  box.querySelectorAll("[data-copy]").forEach(b => b.onclick = async () => {
+    const txt = b.dataset.copy === "sheet" ? sheetPrompt(t, d) : deckPrompt(t, d);
+    try{ await navigator.clipboard.writeText(txt); }
+    catch(e){
+      /* 클립보드가 막히면 조용히 실패하지 않는다 — 골라 둔 채로 돌려준다 */
+      const ta = document.createElement("textarea");
+      ta.value = txt; document.body.appendChild(ta); ta.select();
+      try{ document.execCommand("copy"); }catch(e2){}
+      ta.remove();
+    }
+    const keep = b.textContent; b.textContent = "복사했습니다";
+    setTimeout(() => { b.textContent = keep; }, 1500);
+  });
+}
+
+/* ══ 활동지·수업자료 만들기 프롬프트 ══
+   이 도구는 활동지와 수업자료를 만들지 않는다. 대신 무엇을 어떻게 만들지 적은 글을 준다.
+   교사가 그대로 복사해 쓰던 AI에 넣으면 된다.
+
+   규칙은 교육청 배포 실물을 조사한 결과 그대로다 — 활동지에는 성취기준 코드·차시·
+   소요 시간·채점 기준이 9종 중 0건이었고, 수업자료는 96%가 표지에 성취기준을 싣는다.
+   같은 수업이라도 학생이 손에 드는 종이와 교사가 띄우는 화면은 규칙이 반대다. */
+const PROMPT_TITLES = {sheet:"활동지 만들 때 쓸 프롬프트", deck:"수업자료 만들 때 쓸 프롬프트"};
+
+function promptHead(t, d){
+  const codes = (t.standards || []).map(c => `[${c}] ${CODEMAP[c]?.text || ""}`).join("\n  ");
+  return `초등학교 ${S.klass.grade}학년 ${subjShort(t.subject)} 수업이다.
+
+[학습목표] ${d.goal || "(아직 쓰지 않음)"}
+[성취기준]
+  ${codes || "(없음)"}
+[활동 흐름]
+${(d.flow || []).map((x, i) => `  ${i + 1}. [${x.phase} ${x.min}분] ${x.name}`
+  + ((x.asks || []).length ? `\n     발문: ${x.asks.join(" / ")}` : "")
+  + ((x.steps || []).length ? `\n     하는 일: ${x.steps.join(" / ")}` : "")).join("\n") || "  (아직 없음)"}`;
+}
+function sheetPrompt(t, d){
+  const opts = seeOpts(t);
+  /* 학생이 손으로 무언가 하는 활동이면 칸이 된다. 관점이 아직 없다고 활동을 빠뜨리지 않는다 —
+     관점은 무엇을 볼지 정하는 것이지, 학생이 할 일이 있는지 가리는 잣대가 아니다. */
+  const live = (d.flow || []).filter(r =>
+    seeOK(r, opts) || (r.asks || []).length || (r.steps || []).length);
+  return `${promptHead(t, d)}
+[관찰 관점] ${opts.join(" · ") || "(없음)"}
+
+위 수업에서 학생이 손에 들고 연필로 쓰는 활동지를 만들어 줘.
+칸은 다음 활동마다 하나씩, 이 순서 그대로.
+${live.map((r, i) => `  ${i + 1}. ${r.name}`).join("\n") || "  (활동을 먼저 짜야 한다)"}
+
+규칙
+- 교사가 말로 할 것을 종이에 적지 않는다. 상황·배경·왜 하는지는 넣지 않는다.
+  종이에 남는 글은 무엇을 하라는 지시와 판단을 묻는 물음뿐이다.
+- 한 칸에서 활동을 시작하기 전에 읽는 글자는 지시와 물음을 합쳐 60자 안쪽이다.
+  60자면 6학년이 10초 안에 읽는다.
+- 한 문장에 한 가지만. 25자를 넘기면 자른다.
+- 칸 제목은 아이가 하는 일로 적는다. 설계 의도를 이름으로 삼지 않는다.
+- 물음은 결론을 심지 않는다. 어느 쪽을 골라도 채워지는 틀로 쓴다.
+- 채점 기준·성취기준 코드·차시·소요 시간을 적지 않는다. 아이 종이에 없는 것들이다.
+- 학생용 목표는 20자 안쪽으로 오늘 할 일만. 조건을 붙이지 않는다.
+- 답 칸 줄 수는 ${S.klass.grade}학년이 3분 안에 채울 분량으로 정한다.
+- 처음 나오는 어려운 말에는 괄호로 예를 붙인다.
+- 전체 글자 수는 400자 안쪽으로 한다.
+
+A4 한 장으로 인쇄할 수 있게 만들어 줘.`;
+}
+function deckPrompt(t, d){
+  const rb = (t.rubric || []).filter(x => (x.text || "").trim());
+  return `${promptHead(t, d)}
+[학생이 볼 수준 서술 — 학생 말로 옮겨 한 장에 싣는다]
+${rb.map(x => `  - ${x.level}: ${x.text}`).join("\n") || "  (없음)"}
+
+위 수업에서 교사가 띄울 화면(슬라이드)을 만들어 줘.
+
+규칙
+- 표지에 성취기준 코드를 싣는다. 화면은 교사가 띄우는 것이라 활동지와 반대다.
+- 차시와 소요 시간은 넣지 않는다. 아이를 재촉하는 글자가 된다.
+- 한 장에 한 가지만. 제목과 본문을 합쳐 120자를 넘기지 않는다.
+  실물 75%가 121자 안쪽이었다. 넘칠 것 같으면 장을 나누거나 발표자 노트로 내린다.
+- 교사가 할 설명·근거·까닭은 화면이 아니라 발표자 노트에 적는다. 화면은 학생이 본다.
+- 수준 서술은 학생 말로 바꿔 한 장 싣는다.
+  ‘제한적으로 수행한다’ 같은 말을 아이에게 그대로 주지 않는다.
+- 차례는 표지 → 학습문제 → 활동마다 발문과 안내 → 정리다.`;
+}
+
+/* ── 지도안 본문 ──
+   수업 중에 펴 보는 나침반이다(lesson_plan_guide). 설계 해설은 넣지 않는다 */
+function planBody(t, d, St){
+  const P = [], rb = (t.rubric || []).filter(r => (r.text || "").trim());
+  const opts = seeOpts(t), p = periodsOf(d);
+  const line  = x => P.push(hwpP(x));
+  const head  = x => { P.push(hwpP("")); P.push(hwpP(x, St.head)); };
+  const bold  = x => P.push(hwpP(x, St.bold));
+
+  P.push(hwpP(t.name || "수업 지도안", St.title, St.center));
+  P.push(hwpP(klassLine(t, d), 0, St.center));
+
+  head("평가 계획");
+  bold(`평가 요소 : ${t.name || ""}`);
+  if(t.criteria) line(`평가 내용 : ${t.criteria}`);
+  line(`  └ 관찰 관점 : ${opts.length ? opts.join(" · ") : "(아직 없음)"}`);
+  line("");
+  line("성취기준");
+  if(t.standards.length) t.standards.forEach(c => line(`  [${c}] ${CODEMAP[c]?.text || ""}`));
+  else line("  (걸린 성취기준 없음)");
+  line("");
+  line(`학습목표 : ${d.goal || "(아직 쓰지 않음)"}`);
+  line("");
+  line("기준과 피드백");
+  rb.forEach(r => { line(`  ${r.level} : ${r.text}`);
+    if(r.fb) line(`      → ${r.fb}`); });
+  if(!rb.length) line("  (수준 서술 없음)");
+  line("");
+  line("평가하지 않는 것");
+  const na = (d.notAssessed || []).filter(Boolean);
+  if(na.length) na.forEach(x => line(`  - ${x}`));
+  else line("  - (수업 전에 적어 둘 것)");
+
+  head(`교수·학습 과정  (${p}차시 · ${minutesOf(d)}분)`);
+  (d.flow || []).forEach(r => {
+    const k = seesLive(r, opts);
+    const see = k.includes("hook") ? "동기 유발" : (k.length ? `관점 : ${k.join(" · ")}` : "관점 없음");
+    bold(`[${r.phase} ${r.min}분] ${r.name}`);
+    line(`   ${see}`);
+    (r.asks  || []).forEach(a => line(`   • ${a}`));
+    (r.steps || []).forEach(x => line(`   - ${x}`));
+    if(r.aid) line(`   ▸ 못 따라올 때 : ${r.aid}`);
+    line("");
+  });
+  if(!(d.flow || []).length) line("(활동을 아직 짜지 않았습니다)");
+
+  if(d.hands && d.hands.gate && d.hands.gate !== "fix"){
+    head("도구를 먼저 쓰는 까닭");
+    line(`${HAND_WHY[d.hands.gate] || d.hands.gate}${d.hands.why ? ` — ${d.hands.why}` : ""}`);
+  }
+
+  head("수업 뒤 환류  (수업을 해 본 뒤 채운다)");
+  line(`본 것   : ${d.reflect?.saw  || ""}`);
+  line(`왜?     : ${d.reflect?.why  || ""}`);
+  line(`다음엔  : ${d.reflect?.next || ""}`);
+
+  /* 활동지와 수업자료는 이 도구가 만들지 않는다 — 만드는 법을 지도안 끝에 실어 보낸다.
+     한글파일 하나만 들고 다니면 되도록, 따로 챙길 것을 만들지 않는다. */
+  head("활동지·수업자료 만들기");
+  line("아래 글을 그대로 복사해 쓰시는 AI에 넣으면 됩니다. 이 도구는 파일을 만들지 않습니다.");
+  line("");
+  bold(`▣ ${PROMPT_TITLES.sheet}`);
+  sheetPrompt(t, d).split("\n").forEach(x => line(x));
+  line("");
+  bold(`▣ ${PROMPT_TITLES.deck}`);
+  deckPrompt(t, d).split("\n").forEach(x => line(x));
+  return P.join("");
+}
+const klassLine = (t, d) =>
+  `${S.klass.grade}학년 ${S.klass.room || ""}반 · ${subjShort(t.subject)} · ${periodsOf(d)}차시(${minutesOf(d)}분)`;
+const safeName = v => String(v || "지도안").replace(/[\/:*?"<>|]/g, "").trim().slice(0, 40) || "지도안";
+
+async function saveHwpx(t, d, btn){
+  const keep = btn.textContent; btn.disabled = true; btn.textContent = "…";
+  try{
+    const blob = await buildHwpx(St => planBody(t, d, St));
+    saveBlob(blob, `지도안_${safeName(t.name)}.hwpx`);
+  }catch(e){
+    console.warn("[지도안]", e);
+    const m = el("d-outmsg");
+    if(m){ m.hidden = false; m.style.color = "var(--low)"; m.textContent = e.message; }
+  }
+  btn.disabled = false; btn.textContent = keep;
+}
+
+/* 도구가 먼저 오는 자리에서만 뜬다. 막지 않고 판단을 남기게 한다 —
+   판정 단위는 도구가 아니라 조작이라 기계가 옳고 그름을 정할 수 없다 */
+function handsCard(d){
+  const g = handsGate(d.flow);
+  if(!g || g.ok) return "";
+  const h = d.hands;
+  /* 판정한 뒤 흐름이 바뀌어 다른 활동이 첫 도구가 되었으면 다시 묻는다 */
+  if(h && h.for === g.name) return `<div class="hands done">
+    <h4>${ICON.hand()}손이 먼저다 — 판단을 남김</h4>
+    <p><b>${esc(g.name)}</b> · ${esc(HAND_WHY[h.gate] || h.gate)}${h.why ? ` — ${esc(h.why)}` : ``}</p>
+    <div class="act"><button class="ghost" id="h-redo" type="button">다시 보기</button></div></div>`;
+  return `<div class="hands">
+    <h4>${ICON.hand()}손이 먼저인가</h4>
+    <p><b>${esc(g.name)}</b>이(가) 화면에서 시작합니다. 그 앞에 같은 일을 손으로 해 보는 활동이 없습니다.
+      손으로 만져 본 적 없는 것을 화면으로 먼저 만나면, 아이는 만드는 사람이 아니라 고르는 사람이 됩니다.</p>
+    ${Object.entries(HAND_WHY).map(([k, v], i) => `<label>
+      <input type="radio" name="hgate" value="${k}"${i ? `` : ` checked`}><span>${esc(v)}</span></label>`).join("")}
+    <input type="text" class="why" id="h-why" placeholder="무엇으로 대체하는지 · 축약형은 무엇인지 (골랐다면 적어 주세요)">
+    <div class="act"><button class="ghost" id="h-ok" type="button">이 판단을 남깁니다</button></div>
+  </div>`;
+}
+
+function flowCard(r, i, lv, n){
+  const cur = seesLive(r, lv), ok = cur.length > 0, hook = cur.includes("hook");
+  return `<div class="fl${ok?"":" nosee"}" data-fi="${i}">
+    <div class="fl-head">
+      <select class="ph2" aria-label="단계">${PHASES.map(p =>
+        `<option${p===r.phase?" selected":""}>${p}</option>`).join("")}</select>
+      <input type="text" class="nm" value="${esc(r.name||"")}" placeholder="활동 이름" aria-label="활동 이름">
+      <input type="text" class="mn" value="${+r.min||0}" inputmode="numeric" aria-label="분"><span class="muted">분</span>
+    </div>
+    <div class="fl-row"><span class="lab">관점</span>
+      <div class="fl-see">
+        ${lv.map(k => `<button type="button" class="chip kwc" data-see="${esc(k)}"
+          aria-pressed="${cur.includes(k)}"${hook?` disabled`:``}>${esc(k)}</button>`).join("")}
+        <button type="button" class="chip kwc hookc" data-see="hook"
+          aria-pressed="${hook}">동기 유발</button>
+      </div></div>
+    <div class="fl-row"><span class="lab">발문</span>
+      <textarea class="ak" placeholder="한 줄에 하나씩. 답이 갈리는 물음을 절반 이상">${esc((r.asks||[]).join("\n"))}</textarea></div>
+    <div class="fl-row"><span class="lab">세부</span>
+      <textarea class="st" placeholder="한 줄에 하나씩">${esc((r.steps||[]).join("\n"))}</textarea></div>
+    <div class="fl-row"><span class="lab">처방</span>
+      <input type="text" class="ad" value="${esc(r.aid||"")}" placeholder="못 따라오는 학생에게 줄 한 걸음"></div>
+    ${ok?``:`<div class="fl-msg">어느 지표도 보지 않는 활동입니다 — 동기 유발이 아니면 빼세요.</div>`}
+    <div class="fl-act">
+      <button class="ghost" type="button" data-up="${i}"${i?"":" disabled"} aria-label="위로">↑</button>
+      <button class="ghost" type="button" data-dn="${i}"${i<n-1?"":" disabled"} aria-label="아래로">↓</button>
+      <button class="ghost danger" type="button" data-rm="${i}">지우기</button></div>
+  </div>`;
+}
+
+function bindFlow(t, d){
+  const box = el("d-flowpanel"), lv = seeOpts(t);
+  /* 흐름을 통째로 새로 짠다. 교사가 적어 둔 것이 있을 때만 물어본다 —
+     빈 카드만 있는 상태에서 확인을 받으면 아무것도 안 버리는데 겁을 주게 된다 */
+  const gen = el("d-gen");
+  if(gen) gen.onclick = () => {
+    if(flowWritten(d.flow, lv) &&
+       !confirm("지금 흐름을 버리고 새로 만듭니다.\n적어 둔 발문과 세부가 모두 사라집니다.")) return;
+    genFlow(t, d, gen, false); };
+  const fill = el("d-fill");
+  if(fill) fill.onclick = () => genFlow(t, d, fill, true);
+  const hok = el("h-ok");
+  if(hok) hok.onclick = () => {
+    const g = handsGate(d.flow); if(!g) return;
+    const sel = box.querySelector("input[name=hgate]:checked");
+    d.hands = {gate: sel ? sel.value : "fix", why: (el("h-why")?.value || "").trim(),
+               for: g.name, at: new Date().toISOString()};
+    save(); paintFlow(t, d); };
+  const hredo = el("h-redo");
+  if(hredo) hredo.onclick = () => { d.hands = null; save(); paintFlow(t, d); };
+  const add = el("d-add");
+  if(add) add.onclick = () => {
+    (d.flow ||= []).push({phase: d.flow.length ? "전개" : "도입",
+      name:"", min:5, asks:[], steps:[], sees:"", aid:""});
+    save(); paintFlow(t, d); };
+
+  box.querySelectorAll(".fl").forEach(card => {
+    const r = d.flow[+card.dataset.fi], g = s => card.querySelector(s);
+    g(".ph2").onchange = e => { r.phase = e.target.value; save(); };
+    g(".nm").onchange = e => { r.name = e.target.value.trim(); save(); };
+    /* 합계와 경고가 바뀌는 둘만 다시 그린다 — 글 칸은 다시 그리면 커서가 튄다 */
+    g(".mn").onchange = e => { r.min = Math.max(0, +e.target.value || 0); save(); paintFlow(t, d); };
+    /* 관점 토글. 동기 유발은 배타적이다 — 평가하지 않는 활동에 관점을 달 수 없다 */
+    card.querySelectorAll("[data-see]").forEach(b => b.onclick = () => {
+      const k = b.dataset.see, now = new Set(seesLive(r, lv));
+      if(k === "hook"){ now.has("hook") ? now.delete("hook") : (now.clear(), now.add("hook")); }
+      else { now.delete("hook"); now.has(k) ? now.delete(k) : now.add(k); }
+      r.sees = [...now]; save(); paintFlow(t, d); });
+    g(".ak").onchange = e => { r.asks = toLines(e.target.value); save(); };
+    g(".st").onchange = e => { r.steps = toLines(e.target.value); save(); };
+    g(".ad").onchange = e => { r.aid = e.target.value.trim(); save(); };
+    card.querySelectorAll("textarea").forEach(x => { autoGrow(x); x.oninput = () => autoGrow(x); });
+  });
+  const swap = (i, j) => { const f = d.flow; [f[i], f[j]] = [f[j], f[i]]; save(); paintFlow(t, d); };
+  box.querySelectorAll("[data-up]").forEach(b => b.onclick = () => swap(+b.dataset.up, +b.dataset.up - 1));
+  box.querySelectorAll("[data-dn]").forEach(b => b.onclick = () => swap(+b.dataset.dn, +b.dataset.dn + 1));
+  box.querySelectorAll("[data-rm]").forEach(b => b.onclick = () => {
+    const i = +b.dataset.rm;
+    if(!confirm(`‘${d.flow[i].name || "이 활동"}’을 지웁니다.`)) return;
+    d.flow.splice(i, 1); save(); paintFlow(t, d); });
+}
+
+/* 루브릭 → 활동. 규칙은 skill의 activity_design·backward_design에서 그대로 옮겨 온 것이다 */
+/* 흐름은 활동마다 발문과 세부가 붙어 답이 길다. 기본 8192로는 도중에 잘리고,
+   잘린 JSON은 부분만 복구돼 빈 배열로 보인다 — 그래서 여유를 준다 */
+const aiJSON2 = (prompt, opt) => aiJSON(prompt, Object.assign({maxTokens:24576}, opt || {}));
+
+/* 답에서 활동 배열을 찾아낸다. 한국어로 물었으니 키도 한국어로 오는 일이 잦고,
+   배열만 덜렁 오기도 한다. 키 이름을 하나로 못 박아 두면 그때마다 빈손이 된다 */
+function pickFlowArray(r){
+  if(Array.isArray(r)) return r;
+  if(!r || typeof r !== "object") return [];
+  for(const k of ["flow","활동","활동흐름","흐름","수업흐름","activities","activity"])
+    if(Array.isArray(r[k])) return r[k];
+  /* 이름이 무엇이든 객체가 담긴 배열이 하나뿐이면 그것이다 */
+  const arrs = Object.values(r).filter(v =>
+    Array.isArray(v) && v.some(x => x && typeof x === "object" && !Array.isArray(x)));
+  return arrs.length === 1 ? arrs[0] : [];
+}
+/* 여러 키 이름 가운데 값이 든 것을 고른다 */
+function pickKey(x, ...keys){
+  for(const k of keys){ const v = x?.[k]; if(v !== undefined && v !== null && v !== "") return v; }
+  return undefined;
+}
+const asList = v => Array.isArray(v) ? v.map(s => String(s).trim()).filter(Boolean)
+  : (typeof v === "string" && v.trim() ? toLines(v) : []);
+
+/* 모델이 어떤 모양으로 보내오든 한 칸씩 걸러 담는다. 두 갈래가 같이 쓴다 */
+function normFlowRow(x, lv){
+  const ph = String(pickKey(x, "phase", "단계") || "");
+  const raw = pickKey(x, "sees", "관점", "무엇을보나", "관찰", "지표");
+  const cand = Array.isArray(raw) ? raw.map(v => String(v).trim())
+    : (raw ? String(raw).split(/[,·]/).map(v => v.trim()) : []);
+  return {
+    phase: PHASES.includes(ph) ? ph : "전개",
+    name:  String(pickKey(x, "name", "활동명", "활동", "이름") || "").trim(),
+    min:   Math.max(0, Math.round(+pickKey(x, "min", "분", "시간", "소요시간") || 0)),
+    asks:  asList(pickKey(x, "asks", "발문", "질문")),
+    steps: asList(pickKey(x, "steps", "세부", "활동내용", "내용", "절차")),
+    /* 과제에 걸어 둔 관점이 아니면 버린다 — 지어낸 지표를 그대로 들이지 않는다.
+       동기 유발은 배타적이라 그것만 남긴다 */
+    sees:  cand.includes("hook") ? ["hook"] : cand.filter(k => lv.includes(k)),
+    aid:   String(pickKey(x, "aid", "처방", "도움", "미도달처방") || "").trim()
+  };
+}
+/* 한 칸이라도 비어 있나 — 「빈칸 채우기」를 띄울지 정한다 */
+const hasBlank = (r, opts) => !r.name || !r.min || !(r.asks||[]).length ||
+  !(r.steps||[]).length || !seeOK(r, opts) || !r.aid;
+/* 교사가 실제로 쓴 것이 하나라도 있나. 없으면 채울 빈칸이 아니라 빈 종이다 —
+   그때는 카드 개수에 갇히지 않도록 새로 짠다(＋활동이 넣어 두는 기본 분은 쓴 것이 아니다) */
+const flowWritten = (flow, opts) => (flow || []).some(r =>
+  r.name || (r.asks||[]).length || (r.steps||[]).length || r.aid || seeOK(r, opts));
+
+/* ── 손이 먼저다(§2-1) ──
+   초등은 구체적 조작기에 걸쳐 있어, 손으로 만져 본 적 없는 것을 화면으로 먼저 만나면
+   개념이 서지 않는다. 기계가 보는 것은 딱 하나 — 도구를 여는 그 시점에 같은 일을
+   손으로 해 본 활동이 앞에 있는가. 판정 단위는 도구가 아니라 조작이므로,
+   맞고 틀림은 기계가 정하지 않고 교사가 정한다. */
+const DIGITAL = /스프레드시트|엑셀|구글\s*시트|프레젠테이션|파워포인트|키노트|한글\s*프로그램|앱|어플|프로그램|소프트웨어|태블릿|컴퓨터|노트북|크롬북|아이패드|패드|스마트폰|인공지능|AI|챗봇|생성형|검색|타이핑|자판|코딩|엔트리|스크래치|영상\s*(제작|편집|촬영)|녹음|온라인|웹\s*사이트|누리집|플랫폼|디지털|전자칠판|미러링|QR/i;
+const isDigital = r => DIGITAL.test([r.name || "", ...(r.steps||[]), ...(r.asks||[])].join(" "));
+/* 손 활동으로 치는 것은 지표를 보는 활동뿐이다 — 동기 유발만 앞에 둔 것은
+   "같은 일을 해 봤다"가 아니다 */
+function handsGate(flow){
+  const rows = flow || [];
+  const at = rows.findIndex(isDigital);
+  if(at < 0) return null;
+  const done = rows.slice(0, at).some(r => {
+    const k = seesOf(r);
+    return !isDigital(r) && k.length && !k.includes("hook"); });
+  return {at, ok: done, name: rows[at].name || "이 활동"};
+}
+const HAND_WHY = {
+  fix:   "흐름을 고치겠다",
+  risk:  "위험하거나 민감해서 실물로 못 한다",
+  scale: "교실 규모로 줄이면 개념이 사라진다",
+  time:  "축약형도 시간에 들어가지 않는다"
+};
+
+/* 흐름 만들기 두 갈래.
+   fill=false 새로 짠다 / fill=true 교사가 쓴 것은 그대로 두고 빈 칸만 채운다.
+   두 번째가 기본 쓰임이다 — 교사가 아는 활동은 이미 손에 있고, 모르는 칸만 물으면 된다. */
+async function genFlow(t, d, btn, fill){
+  if(!aiOn()){ S.ui.tab = "ai"; save(); render(); return; }
+  const msg = el("d-flowmsg");
+  const keep = btn.textContent; btn.disabled = true; btn.textContent = "…";
+  if(msg) msg.hidden = true;
+  try{
+    const rb = (t.rubric || []).filter(r => (r.text || "").trim());
+    const lv = seeOpts(t);
+    if(!lv.length) throw new Error("먼저 준비 탭에서 이 평가의 「관찰 관점」을 골라 주세요. 활동이 무엇을 보는지 댈 곳이 없습니다.");
+    const p = periodsOf(d), want = minutesOf(d);
+    const head = `[학습목표] ${d.goal || "(아직 정하지 않음 — 성취기준에서 끌어낸다)"}
+[성취기준]
+${t.standards.map(c => `- [${c}] ${CODEMAP[c]?.text || ""}`).join("\n") || "- (없음)"}
+[평가 내용] ${t.criteria || "(없음)"}
+[관찰 관점 — 활동은 이 가운데 무엇을 보는지 댈 수 있어야 한다]
+${lv.map(k => `- ${k}`).join("\n")}
+[수준 서술 — 활동의 어려움을 여기에 맞춘다]
+${rb.map(x => `- ${x.level}: ${x.text}`).join("\n")}`;
+    const rules = `- 활동마다 그 장면에서 교사가 관찰할 관점을 sees에 배열로 적는다. 한 활동에서 여럿을 볼 수 있다.
+  고를 수 있는 관점은 이것뿐이다 — ${lv.join(" / ")}. 이 밖의 말을 지어내지 않는다.
+  평가하지 않는 동기 유발 활동이면 sees를 ["hook"] 하나로 둔다.
+- 어느 관점도 관찰할 수 없는 활동은 넣지 않는다. 재미있어도 넣지 않는다. 예외는 동기 유발 하나뿐이다.
+- 손으로 해 볼 수 있는 일은 반드시 먼저 한다. 몸과 구체물로 해 보기 → 말과 기호로 옮기기 → 디지털 도구 순서다.
+  도구는 손으로 이미 해 본 일을 반복하거나 완성할 때만 쓴다. 개념을 처음 만나는 자리에 두지 않는다.
+- 발문(asks)은 답이 갈리는 물음을 절반 이상 넣는다. 예·아니오로 닫히는 물음만 늘어놓지 않는다.
+- 세부(steps)는 교사가 그대로 따라 할 수 있는 동작으로 쓴다.
+- 처방(aid)은 그 활동에서 못 따라오는 학생에게 줄 한 걸음이다. 한 번 빗대어 설명한 뒤 좁혀 준다.
+- 단계(phase)는 도입·전개·정리 중 하나다.${p > 1 ? `
+- ${p}차시 수업이므로 차시가 바뀌는 자리에서 정리와 도입이 다시 온다. 한 차시가 40분을 넘지 않게 나눈다.` : ``}`;
+
+    if(fill){
+      /* 교사가 이미 쓴 것을 그대로 보여 준다. 빈 칸이 어디인지 모델이 봐야 한다 */
+      const cur = (d.flow || []).map((r, i) => ({i, phase:r.phase||"", name:r.name||"",
+        min:+r.min||0, asks:r.asks||[], steps:r.steps||[],
+        sees:seesLive(r, lv), aid:r.aid||""}));
+      const r = await aiJSON2(`한국 초등학교 ${S.klass.grade}학년 ${subjShort(t.subject)} ${p}차시(${want}분) 수업이다.
+아래는 교사가 짜다 만 활동 흐름이다. **빈 칸만 채운다.**
+
+${head}
+
+[현재 흐름 — 빈 칸이 채울 자리다]
+${JSON.stringify(cur)}
+
+규칙
+- 이미 적혀 있는 값은 고치지 않는다. 받은 그대로 돌려준다. 빈 값("" · 0 · [])만 채운다.
+- i를 그대로 돌려준다. 활동을 새로 만들거나 지우거나 순서를 바꾸지 않는다.
+- 이미 적힌 활동 이름과 발문을 읽고, 그 활동에 실제로 맞는 내용으로 빈 칸을 채운다.
+- 분(min)이 비어 있는 활동에만 분을 넣되, 전체 합이 ${want}에 가깝게 한다.
+${rules}
+
+아래 모양 그대로, 키 이름을 번역하지 말고 영문 그대로 쓴다. JSON만 출력한다:
+{"flow":[{"i":0,"phase":"도입","name":"활동 이름","min":5,"asks":["발문"],"steps":["세부"],"sees":["hook"],"aid":""}]}`);
+
+      const by = new Map();
+      pickFlowArray(r).forEach((x, k) => {
+        /* i를 빠뜨리고 순서대로만 보내는 일이 있다 — 그때는 온 순서를 자리로 본다 */
+        const at = Number.isInteger(x?.i) ? x.i : (Number.isInteger(+x?.i) ? +x.i : k);
+        if(at >= 0 && at < (d.flow || []).length) by.set(at, normFlowRow(x, lv)); });
+      if(!by.size){ console.warn("[흐름] 이해하지 못한 응답:", r);
+        throw new Error("채울 내용을 받지 못했습니다. 다시 시도해 주세요."); }
+      /* 교사가 쓴 값이 언제나 이긴다. 모델의 답은 빈 자리에만 들어간다 */
+      d.flow = d.flow.map((r0, i) => {
+        const x = by.get(i) || {};
+        return {
+          phase: r0.phase || x.phase || "전개",
+          name:  r0.name  || x.name  || "",
+          min:   (+r0.min || 0) || x.min || 0,
+          asks:  (r0.asks  || []).length ? r0.asks  : (x.asks  || []),
+          steps: (r0.steps || []).length ? r0.steps : (x.steps || []),
+          sees:  seeOK(r0, lv) ? seesLive(r0, lv) : (x.sees || []),
+          aid:   r0.aid || x.aid || ""
+        };
+      });
+    } else {
+      const r = await aiJSON2(`한국 초등학교 ${S.klass.grade}학년 ${subjShort(t.subject)} ${p}차시(${want}분) 수업의 활동 흐름을 짠다.
+
+${head}
+
+규칙
+${rules}
+- 분(min)의 합이 정확히 ${want}가 되게 한다.
+
+아래 모양 그대로, 키 이름을 번역하지 말고 영문 그대로 쓴다. JSON만 출력한다:
+{"flow":[{"phase":"도입","name":"활동 이름","min":5,"asks":["발문"],"steps":["세부"],"sees":["hook"],"aid":""}]}`);
+
+      const made = pickFlowArray(r).map(x => normFlowRow(x, lv)).filter(x => x.name);
+      if(!made.length){
+        /* 무엇이 왔는지 콘솔에 남긴다 — 이 갈래는 화면에 보일 것이 없어 진단이 막힌다 */
+        console.warn("[흐름] 이해하지 못한 응답:", r);
+        throw new Error("활동을 만들지 못했습니다. 다시 시도해 주세요. (F12 콘솔에 받은 답이 남습니다)");
+      }
+      d.flow = made;
+    }
+    d.at = new Date().toISOString(); save(); paintFlow(t, d);
+  }catch(e){
+    btn.disabled = false; btn.textContent = keep;
+    const m = el("d-flowmsg");
+    if(m){ m.hidden = false; m.style.color = "var(--low)"; m.textContent = e.message; }
+  }
+}
+
+/* 지금 어디까지 왔는지 머리에 띄운다. 누르면 그 자리로 데려간다 —
+   보여 주기만 하는 표시는 몇 번 보면 눈에 안 들어온다 */
+function paintBar(t, d){
+  const bar = el("dbar"); if(!bar) return;
+  const stage = designStage(d);
+  const to = ["d-flowpanel", "d-outpanel"];
+  bar.hidden = false;
+  bar.innerHTML = `<div class="dbar-in">
+    <button class="dbar-back" id="dbar-back" type="button" aria-label="목록으로">◀</button>
+    <b class="dbar-name">${esc(t.name || "")}</b>
+    <span class="dbar-steps">${DSG_STEPS.map((x, i) => `
+      <button type="button" class="dstep${i < stage ? " done" : ""}${i === stage ? " now" : ""}"
+        data-go="${to[i]}"><i>${i < stage ? "✓" : i + 1}</i>${x}</button>`).join("")}</span>
+  </div>`;
+  el("dbar-back").onclick = () => { _dsgId = ""; renderDesign(); };
+  bar.querySelectorAll("[data-go]").forEach(b => b.onclick = () => {
+    const p = el(b.dataset.go);
+    if(p) p.scrollIntoView({behavior:"smooth", block:"start"}); });
+}
+
+function renderDesignList(){
+  const ok = S.tasks.filter(designable), no = S.tasks.filter(t => !designable(t));
+  el("main").innerHTML = `<div class="stack">
+    <div class="panel">
+      <div class="ph"><h2>수업 설계</h2>
+        <span class="r muted">평가를 먼저 정하고, 활동은 거기서 역산합니다</span></div>
+      ${ok.length ? `<div class="scroll"><table class="task-table">
+        <thead><tr><th>과제</th><th>루브릭</th><th>설계</th><th></th></tr></thead>
+        <tbody>${ok.map(t => {
+          const st = designStage(t.design);
+          return `<tr class="trow" data-dopen="${t.id}">
+            <td>${esc(t.name)}<div style="font-size:12px;color:var(--ink-3)">${esc(subjShort(t.subject))}${
+              t.design?.goal ? ` · ${esc(t.design.goal.slice(0,34))}` : ""}</div></td>
+            <td style="font-size:12px;color:var(--ink-3)">${(t.rubric||[]).map(r=>esc(r.level)).join(" · ")}</td>
+            <td><span class="chip"${st?``:` style="background:var(--sink);color:var(--ink-3);border-color:var(--rule)"`}>${DSG_STAGE[st]}</span></td>
+            <td class="rowact" style="text-align:right"><button class="ghost" type="button" data-dgo="${t.id}">열기</button></td></tr>`;
+        }).join("")}</tbody></table></div>` : `<div class="pb"><div class="empty-action">
+          <span class="mark" aria-hidden="true">${ICON.flow()}</span>
+          <span class="copy"><b>먼저 준비 탭에서 평가를 설계하세요</b>
+            <span>수준 서술(루브릭)이 있어야 활동을 역산할 수 있습니다.</span></span>
+          <span class="actions"><button class="primary" id="d-goprep" type="button">준비 탭으로</button></span>
+        </div></div>`}
+    </div>
+    ${no.length ? `<div class="panel">
+      <div class="ph"><h2>아직 설계할 수 없는 평가</h2><span class="r muted">${no.length}개</span></div>
+      <div class="pb"><div class="hint">수준 서술이 비어 있어 역산할 지표가 없습니다.
+        아래에서 눌러 루브릭을 채우면 위 목록으로 올라옵니다.</div>
+        <div class="tags" style="margin-top:10px">${no.map(t =>
+          `<button class="chip" type="button" data-dfix="${t.id}">${esc(t.name)}</button>`).join("")}</div></div>
+    </div>` : ``}
+  </div>`;
+
+  const gp = el("d-goprep");
+  if(gp) gp.onclick = () => { S.ui.tab = "prep"; save(); render(); };
+  const open = id => { _dsgId = id; renderDesign(); };
+  el("main").querySelectorAll(".trow").forEach(r => r.onclick = e => {
+    if(e.target.closest("button")) return; open(r.dataset.dopen); });
+  el("main").querySelectorAll("[data-dgo]").forEach(b => b.onclick = () => open(b.dataset.dgo));
+  el("main").querySelectorAll("[data-dfix]").forEach(b => b.onclick = () => {
+    const t = S.tasks.find(x => x.id === b.dataset.dfix);
+    openTask(t.subject, t, () => renderDesign()); });
+}
+
 /* 과제 양식이 요구하는 윤리 점검 3항목. 줄이거나 순서를 바꾸지 말 것 —
    ‘알고 있다’는 확인이므로 체크해도 항목은 화면에 남는다. */
 const ETHICS = [
@@ -3006,6 +3827,129 @@ async function unzip(buf, want){
   }
   return out;
 }
+/* ══ 압축해 내보내기 — unzip()의 짝 ══ */
+let _crcT = null;
+function crc32(u8){
+  if(!_crcT){ _crcT = new Uint32Array(256);
+    for(let n = 0; n < 256; n++){ let c = n;
+      for(let k = 0; k < 8; k++) c = (c & 1) ? (0xEDB88320 ^ (c >>> 1)) : (c >>> 1);
+      _crcT[n] = c >>> 0; } }
+  let crc = 0xFFFFFFFF;
+  for(let i = 0; i < u8.length; i++) crc = _crcT[(crc ^ u8[i]) & 0xFF] ^ (crc >>> 8);
+  return (crc ^ 0xFFFFFFFF) >>> 0;
+}
+const b64bytes = b64 => { const bin = atob(b64), u = new Uint8Array(bin.length);
+  for(let i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i); return u; };
+
+/* files: [{name, data:Uint8Array, store}] — store면 압축하지 않는다.
+   시각을 고정값으로 둔다. 같은 내용이면 같은 파일이 나오는 편이 낫다 */
+const ZIP_TIME = 0, ZIP_DATE = ((2026 - 1980) << 9) | (1 << 5) | 1;
+async function zip(files, mime){
+  const enc = new TextEncoder(), parts = [], central = [];
+  let off = 0;
+  for(const f of files){
+    const nm = enc.encode(f.name), crc = crc32(f.data);
+    let body = f.data, method = 0;
+    if(!f.store){
+      body = new Uint8Array(await new Response(new Blob([f.data]).stream()
+        .pipeThrough(new CompressionStream("deflate-raw"))).arrayBuffer());
+      method = 8;
+    }
+    const lh = new Uint8Array(30 + nm.length), lv = new DataView(lh.buffer);
+    lv.setUint32(0, 0x04034b50, true); lv.setUint16(4, 20, true); lv.setUint16(6, 0, true);
+    lv.setUint16(8, method, true); lv.setUint16(10, ZIP_TIME, true); lv.setUint16(12, ZIP_DATE, true);
+    lv.setUint32(14, crc, true); lv.setUint32(18, body.length, true); lv.setUint32(22, f.data.length, true);
+    lv.setUint16(26, nm.length, true); lv.setUint16(28, 0, true);
+    lh.set(nm, 30);
+    parts.push(lh, body);
+
+    const ch = new Uint8Array(46 + nm.length), cv = new DataView(ch.buffer);
+    cv.setUint32(0, 0x02014b50, true); cv.setUint16(4, 20, true); cv.setUint16(6, 20, true);
+    cv.setUint16(8, 0, true); cv.setUint16(10, method, true);
+    cv.setUint16(12, ZIP_TIME, true); cv.setUint16(14, ZIP_DATE, true);
+    cv.setUint32(16, crc, true); cv.setUint32(20, body.length, true); cv.setUint32(24, f.data.length, true);
+    cv.setUint16(28, nm.length, true); cv.setUint16(30, 0, true); cv.setUint16(32, 0, true);
+    cv.setUint16(34, 0, true); cv.setUint16(36, 0, true); cv.setUint32(38, 0, true);
+    cv.setUint32(42, off, true);
+    ch.set(nm, 46);
+    central.push(ch);
+    off += lh.length + body.length;
+  }
+  const csize = central.reduce((a, c) => a + c.length, 0);
+  const eo = new Uint8Array(22), ev = new DataView(eo.buffer);
+  ev.setUint32(0, 0x06054b50, true); ev.setUint16(4, 0, true); ev.setUint16(6, 0, true);
+  ev.setUint16(8, files.length, true); ev.setUint16(10, files.length, true);
+  ev.setUint32(12, csize, true); ev.setUint32(16, off, true); ev.setUint16(20, 0, true);
+  return new Blob([...parts, ...central, eo], {type: mime || "application/zip"});
+}
+
+/* 골격을 풀어 본문만 갈아 끼운다. mimetype은 무압축으로 맨 앞에 둔다 —
+   ZIP 안에서 그 자리에 있어야 한글이 형식을 알아본다 */
+/* 골격에는 굵은 글씨도 가운데 정렬도 없다 — 글자가 죄다 10pt 민짜라 제목과
+   본문이 구별되지 않는다. 골격 파일은 그대로 두고 필요한 모양을 여기서 만든다.
+   0번(본문)은 골격 것을 그대로 쓴다 */
+function withStyles(header){
+  const cp = header.match(/<hh:charPr id="0"[\s\S]*?<\/hh:charPr>/);
+  const pp = header.match(/<hh:paraPr id="0"[\s\S]*?<\/hh:paraPr>/);
+  const cm = header.match(/<hh:charProperties itemCnt="(\d+)">/);
+  const pm = header.match(/<hh:paraProperties itemCnt="(\d+)">/);
+  if(!cp || !pp || !cm || !pm) return {xml: header, S:{title:0, head:0, bold:0, center:0}};
+  const cNext = Math.max(...[...header.matchAll(/<hh:charPr id="(\d+)"/g)].map(m => +m[1])) + 1;
+  const pNext = Math.max(...[...header.matchAll(/<hh:paraPr id="(\d+)"/g)].map(m => +m[1])) + 1;
+  /* 굵게는 밑줄 앞자리에 온다 — 한글이 낸 문서가 그 자리에 둔다 */
+  const mkC = (id, h, bold) => cp[0]
+    .replace('<hh:charPr id="0"', `<hh:charPr id="${id}"`)
+    .replace(/height="\d+"/, `height="${h}"`)
+    .replace("<hh:underline", (bold ? "<hh:bold/>" : "") + "<hh:underline");
+  const mkP = (id, al) => pp[0]
+    .replace('<hh:paraPr id="0"', `<hh:paraPr id="${id}"`)
+    .replace(/horizontal="[A-Z_]+"/, `horizontal="${al}"`);
+  const S = {title: cNext, head: cNext + 1, bold: cNext + 2, ul: cNext + 3, center: pNext};
+  const xml = header
+    .replace(cm[0], `<hh:charProperties itemCnt="${+cm[1] + 4}">`)
+    .replace("</hh:charProperties>",
+      mkC(S.title, 1800, true) + mkC(S.head, 1200, true) + mkC(S.bold, 1000, true) +
+      /* 학생이 쓰는 칸 — 빈 줄에 밑줄만 그어 둔다 */
+      mkC(S.ul, 1000, false).replace(/<hh:underline type="NONE"/, '<hh:underline type="BOTTOM"') +
+      "</hh:charProperties>")
+    .replace(pm[0], `<hh:paraProperties itemCnt="${+pm[1] + 1}">`)
+    .replace("</hh:paraProperties>", mkP(S.center, "CENTER") + "</hh:paraProperties>");
+  return {xml, S};
+}
+
+/* body는 글자·문단 모양 id를 받아 XML을 돌려주는 함수다.
+   mimetype은 무압축으로 맨 앞에 둔다 — 그 자리에 있어야 한글이 형식을 알아본다 */
+async function buildHwpx(body){
+  if(!HWPX_SKEL) throw new Error("문서 골격이 빠져 있습니다. 빌드를 다시 해 주세요.");
+  const all = await unzip(b64bytes(HWPX_SKEL).buffer, () => true);
+  const key = "Contents/section0.xml", hkey = "Contents/header.xml";
+  if(!all[key] || !all[hkey]) throw new Error("문서 골격이 온전하지 않습니다.");
+  const td = new TextDecoder(), te = new TextEncoder();
+  const st = withStyles(td.decode(all[hkey]));
+  all[hkey] = te.encode(st.xml);
+  const sec = td.decode(all[key]);
+  if(!sec.includes("</hs:sec>")) throw new Error("문서 골격의 본문을 찾지 못했습니다.");
+  const xml = typeof body === "function" ? body(st.S) : body;
+  /* 골격의 첫 문단에 쪽 설정(secPr)이 들어 있으므로 그것을 남기고 뒤에 붙인다 */
+  all[key] = te.encode(sec.replace("</hs:sec>", xml + "</hs:sec>"));
+  const names = Object.keys(all);
+  return zip([{name:"mimetype", data:all["mimetype"], store:true},
+    ...names.filter(n => n !== "mimetype").map(n => ({name:n, data:all[n]}))],
+    "application/hwp+zip");
+}
+const xesc = v => String(v == null ? "" : v)
+  .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+/* 문단 하나. cp는 글자 모양, pp는 문단 모양 — 안 주면 골격의 기본(0번)이다 */
+const hwpP = (txt, cp, pp) =>
+  `<hp:p id="0" paraPrIDRef="${pp || 0}" styleIDRef="0" pageBreak="0" columnBreak="0" merged="0">` +
+  `<hp:run charPrIDRef="${cp || 0}"><hp:t>${xesc(txt)}</hp:t></hp:run></hp:p>`;
+
+function saveBlob(blob, name){
+  const u = URL.createObjectURL(blob), a = document.createElement("a");
+  a.href = u; a.download = name; document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(u), 4000);
+}
+
 /* 문단은 한 줄, 표는 한 행을 탭으로 이어 붙인다 — readPlan()이 셀 위치로 읽을 수 있게 */
 function hwpxLines(root){
   const out = [], kids = e => [...e.children];
@@ -3848,6 +4792,8 @@ JSON만 출력한다: {${ELEM_CATS.map(c=>`"${c}":[]`).join(",")}}`);
 ${codes.length ? "성취기준:\n" + codes.map(c => `- [${c}] ${CODEMAP[c]?.text||""}`).join("\n") : "영역: " + dlgAreas().join(" · ")}
 ${name ? "평가과제: " + name + (crit ? " / 평가기준: " + crit : "") : ""}
 지식·기능·태도 세 갈래로 각각 6개씩, 교사가 관찰한 사실을 적을 때 쓰는 짧은 명사구로 쓴다(예: 중심 문장 찾기, 근거 들어 설명하기).
+평가과제 이름을 되풀이하지 않는다. 그보다 한 층 잘게, 그 과제를 하는 동안 교실에서 갈리는 장면으로 쓴다
+(평가과제가 「문단의 중심 생각 정리하기」라면 → 중심 문장 찾기 / 뒷받침 문장 잇기 / 요약해 쓰기 / 고쳐 쓰기).
 점수·등급·대회·상표명은 넣지 않는다.
 JSON만 출력한다: {"지식":["..."],"기능":["..."],"태도":["..."]}`);
       const byCat = ["지식","기능","태도"].map(k => (r[k]||[]).map(String).map(s=>s.trim()).filter(Boolean));
@@ -4038,8 +4984,20 @@ function demo(){
   const base = S.students.length;
   const made = ["강ㅇㅇ","김ㅇㅇ","박ㅇㅇ","이ㅇㅇ","정ㅇㅇ"].map((n,i)=>({id:uid(), no:base+i+1, name:n}));
   S.students.push(...made);
+  /* 수준 서술까지 채워 둔다 — 루브릭이 없으면 「수업 설계」로 넘어가지 못하고,
+     예시가 준비 탭의 절반만 보여 주게 된다. 기준은 [4국03-01]의 과정·기능이다 */
   const t1 = {id:uid(), name:"문단의 중심 생각 정리하기", subject:"국어", standards:["4국02-01","4국03-01"],
-              criteria:"문단의 중심 문장을 찾아 글의 내용을 요약하여 쓸 수 있다."};
+              criteria:"문단의 중심 문장을 찾아 글의 내용을 요약하여 쓸 수 있다.",
+              axis:"정확성", off:{}, sources:[], targets:[], legacy:[],
+              kw:["중심 문장 찾기", "뒷받침 문장 잇기", "요약해 쓰기", "고쳐 쓰기"],
+              rubric:[
+                {level:"잘함", text:"중심 문장을 먼저 정하고 뒷받침 문장을 그 아래 붙여 문단을 씀",
+                 fb:"중심 문장을 먼저 쓰고 뒷받침을 붙인 순서가 좋았어. 다음에는 뒷받침 하나를 예로 바꿔 보자."},
+                {level:"보통", text:"중심 문장과 뒷받침 문장을 갖추어 쓰나 둘의 순서가 뒤섞임",
+                 fb:"이 문단에서 가장 중요한 한 줄에 밑줄을 긋고, 그 줄을 맨 앞으로 옮겨 보자."},
+                {level:"노력요함", text:"읽은 문장을 차례대로 옮겨 적음",
+                 fb:"이 문단이 무엇에 대한 이야기인지 한 낱말로 말해 보자. 그 낱말이 들어간 문장을 같이 찾자."}
+              ]};
   S.tasks.push(t1);
   const D = today(), add = (i,o) => S.notes.push(Object.assign({id:uid(), studentId:made[i].id, date:D, standards:[]}, o));
   add(0,{axis:"subj",subject:"국어",source:"수업산출물",taskId:t1.id,standards:t1.standards.slice(),text:"문단의 중심 문장을 찾아 근거를 들어 설명함"});
@@ -4058,6 +5016,7 @@ function demo(){
 
 /* ── 부팅 ── */
 el("tab-prep").onclick  = () => { S.ui.tab = "prep";  save(); render(); };
+el("tab-design").onclick = () => { S.ui.tab = "design"; save(); render(); };
 el("tab-write").onclick = () => { S.ui.tab = "write"; save(); render(); };
 el("tab-check").onclick = () => { S.ui.tab = "check"; save(); render(); };
 el("tab-ai").onclick = () => { S.ui.tab = "ai"; save(); render(); };
