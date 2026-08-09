@@ -225,6 +225,14 @@ textarea{line-height:1.7}
 .kwtog[aria-expanded="true"]::after{transform:rotate(180deg)}
 @media (prefers-reduced-motion:reduce){.kwtog::after{transition:none}}
 .kwchips{display:flex;flex-wrap:wrap;gap:5px;max-height:62px;overflow-y:auto;padding-right:2px}
+/* 역할 — 그 장면에서 이 아이가 맡은 것. 한 줄이고, 안 골라도 담긴다 */
+.rolebar{display:flex;flex-wrap:wrap;align-items:center;gap:5px;margin:7px 0 0}
+.rolebar .rl{font-size:12px;color:var(--ink-3);margin-right:3px}
+.rlc{background:var(--surface);border:1px solid var(--rule);border-radius:999px;
+     padding:3px 11px;font-size:12.5px;font-family:inherit;color:var(--ink-2);cursor:pointer;line-height:1.5}
+.rlc:hover{border-color:var(--accent-line);color:var(--accent)}
+.rlc[aria-pressed="true"]{background:var(--accent-soft);border-color:var(--accent-line);
+     color:var(--accent-deep);font-weight:600}
 .kwc{background:var(--surface);border:1px solid var(--rule);border-radius:999px;
      padding:2px 10px;font-size:12px;color:var(--ink-2);white-space:nowrap}
 .kwc:hover{border-color:var(--accent-line);color:var(--accent);background:var(--accent-soft)}
@@ -315,6 +323,11 @@ textarea.goal{width:100%;min-height:66px;font-size:13.5px;line-height:1.7;resize
      padding:3px 12px;font-size:12px;color:var(--ink-2)}
 .lvc:hover{border-color:var(--rule-strong);color:var(--ink)}
 .lvc[aria-pressed="true"]{border-color:var(--rule-strong);color:var(--ink);font-weight:600;background:var(--raise)}
+/* 복사한 자국 — 어디까지 넘겼는지 알려 준다 */
+.foot .moved{font-size:11.5px;color:var(--good);background:var(--good-soft);border-radius:999px;padding:2px 9px;white-space:nowrap}
+.progress-table .mvtag{font-family:var(--mono);font-size:11.5px;color:var(--ink-3);background:var(--sink);border-radius:999px;padding:1px 8px}
+.progress-table .mvtag.all{color:var(--good);background:var(--good-soft)}
+.ph .sep{margin:0 6px;color:var(--rule-strong)}
 .lvtag{font-size:11.5px;color:var(--ink-2);border:1px solid var(--rule);border-radius:999px;
        padding:1px 8px;white-space:nowrap}
 .lvc:disabled{opacity:.35}
@@ -334,11 +347,22 @@ textarea.goal{width:100%;min-height:66px;font-size:13.5px;line-height:1.7;resize
            padding:1px 9px;justify-self:start;white-space:nowrap}
 .memo .body{word-break:break-word;line-height:1.65}
 .memo .body{display:flex;flex-wrap:wrap;align-items:baseline;gap:6px}
+/* 동그라미는 「무엇을 보고 썼는가」 하나에만 두른다. 이 도구가 관찰마다 묻는 것이고,
+   기재요령이 근거로 인정하는 자료가 무엇인지 가르는 자리라서다.
+   나머지는 색과 크기로만 갈린다 — 다 두르면 무엇이 중한지 알 수 없다. */
+.memo .rtag{font-size:12px;color:var(--ink-3);white-space:nowrap}
+.memo .rtag:after{content:"·";margin-left:6px;color:var(--rule-strong)}
+.memo .lvtag{font-size:12px;font-weight:600;color:var(--ink-2);border:0;background:none;padding:0;white-space:nowrap}
+.memo .gmark{font-style:normal;font-weight:700;margin-left:3px}
+.memo .gmark.up{color:var(--good)}
+.memo .gmark.down{color:var(--mid)}
+.memo .gmark.flat{color:var(--ink-3)}
+.memo .meta{flex-basis:100%;display:flex;flex-wrap:wrap;align-items:baseline;gap:7px;margin-top:2px}
 .memo .code{font-family:var(--mono);font-size:11px;color:var(--accent)}
 .memo .code.legacy{color:var(--warm)}
 .memo .code em{font-style:normal;font-size:10px;border:1px solid var(--warm-line);border-radius:999px;padding:0 5px}
 .memo .stdinline{font-size:11.5px;color:var(--ink-3)}
-.memo .obs{flex-basis:100%;line-height:1.6}
+.memo .obs{flex:1;min-width:0;line-height:1.6;color:var(--ink)}
 .ic{width:15px;height:15px;flex:0 0 auto;vertical-align:-2px}
 .kwai{display:inline-flex;align-items:center;gap:5px;background:var(--accent);color:var(--on-accent);
       border:1px solid var(--accent);border-radius:999px;padding:5px 13px;font-size:12.5px;font-weight:600}
@@ -611,6 +635,18 @@ dialog::backdrop{background:rgba(8,12,20,.45)}
 .fieldhead{display:flex;align-items:center;gap:8px;margin-bottom:5px}
 .fieldhead .r{margin-left:auto;display:flex;gap:6px;align-items:center}
 /* 고른 성취기준과 그 영역 — 영역은 고르는 것이 아니라 따라 나온다(읽기 전용) */
+/* 교육부 성취수준으로 채웠음을 알리는 한 줄 — 서술 자체는 접혀 있다 */
+#dlg-official{display:flex;flex-wrap:wrap;align-items:baseline;gap:5px 9px;
+              padding:9px 12px;border:1px solid var(--accent-line);border-radius:10px;
+              background:var(--accent-soft);margin-bottom:8px;font-size:13px}
+#dlg-official .offmark{font-weight:600;color:var(--accent-deep)}
+#dlg-official .offmark:before{content:"✓ ";font-weight:700}
+#dlg-official .offmark.edited{color:var(--ink-2)}
+#dlg-official .offmark.edited:before{content:"";}
+#dlg-official .offlv{color:var(--ink-3);font-size:12.5px}
+#dlg-official .offmore{color:var(--mid);font-size:12.5px;flex-basis:100%}
+#dlg-official .r{margin-left:auto;display:flex;gap:11px;align-items:baseline}
+#dlg-skelmenu .skelhead{font-size:12px;color:var(--ink-3);padding:1px 2px 3px}
 #dlg-picked{display:flex;flex-wrap:wrap;gap:5px;align-items:center;margin-bottom:10px}
 #dlg-picked .subj{font-size:12.5px;font-weight:600;color:var(--ink-2);margin-right:2px}
 /* 평가 요소를 갈래로 고른다 — 갈래 이름은 2022 개정 범주를 그대로 쓴다 */
@@ -796,6 +832,13 @@ input.elnew{border:1px solid var(--accent-line);border-radius:999px;padding:3px 
       <div id="dlg-elmsg"></div>
       <div id="dlg-elem"></div>
     </div>
+    <!-- 관찰 관점은 평가 요소와 같은 층이다 — 무엇을 볼 것인가(요소) 바로 다음에
+         그것을 어떤 낱말로 볼 것인가(관점)가 온다. 둘을 떼어 놓으면 따로 채우게 된다 -->
+    <div class="field" style="margin-bottom:10px">
+      <div class="fieldhead"><span class="lab">관찰 관점</span><span class="r" id="dlg-kwai-slot"></span></div>
+      <div id="dlg-kwmsg"></div>
+      <div class="kwchips" id="dlg-kw"></div>
+    </div>
     <div class="field" style="margin-bottom:10px">
       <span class="lab">평가 내용</span>
       <textarea id="dlg-crit" rows="2" placeholder="학교 평가계획의 문장을 그대로 붙여 넣으세요"></textarea>
@@ -815,17 +858,12 @@ input.elnew{border:1px solid var(--accent-line);border-radius:999px;padding:3px 
         <span class="r"><button class="fix" id="dlg-who" type="button">고르기</button></span></div>
       <div class="muted" id="dlg-whotxt"></div>
     </div>
-    <div class="field" style="margin-bottom:10px">
-      <div class="fieldhead"><span class="lab">관찰 관점</span><span class="r" id="dlg-kwai-slot"></span></div>
-      <div id="dlg-kwmsg"></div>
-      <div class="kwchips" id="dlg-kw"></div>
-    </div>
     <div class="field" style="margin-bottom:0">
       <div class="fieldhead"><span class="lab">수준 서술</span>
         <span class="r">
-          <button class="ghost" id="dlg-skel" type="button">뼈대 만들기</button>
-          <span id="dlg-airub-slot"></span></span></div>
+          <span id="dlg-mine-slot"></span></span></div>
       <div id="dlg-skelmenu" hidden></div>
+      <div id="dlg-official" hidden></div>
       <div class="rub" id="dlg-rub">
         <div class="rrow2"><input type="text" class="rl" value="잘함"><textarea rows="1" class="rt" placeholder="이 수준에서 보이는 모습 — 뼈대를 만들어 다듬어도 됩니다"></textarea>
           <span class="rfl">피드백</span><textarea rows="1" class="rf" placeholder="이 수준 학생에게 그 자리에서 건넬 말 — 다음 걸음 하나"></textarea></div>
@@ -905,6 +943,21 @@ const HWPX_SKEL = /*__SKEL__*/""/*__/SKEL__*/;
 /* ══ 교과·창체·행동특성 평가 키워드 (v1 확장 자료, 688개) ══ */
 const KW = /*__KW__*/{"subj":{},"cca":{"auto":[],"career":[]},"behavior":[]}/*__/KW__*/;
 
+/* ══ 성취기준별 성취수준 A·B·C (교육부, 2022 개정 초등 603건) ══
+   평가기준(2015)과 같은 자리에 놓이는 것으로, 도달 정도를 세 단계로 적은 서술이다.
+   교사가 세 수준을 직접 쓰지 않아도 되게 이것으로 빈칸을 채운다. */
+const LV = /*__LV__*/{}/*__/LV__*/;
+
+/* ══ 성취기준별 평가 요소 (위 성취수준 서술에서 뽑은 관찰 관점) ══ */
+const PT = /*__PT__*/{}/*__/PT__*/;
+
+/* ══ 세특 문장 골격과 교과 역량 ══
+   교육과정 재구성 예시 자료집이 기재 예시마다 붙여 둔 설명 그대로다.
+   ① 학습목표에 따라 학습한 '수행 과제'  ② 학습활동 과정의 '수행한 기능'
+   ③ 활동에 참여하며 성장한 '교과 역량'
+   보기 문장은 같은 자료집의 실제 기재 예시에서 골랐다 — 교과와 행동특성은 결이 다르다. */
+const FRAME = /*__FR__*/{"골격":[],"역량":{},"보기":{"subj":[],"behavior":[]}}/*__/FR__*/;
+
 const CCA = {auto:{label:"창체 자율·동아리"}, career:{label:"창체 진로"}};
 const COMMON_KW = [
   {a:"태도·참여", k:["적극적으로 참여함","끝까지 해냄","스스로 계획해 실천함","친구를 도와줌","끝까지 경청함",
@@ -917,6 +970,16 @@ const SOURCES = ["직접관찰","수업산출물","자기평가서","동료평�
 /* 못 한 것은 판정이 아니라 사실이다 — 관찰(노트)이 아니라 과제의 t.off에 남는다.
    노트로 적으면 관찰 수와 근거 스트림이 오염되고, 「관찰 0건」이 미기록과 미실시를 못 가른다. */
 const OFFS = ["결석","미제출"];
+/* 역할 — 그 장면에서 이 아이가 무엇을 맡았나. 관찰된 사실만 담는다.
+   ‘성실함’ 같은 해석은 넣지 않는다 — 해석이 사실보다 앞서면 그것이 곧 과장이다.
+   ‘도움 받음’을 뺀 목록은 반쪽이다. 도움을 받은 것도 일어난 일이다. */
+const ROLES = ["이끎","기록","발표","도움 줌","도움 받음","질문","혼자 해냄"];
+/* 초안에서 관찰 앞에 붙는 어구. 명사형 문장에 그대로 이어 붙는다 */
+const ROLE_PHRASE = {
+  "이끎":"모둠을 이끌며", "기록":"모둠의 기록을 맡아", "발표":"모둠을 대표해 발표하며",
+  "도움 줌":"친구를 도우며", "도움 받음":"친구의 도움을 받아",
+  "질문":"궁금한 점을 물으며", "혼자 해냄":"스스로",
+};
 const RECOGNIZED = ["수업산출물","자기평가서","동료평가서","소감문","독후감"];   // 기재요령이 인정하는 학생 산출 자료 5종
 const BAND_OF = {1:"1~2",2:"1~2",3:"3~4",4:"3~4",5:"5~6",6:"5~6"};
 const INTEGRATED = "통합교과", INTEGRATED_LABEL = "바른 생활·슬기로운 생활·즐거운 생활";
@@ -1267,7 +1330,7 @@ function switchClass(id){
   save(); render();
 }
 const klassName = c => `${c.klass.grade}학년 ${c.klass.room||""}반`.replace(/\s+반$/, "반");
-let S = blank(), pendingStd = [], pendingFile = null, _taskId = "", _src = "직접관찰", dlgState = null, upload = null;
+let S = blank(), pendingStd = [], pendingFile = null, _taskId = "", _src = "직접관찰", _roles = [], dlgState = null, upload = null;
 /* AI 검토 결과는 초안 레코드(S.drafts[k].review)에 함께 저장한다.
    문장과 근거가 그대로면 다시 부르지 않는다 — 무료 키의 병목은 토큰이 아니라 호출 횟수다. */
 const revOf = k => S.drafts[k]?.review || null;
@@ -1354,8 +1417,9 @@ function logCount(sid, k){ return (S.drafts[dkey(sid,k)]?.log || []).length; }
 /* AI에 넘기는 [근거] 본문 — 검토 캐시의 서명에도 같은 값을 쓴다(근거가 늘면 다시 검토해야 한다) */
 function evidOf(sid, k){
   return notesOf(sid, k).map(n =>
-    `- (${n.source}) ${n.text}${n.level?` (수준: ${n.level} — ${levelText(n)})`:""}${n.standards?.length?` [${n.standards.join(" ")}: ${n.standards.map(c=>CODEMAP[c]?.text||"").join(" / ")}]`:""}`).join("\n");
+    `- (${n.source})${rolesOf(n).length?` [역할: ${rolesOf(n).join(" · ")}]`:""} ${n.text}${n.level?` (수준: ${n.level} — ${levelText(n)}${growthOf(n)?`, 지난 기록보다 ${GROWTH_LABEL[growthOf(n)]}`:""})`:""}${n.standards?.length?` [${n.standards.join(" ")}: ${n.standards.map(c=>CODEMAP[c]?.text||"").join(" / ")}]`:""}`).join("\n");
 }
+const movedAt = (sid, k) => S.drafts[dkey(sid,k)]?.moved || "";
 function draftDone(sid, k){
   const d = S.drafts[dkey(sid,k)];
   return !!(d && d.text.trim() && d.gate.every(Boolean) && !check(d.text).some(f => f.lv === "block"));
@@ -1427,7 +1491,20 @@ let AI = {key:"", model:"gemini-flash-lite-latest", agreed:false, models:null};
 try{ Object.assign(AI, JSON.parse(localStorage.getItem(AIKEY) || "{}")); }catch(e){}
 const aiShared = () => !AI.key && !!AI_PROXY;
 const aiBase = () => aiShared() ? AI_PROXY.replace(/\/+$/,"") : "https://generativelanguage.googleapis.com";
-const aiHead = () => AI.key ? {"x-goog-api-key":AI.key} : {};
+/* 개발용 — 로컬에서 띄운 화면(127.0.0.1·localhost)에서도 공용 연결을 쓰려면
+   콘솔에서 localStorage['trecord.dev'] = '토큰' 을 한 번 넣어 둔다.
+   토큰은 프록시의 DEV_TOKEN과 같아야 하고, 배포된 주소에서는 쓰이지 않는다. */
+const aiDev = () => {
+  try{
+    if(!/^(localhost|127\.0\.0\.1)$/.test(location.hostname)) return "";
+    return localStorage.getItem("trecord.dev") || "";
+  }catch(e){ return ""; }
+};
+const aiHead = () => {
+  if(AI.key) return {"x-goog-api-key":AI.key};
+  const d = aiDev();
+  return d ? {"x-dev-token":d} : {};
+};
 const aiOn = () => !!((AI.key || AI_PROXY) && AI.agreed);
 function aiSave(){ try{ localStorage.setItem(AIKEY, JSON.stringify(AI)); }catch(e){} }
 /* 기본 후보. 실제 목록은 ‘모델 목록 가져오기’로 키에서 직접 받아온다. */
@@ -1929,6 +2006,11 @@ function detailHTML(){
         ${_sweep ? `<button class="ghost" id="c-skip" type="button">넘김</button>`
                  : `<button class="ghost tip" id="c-many" type="button"
                 data-tip="같은 장면을 여럿이 겪었을 때 — 모둠 활동이나 현장학습. 수준 판정은 함께 담기지 않습니다">함께 담기</button>`}
+      </div>
+      <div class="rolebar" id="c-role">
+        <span class="rl">역할</span>
+        ${roleOrder().map(v => `<button class="rlc" type="button" data-role="${esc(v)}"
+          aria-pressed="${_roles.includes(v)}">${esc(v)}</button>`).join("")}
       </div>` : ``}
       ${_sweepMsg ? `<div class="hint" id="c-sweepmsg">${esc(_sweepMsg)}</div>` : ``}
       ${!ready ? `` : (() => {
@@ -1980,15 +2062,21 @@ function detailHTML(){
         <span class="dt" title="${esc(n.date)}">${esc(n.date.slice(5))}</span>
         <span class="src">${esc(n.source)}</span>
         <span class="body">
-          ${(n.standards||[]).length?`<span class="code">${n.standards.map(esc).join(" ")}</span>`:""}
-          ${(n.legacy||[]).length?`<span class="code legacy">${n.legacy.map(esc).join(" ")} <em>2015</em></span>`:""}
-          ${(n.standards||[]).length?`<span class="stdinline">${n.standards.map(c=>esc(stdCut(c,52))).filter(Boolean).join(" / ")}</span>`:""}
+          ${rolesOf(n).length?`<span class="rtag">${rolesOf(n).map(esc).join("·")}</span>`:""}
           <span class="obs">${n.text ? esc(n.text)
             : `<span class="muted">${n.level ? esc(levelText(n) || "수준만 담김")
                 : n.fileId ? "산출물만 담김 — 눌러서 볼 수 있습니다" : "(빈 관찰)"}</span>`}</span>
-          ${n.level?`<span class="lvtag" title="${esc(levelText(n))}">${esc(n.level)}</span>`:""}
-          ${taskOf(n)?`<span class="task">${esc(taskOf(n).name)}</span>`:""}
-          ${n.fileId?`<button class="clip" type="button" data-open="${esc(n.fileId)}" title="붙어 있는 산출물 보기">첨부</button>`:""}</span>
+          ${n.level?`<span class="lvtag" title="${esc(levelText(n))}">${esc(n.level)}${(() => {
+            const g = growthOf(n); return g
+              ? `<i class="gmark ${g}" title="같은 평가과제의 지난 기록보다 ${GROWTH_LABEL[g]}">${
+                  g==="up"?"↑":g==="down"?"↓":"="}</i>` : ""; })()}</span>`:""}
+          ${n.fileId?`<button class="clip" type="button" data-open="${esc(n.fileId)}" title="붙어 있는 산출물 보기">첨부</button>`:""}
+          ${(() => { const meta = []
+              .concat((n.standards||[]).length?[`<span class="code">${n.standards.map(esc).join(" ")}</span>`]:[])
+              .concat((n.legacy||[]).length?[`<span class="code legacy">${n.legacy.map(esc).join(" ")} <em>2015</em></span>`]:[])
+              .concat((n.standards||[]).length?[`<span class="stdinline">${n.standards.map(c=>esc(stdCut(c,52))).filter(Boolean).join(" / ")}</span>`]:[])
+              .concat(taskOf(n)?[`<span class="task">${esc(taskOf(n).name)}</span>`]:[]);
+            return meta.length?`<span class="meta">${meta.join("")}</span>`:""; })()}</span>
         <span style="display:flex;gap:2px;align-items:baseline;justify-content:flex-end">
           <button class="mv" type="button" data-mv="${n.id}" title="다른 학생에게 옮기기">옮기기</button>
           <button class="del" type="button" data-del="${n.id}" title="지우기">×</button></span></div>`).join("")
@@ -2049,6 +2137,9 @@ function detailHTML(){
                 data-tip="지금 문장을 누가기록으로 남깁니다. 학기말에 모아 이어 붙일 수 있습니다">저장</button>
         <span class="msg${nb?" warn":""}">${nb?`위반 ${nb}건을 먼저 고쳐 주세요`
           : !d.text.trim()?"문장을 먼저 쓰세요" : ok?"복사할 수 있습니다":"네 항목을 확인해 주세요"}</span>
+        ${(() => { const mv = movedAt(s.id, S.ui.slot); return mv
+          ? `<span class="moved" title="복사한 때입니다. 나이스에 붙여넣었는지까지는 이 도구가 알 수 없습니다"
+               >${esc(mv.replace("T"," ").slice(5,16))} 복사함</span>` : ""; })()}
       </div>
       ${(d.log||[]).length ? `<div class="log">
         <div class="loghead"><span class="lab">누가기록 ${d.log.length}</span>
@@ -2107,6 +2198,27 @@ function modeLevel(ns){
   return best;
 }
 /* 수준은 홀로 뜨지 않는다 — 언제나 서술어를 달고 다닌다 (§10-5 울타리) */
+/* 성장 — 교사에게 묻지 않는다. 같은 과제의 루브릭 서열로만 읽는다.
+   과제가 다르면 잣대가 달라 비교가 되지 않는다. 비교하는 척하지 않는다.
+   값을 저장하지 않고 그때그때 센다 — 기록 하나를 지우면 판정도 함께 사라져야 한다.
+   같은 날 여러 건이 있을 수 있어 날짜가 아니라 담긴 차례로 앞뒤를 가른다. */
+function growthOf(n){
+  if(!n || !n.level || !n.taskId) return "";
+  const rb = (taskOfId(n.taskId)?.rubric || []);
+  const rank = v => rb.findIndex(r => r.level === v);
+  const now = rank(n.level);
+  if(now < 0) return "";
+  const i = S.notes.indexOf(n);
+  for(let j = i - 1; j >= 0; j--){
+    const m = S.notes[j];
+    if(m.studentId !== n.studentId || m.taskId !== n.taskId || !m.level) continue;
+    const was = rank(m.level);
+    if(was < 0) continue;
+    return now < was ? "up" : now > was ? "down" : "flat";
+  }
+  return "";
+}
+const GROWTH_LABEL = {up:"나아짐", flat:"유지", down:"낮아짐"};
 function levelText(n){
   const t = taskOf(n);
   const r = (t?.rubric || []).find(x => x.level === n.level);
@@ -2251,7 +2363,7 @@ function bindDetail(){
   const goPrep = el("c-goprep");
   if(goPrep) goPrep.onclick = () => { S.ui.tab = "prep"; save(); render(); };
   const plain = el("c-plain");
-  if(plain) plain.onclick = () => { _taskId = "none"; _noteLevel = ""; repaint(); el("c-text")?.focus(); };
+  if(plain) plain.onclick = () => { _taskId = "none"; _noteLevel = ""; repaint(); el("c-text")?.focus({preventScroll:true}); };
   const editTask = el("c-edittask");
   if(editTask) editTask.onclick = () => {
     const t = S.tasks.find(x => x.id === _taskId); if(!t) return;
@@ -2318,12 +2430,22 @@ function bindDetail(){
       if(_sweep && !ti.value.trim()) sweepNext(); else addNote(); } };
   }
   const addBtn = el("c-add"); if(addBtn) addBtn.onclick = addNote;
+  /* 역할은 골라도 되고 안 골라도 된다. 담기를 막지 않는다 */
+  const rbar = el("c-role");
+  if(rbar) rbar.onclick = e => {
+    const b = e.target.closest("[data-role]"); if(!b) return;
+    const v = b.dataset.role;
+    _roles = _roles.includes(v) ? _roles.filter(x => x !== v) : [..._roles, v];
+    rbar.querySelectorAll("[data-role]").forEach(x =>
+      x.setAttribute("aria-pressed", String(_roles.includes(x.dataset.role))));
+    el("c-text")?.focus({preventScroll:true});
+  };
   const many = el("c-many"); if(many) many.onclick = addNoteMany;
   const skip = el("c-skip"); if(skip) skip.onclick = () => sweepNext();
   el("c-sweep").onclick = () => {
     _sweep = !_sweep; _sweepMsg = "";
     if(_sweep && S.students.length) S.ui.sid = S.students[0].id;
-    renderWrite(); el("c-text")?.focus();
+    renderWrite(); el("c-text")?.focus({preventScroll:true});
   };
 
   /* 산출물 사진·PDF → 글자 읽기 → 관찰 메모 후보 */
@@ -2356,7 +2478,7 @@ function bindDetail(){
       /* 첨부 칩이 이미 파일 이름을 보여주므로 여기서는 결과만 알린다(§7-2 40자) */
       const keep = `<div class="hint">보관했습니다 — 지금 담는 관찰에 붙습니다.</div>`;
       repaint();
-      if(!aiOn()){ el("c-shot-out").innerHTML = keep; el("c-text").focus(); return; }
+      if(!aiOn()){ el("c-shot-out").innerHTML = keep; el("c-text")?.focus({preventScroll:true}); return; }
       el("c-shot-out").innerHTML = `<div class="hint">사진에서 글자를 읽는 중… 잠시 기다려 주세요.</div>`;
       try{
         const b64 = await new Promise((ok,no) => {
@@ -2448,9 +2570,16 @@ JSON만 출력한다: {"text":"옮겨 적은 글","memos":["메모1","메모2"],
   if(mk) mk.onclick = () => {
     const list = notesOf(s.id, S.ui.slot); if(!list.length) return;
     const seen = new Set(), parts = [];
+    let last = "";
     list.forEach(n => {
       const t = n.text.trim().replace(/[.\s]+$/, "");
-      if(t && !seen.has(t)){ seen.add(t); parts.push(toNominal(t) || t); }
+      if(!t || seen.has(t)) return;
+      seen.add(t);
+      /* 같은 역할이 잇달으면 한 번만 적는다 — 두 번 적으면 말이 겹쳐 읽힌다 */
+      const first = rolesOf(n)[0] || "";
+      const ph = first && first !== last ? ROLE_PHRASE[first] : "";
+      if(first) last = first;
+      parts.push((ph ? ph + " " : "") + (toNominal(t) || t));
     });
     const d2 = S.drafts[k] || (S.drafts[k] = {text:"", gate:[false,false,false,false]});
     setDraft(d2, tidySentence(parts.join(". ") + "."));
@@ -2476,6 +2605,18 @@ JSON만 출력한다: {"text":"옮겨 적은 글","memos":["메모1","메모2"],
     try{
       const r = await aiJSON(`아래 [근거]만 사용해 한국 초등학교 학교생활기록부 ‘${cur2.full}’에 넣을 문장 초안을 쓴다.
 근거에 없는 사실을 지어내지 않는다. 2~4문장. 학생의 특성과 성장이 드러나게 쓴다. ${AI_RULES}
+${(() => {
+  /* 문장을 세 매듭으로 짠다 — 교육과정 재구성 예시 자료집이 기재 예시마다 붙여 둔 골격이다.
+     매듭 이름은 문장에 드러내지 않는다. 결과가 골격을 따르면 되지, 골격을 설명할 일이 아니다. */
+  const subj = cur2.kind === "subj";
+  const ex = (FRAME.보기?.[subj ? "subj" : "behavior"] || []).slice(0, 2);
+  const comp = subj ? (FRAME.역량?.[cur2.subject] || []) : [];
+  return `문장은 세 매듭으로 짠다 — ① 무엇을 했나(수행 과제) ② 어떻게 했나(수행한 기능) ③ 무엇이 자랐나.
+매듭마다 한 문장씩 이어 붙여 한 문단으로 쓴다. ①②③ 같은 번호나 매듭 이름은 문장에 쓰지 않는다.
+③은 근거에서 실제로 자란 것이 보일 때만 쓴다. 보이지 않으면 ①②로 끝낸다.`
+  + (comp.length ? `\n③에 쓸 수 있는 ${subjShort(cur2.subject)} 역량: ${comp.join(" · ")}` : "")
+  + (ex.length ? `\n\n[결을 보는 보기 — 내용을 가져오지 말고 문장의 짜임만 본다]\n${ex.map(x => "- " + x).join("\n")}` : "");
+})()}
 ${(() => { const ts = [...new Set(notesOf(s.id, S.ui.slot).map(n => n.taskId).filter(Boolean))]
       .map(id => S.tasks.find(t => t.id === id)).filter(t => t && (t.rubric||[]).length);
     if(!ts.length) return "";
@@ -2593,13 +2734,22 @@ ${S.drafts[k].text}`);
   if(cp) cp.onclick = async () => {
     try{ await navigator.clipboard.writeText(S.drafts[k].text.trim()); }
     catch(e){ ta.select(); document.execCommand("copy"); }
-    cp.textContent = "복사했습니다"; setTimeout(()=>{ cp.textContent = "문장 복사"; }, 1500); };
+    /* 복사한 때를 남긴다. 나이스로 옮겼다는 표시로 쓰인다 —
+       붙여넣기까지 지켜볼 수는 없으니 '옮겼다'가 아니라 '복사했다'가 정확한 말이다 */
+    const d3 = S.drafts[k];
+    if(d3){ d3.moved = new Date().toISOString(); save(); }
+    cp.textContent = "복사했습니다"; setTimeout(()=>{ repaint(); }, 900); };
 
   function repaint(){ wrap.innerHTML = detailHTML(); bindDetail(); }
 }
 
 /* 관찰 한 건을 짓는다. 학생만 다르고 나머지는 같다 —
    withLevel이 false면 수준을 붙이지 않는다(함께 담기에서 쓴다, §일괄의 경계). */
+/* 한 개만 담기던 때의 기록도 그대로 읽는다 */
+const rolesOf = n => n.roles || (n.role ? [n.role] : []);
+/* 자리는 고정이다. 자주 쓰는 것을 앞으로 당겨 봤으나, 한 건 담을 때마다 셈이 달라져
+   칩이 눈앞에서 뒤섞였다. 일곱 개뿐이라 찾기 어렵지 않다 — 자리가 늘 같은 편이 손에 익는다. */
+function roleOrder(){ return ROLES; }
 function buildNote(sid, text, cur, withLevel){
   const n = {id:uid(), studentId:sid, date:today(), source:_src, text, standards:[]};
   if(cur.kind === "subj"){
@@ -2612,6 +2762,9 @@ function buildNote(sid, text, cur, withLevel){
     if(withLevel && _noteLevel && (t?.rubric || []).some(r => r.level === _noteLevel)) n.level = _noteLevel;
   } else if(cur.kind === "cca"){ n.axis = "cca"; n.cca = cur.cca; }
   else n.axis = "behavior";
+  /* 역할은 그 아이가 그 장면에서 맡은 것이다. 수준과 같은 이유로 함께 담기에는 딸려가지 않는다 —
+     한 클릭이 N명의 역할을 정하면 그중 N−1명은 보지 않고 정해진 것이다 */
+  if(withLevel && _roles.length) n.roles = _roles.slice();
   return n;
 }
 function addNote(){
@@ -2623,9 +2776,9 @@ function addNote(){
   const n = buildNote(S.ui.sid, text, cur, true);
   if(pendingFile) n.fileId = pendingFile.id;
   /* 수준은 한 건에 한 번이다 — 비우지 않으면 다음 학생에게 판정이 조용히 따라간다(§10-5) */
-  S.notes.push(n); pendingStd = []; _noteLevel = ""; save();
+  S.notes.push(n); pendingStd = []; _noteLevel = ""; _roles = []; save();
   if(_sweep){ sweepNext(); return; }
-  renderWrite(); el("c-text").focus();
+  renderWrite(); el("c-text")?.focus({preventScroll:true});
 }
 /* 다음 학생으로. 명렬 끝에 닿으면 스스로 멈춘다 — 되돌아 처음부터 돌지 않는다 */
 function sweepNext(){
@@ -2634,7 +2787,7 @@ function sweepNext(){
   if(next){ S.ui.sid = next.id; _sweepMsg = ""; }
   else { _sweep = false; _sweepMsg = "한 바퀴 돌았습니다."; }
   pendingStd = []; pendingFile = null; _noteLevel = ""; save();
-  renderWrite(); el("c-text")?.focus();
+  renderWrite(); el("c-text")?.focus({preventScroll:true});
 }
 /* 함께 담기 — 같은 장면을 여럿이 실제로 겪었을 때. 사실은 복제할 수 있다.
    그러나 수준 판정은 복제하지 않는다: 한 클릭이 N명의 수준을 정하면
@@ -3509,6 +3662,8 @@ const ethList = () => { const v = S.ui.ethics; return [0,1,2].map(i => !!(Array.
 function renderCheck(){
   const sl = slots(), pts = pointers();
   const done = S.students.reduce((a,s) => a + sl.filter(x => draftDone(s.id,x.key)).length, 0);
+  /* 나이스로 넘긴 칸 — 문장을 다 쓴 것과는 다른 셈이다 */
+  const movedN = S.students.reduce((a,s) => a + sl.filter(x => movedAt(s.id,x.key)).length, 0);
   const eth = ethList(), ethN = eth.filter(Boolean).length;
   const total = S.students.length * sl.length;
   const noteTotal = S.notes.length;
@@ -3553,9 +3708,9 @@ function renderCheck(){
 
 
     <div class="panel">
-      <div class="ph"><h2>진행</h2><span class="r muted">${done}/${S.students.length*sl.length}칸 확인 완료</span></div>
+      <div class="ph"><h2>진행</h2><span class="r muted">${done}/${S.students.length*sl.length}칸 확인 완료<span class="sep">·</span>${movedN}칸 복사함</span></div>
       <div class="scroll"><table class="progress-table">
-        <thead><tr><th>학생</th><th>담긴 근거</th><th>문장</th></tr></thead>
+        <thead><tr><th>학생</th><th>담긴 근거</th><th>문장</th><th>복사</th></tr></thead>
         <tbody>${S.students.map(s=>{
           const ns = notesOf(s.id);
           const srcs = [...new Set(ns.map(n=>n.source))].filter(v => SRC_ICON[v]);
@@ -3563,7 +3718,9 @@ function renderCheck(){
             <td><span class="stu"><span class="no">${esc(String(s.no).padStart(2,"0"))}</span>${S.klass.numbersOnly?"":esc(s.name||"")}</span></td>
             <td>${ns.length ? `<span class="srcs" title="${esc(srcs.join(" · "))}">${srcs.map(v=>ICON[SRC_ICON[v]]()).join("")}
                  <span class="tot">${ns.length}</span></span>` : `<span class="muted">—</span>`}</td>
-            <td>${gauge(sl.filter(x=>draftDone(s.id,x.key)).length, sl.length)}</td></tr>`;}).join("")}</tbody>
+            <td>${gauge(sl.filter(x=>draftDone(s.id,x.key)).length, sl.length)}</td>
+            <td>${(() => { const mv = sl.filter(x=>movedAt(s.id,x.key)).length, dn = sl.filter(x=>draftDone(s.id,x.key)).length;
+              return mv ? `<span class="mvtag${mv>=dn&&dn?" all":""}">${mv}</span>` : `<span class="muted">—</span>`; })()}</td></tr>`;}).join("")}</tbody>
       </table></div>
       ${thinN ? `<div class="tsum">관찰이 3회 미만인 학생 ${thinN}명</div>` : ``}
     </div>
@@ -4482,6 +4639,57 @@ function openStd(subject, selected, onOK, taskMode){
     field.style.height = Math.max(field.scrollHeight, 40) + "px";
   };
   const growRubric = () => rubBox.querySelectorAll(".rt,.rf").forEach(growRubricField);
+
+  /* ── 교육부 성취수준으로 수준 서술 채우기 ──
+     성취기준을 고르면 그 기준의 A·B·C가 빈칸으로 들어간다. 적힌 칸은 건드리지 않는다
+     (「뼈대 만들기」와 같은 규칙). 채운 뒤에는 접어 둔다 — 세 수준을 펼쳐 두면
+     읽을 것이 300자 넘게 쌓이고, 교사가 지금 할 일은 읽기가 아니라 고르기다. */
+  function paintOfficial(){
+    const box = el("dlg-official");
+    if(!box || box.hidden) return;
+    const more = [...dlgState.sel].filter(c => LV[c]).length - 1;
+    const names = [...rubBox.querySelectorAll(".rl")].map(i => i.value.trim()).filter(Boolean);
+    const state = dlgState.officialClean ? "교육부 성취수준으로 채웠습니다"
+                : dlgState.mine          ? "교육부 성취수준에 내 평가요소를 얹었습니다"
+                :                          "교육부 성취수준을 고쳐 썼습니다";
+    box.innerHTML =
+      `<span class="offmark${dlgState.officialClean ? "" : " edited"}">${state}</span>`
+      + `<span class="offlv">${esc(names.join(" · "))}</span>`
+      + (more > 0 && dlgState.officialClean
+          ? `<span class="offmore">첫 성취기준 기준입니다 — 나머지 ${more}건은 확인해 주세요</span>` : "")
+      + `<span class="r">`
+      + (dlgState.officialClean ? ""
+          : `<button class="link" id="dlg-revert" type="button">되돌리기</button>`)
+      + `<button class="link" id="dlg-rubtog" type="button">${rubBox.hidden ? "보기" : "접기"}</button>`
+      + `</span>`;
+    el("dlg-rubtog").onclick = () => {
+      rubBox.hidden = !rubBox.hidden;
+      if(!rubBox.hidden) requestAnimationFrame(growRubric);
+      paintOfficial();
+    };
+    const rv = el("dlg-revert"); if(rv) rv.onclick = revertOfficial;
+  }
+  function fillOfficialRubric(){
+    const box = el("dlg-official");
+    if(!box) return;
+    const codes = [...dlgState.sel].filter(c => LV[c]);
+    const key = codes[0] || "";
+    if(!key){ box.hidden = true; rubBox.hidden = false; return; }
+    /* 고른 성취기준이 그대로면 다시 채우지 않는다 — 교사가 지운 칸을 되살리면 안 된다 */
+    if(dlgState.officialFor === key){ paintOfficial(); return; }
+    dlgState.officialFor = key;
+    const src = LV[key];
+    let filled = 0;
+    [...rubBox.querySelectorAll(".rrow2")].forEach((row, i) => {
+      const t = row.querySelector(".rt");
+      if(!t.value.trim() && src[i]){ t.value = src[i]; growRubricField(t); filled++; }
+    });
+    if(!filled){ box.hidden = true; rubBox.hidden = false; return; }
+    dlgState.officialClean = true;
+    box.hidden = false;
+    rubBox.hidden = true;          /* 채웠으면 접는다 */
+    paintOfficial();
+  }
   subjSel.innerHTML = subjects().map(s=>`<option value="${esc(s)}"${s===subject?" selected":""}>${esc(subjShort(s))}</option>`).join("");
   subjSel.onchange = () => {
     /* 교과를 넘나들어도 고른 것은 지우지 않는다 — 담은 것은 담긴 채로 둔다.
@@ -4506,10 +4714,14 @@ function openStd(subject, selected, onOK, taskMode){
       row.querySelector(".rt").value = rb[i]?.text ?? "";
       row.querySelector(".rf").value = rb[i]?.fb ?? "";
     });
-    el("dlg-name").oninput = () => { el("dlg-skel").disabled = !skelKey(); };
+    el("dlg-name").oninput = () => { const b = el("dlg-mine"); if(b) b.disabled = !skelKey(); };
     let lt = null;
     rubBox.oninput = e => {
       growRubricField(e.target);
+      /* 한 글자라도 손대면 더는 '교육부 성취수준 그대로'가 아니다 */
+      if(dlgState.officialClean && e.target.matches(".rt,.rl")){
+        dlgState.officialClean = false; paintOfficial();
+      }
       clearTimeout(lt); lt = setTimeout(paintLint, 450);
     };
   }
@@ -4570,23 +4782,46 @@ function openStd(subject, selected, onOK, taskMode){
     const w = b.dataset.kw;
     dlgState.kw.has(w) ? dlgState.kw.delete(w) : dlgState.kw.add(w);
     paintKw(); };
-  el("dlg-skel").onclick = () => {
+  /* 교육부 성취수준이 들어온 뒤로 「빈칸만 채우기」는 아무 일도 하지 않는다 — 빈칸이 없다.
+     그래서 기준을 바꾼다: 교육부 것 그대로인 칸은 내 것으로 바꾸고, 내가 고쳐 쓴 칸은 놔둔다. */
+  function untouchedCell(t, i){
+    const src = ((LV[dlgState.officialFor] || [])[i] || "").trim();
+    const v = t.value.trim();
+    return !v || (!!src && v === src);
+  }
+  /* 「내 평가요소 반영」 — 교육부 성취수준(정본) 위에 우리 반 평가요소를 얹는다.
+     AI가 있으면 둘을 합쳐 다시 쓰고, 없으면 잣대를 골라 뼈대 문장으로 쓴다. */
+  function openMine(){
+    if(aiOn()) return aiRubric();
     const m = el("dlg-skelmenu");
     if(!m.hidden){ m.hidden = true; return; }
     const k = skelKey();
-    m.innerHTML = SKEL.map((s,i)=>`<button class="skelopt" type="button" data-skel="${i}">
+    m.innerHTML = `<div class="skelhead">수준을 무엇으로 가를까요</div>`
+      + SKEL.map((s,i)=>`<button class="skelopt" type="button" data-skel="${i}">
       <b>${esc(s.axis)}</b><span>${esc(s.hint)} — ${esc(s.t[0](k))}</span></button>`).join("");
     m.hidden = false;
     m.querySelectorAll("[data-skel]").forEach(b => b.onclick = () => {
       const s = SKEL[+b.dataset.skel], kk = skelKey();
-      /* 빈칸만 채운다 — 적힌 칸은 건드리지 않는다 */
       [...rubBox.querySelectorAll(".rrow2")].forEach((row,i) => {
         const t = row.querySelector(".rt");
-        if(!t.value.trim() && s.t[i]){ t.value = s.t[i](kk); growRubricField(t); }
+        if(untouchedCell(t, i) && s.t[i]){ t.value = s.t[i](kk); growRubricField(t); }
       });
-      dlgState.axis = s.axis; m.hidden = true; paintLint();
+      dlgState.axis = s.axis;
+      dlgState.officialClean = false; dlgState.mine = true;
+      m.hidden = true; paintOfficial(); paintLint();
     });
-  };
+  }
+  /* 얹은 것을 물릴 길을 함께 둔다 — 되돌릴 수 없으면 눌러 보지 못한다 */
+  function revertOfficial(){
+    const src = LV[dlgState.officialFor] || [];
+    [...rubBox.querySelectorAll(".rrow2")].forEach((row,i) => {
+      const t = row.querySelector(".rt");
+      if(src[i]){ t.value = src[i]; growRubricField(t); }
+    });
+    dlgState.officialClean = true; dlgState.mine = false;
+    el("dlg-skelmenu").hidden = true;
+    paintOfficial(); paintLint();
+  }
   paintDlg(); el("dlg").showModal(); requestAnimationFrame(growRubric);
 
   /* 평가 요소가 비면 첫 성취기준 원문을 명사형으로 바꿔 뼈대의 핵으로 쓴다 */
@@ -4659,7 +4894,7 @@ function openStd(subject, selected, onOK, taskMode){
     el("dlg-full").innerHTML = codes.map(c =>
       `<div class="one"><span class="c">${esc(c)}</span><span>${esc(CODEMAP[c]?.text || "원문을 찾지 못했습니다")}</span></div>`).join("");
     el("dlg-sel").textContent = codes.length ? `성취기준 ${codes.length}건` : "";
-    el("dlg-skel").disabled = !skelKey();
+    fillOfficialRubric();
     paintSrc(); paintWho();
     /* AI 기능은 연결 전에도 숨기지 않는다 — 사라진 기능처럼 보이면 연결할 이유도 찾지 못한다. */
     const air = aiOn(), need = air ? "" : ` ai-need`;
@@ -4668,8 +4903,11 @@ function openStd(subject, selected, onOK, taskMode){
       `<button class="kwai${need}" id="dlg-elai" type="button">${ICON.spark()}AI 추천${needText}</button>`;
     el("dlg-kwai-slot").innerHTML =
       `<button class="kwai${need}" id="dlg-kwai" type="button">${ICON.spark()}AI 추천${needText}</button>`;
-    el("dlg-airub-slot").innerHTML =
-      `<button class="ghost${need}" id="dlg-airub" type="button">${ICON.spark()}AI 초안${needText}</button>`;
+    /* 수준 서술은 교육부 성취수준이 이미 채워 둔다. 여기 버튼이 하는 일은
+       그 위에 우리 반 평가요소를 얹는 것이다 — AI가 있으면 합쳐 다시 쓰고,
+       없으면 잣대를 골라 뼈대 문장으로 쓴다. 그래서 연결 없이도 눌린다. */
+    el("dlg-mine-slot").innerHTML =
+      `<button class="ghost" id="dlg-mine" type="button">${air ? ICON.spark() : ""}내 평가요소 반영</button>`;
     const needAI = () => {
       const msg = el("dlg-sel");
       msg.textContent = "AI 연결 탭에서 전송 안내에 동의하고 연결을 확인해 주세요";
@@ -4677,7 +4915,8 @@ function openStd(subject, selected, onOK, taskMode){
     };
     const eai = el("dlg-elai"); if(eai) eai.onclick = air ? aiElements : needAI;
     const kai = el("dlg-kwai"); if(kai) kai.onclick = air ? aiKeywords : needAI;
-    const arb = el("dlg-airub"); if(arb) arb.onclick = air ? aiRubric : needAI;
+    const mn = el("dlg-mine");
+    if(mn){ mn.disabled = !skelKey(); mn.onclick = openMine; }
     paintElem(); paintKw(); paintLint();
   }
   /* 증거 계획 — 관찰 한 번으로 판정하는 평가를 설계 시점에 거른다.
@@ -4730,14 +4969,38 @@ function openStd(subject, selected, onOK, taskMode){
     for(const c of ELEM_CATS) for(const w of (pool[c]||[])) if(sel.has(w)) out.push(w);
     return out.join(" · ");
   }
+  /* 고른 성취기준에서 나온 평가 요소.
+     교육부 성취수준 서술(A·B·C)에서 뽑은 것이라 이 성취기준을 재는 말이다.
+     교과·학년군 단위 낱말보다 앞에 온다 — 같은 자리를 두고 다투면 좁은 쪽이 이긴다. */
+  function stdPoints(){
+    const out = [];
+    for(const c of dlgState.sel) for(const w of (PT[c] || [])) if(!out.includes(w)) out.push(w);
+    return out;
+  }
   function paintKw(){
     const r = kwOfAreas(mainSubject(), dlgAreas());
     /* 자리를 지킨다 — 고른 것을 앞으로 당기면 눌러 놓고도 누른 것인지 눈이 잃는다.
        켜짐은 색으로 이미 보인다. 순서는 기본 낱말 → 올라온 낱말 → 그 밖의 것. */
-    const words = [...new Set([...r.blocks.flatMap(b => b.k), ...(dlgState.kwPool||[]), ...dlgState.kw])];
-    el("dlg-kw").innerHTML = words.map(w=>`<button class="kwc" type="button" data-kw="${esc(w)}"
-      aria-pressed="${dlgState.kw.has(w)}">${esc(w)}</button>`).join("")
-      || `<span class="muted">이 영역의 키워드가 없습니다</span>`;
+    const all = [...new Set([...r.blocks.flatMap(b => b.k), ...(dlgState.kwPool||[]), ...dlgState.kw])];
+    /* 성취기준에서 나온 말과 이미 고른 말은 앞에 편다. 나머지는 접어 둔다 —
+       스무 개를 한꺼번에 펴 두면 고르는 일이 읽는 일이 된다. */
+    const head = [...new Set([...stdPoints(), ...dlgState.kw])];
+    const rest = all.filter(w => !head.includes(w));
+    const chip = w => `<button class="kwc" type="button" data-kw="${esc(w)}"
+      aria-pressed="${dlgState.kw.has(w)}">${esc(w)}</button>`;
+    el("dlg-kw").innerHTML = (head.length || rest.length)
+      ? head.map(chip).join("")
+        + (rest.length
+            ? `<button class="kwtog" id="dlg-kwmore" type="button" aria-expanded="${!!dlgState.kwMore}"
+                 >다른 낱말<span class="cnt">${rest.length}</span></button>`
+              + (dlgState.kwMore ? rest.map(chip).join("") : "")
+            : "")
+      : `<span class="muted">이 영역의 키워드가 없습니다</span>`;
+    const mo = el("dlg-kwmore");
+    if(mo) mo.onclick = () => { dlgState.kwMore = !dlgState.kwMore; paintKw(); };
+    /* 평가 요소 칸이 비어 있으면 이 성취기준의 첫 관점을 예로 보인다 — 채우지는 않는다 */
+    const nm = el("dlg-name"), first = stdPoints()[0];
+    if(nm && first && !nm.value.trim()) nm.placeholder = `예) ${first}`;
     /* 조용히 실패하지 않는다 */
     const m = el("dlg-kwmsg");
     if(!r.missed.length) m.innerHTML = "";
@@ -4813,14 +5076,18 @@ JSON만 출력한다: {"지식":["..."],"기능":["..."],"태도":["..."]}`);
     const b2 = el("dlg-kwai"); if(b2){ b2.disabled = false; b2.innerHTML = ICON.spark() + "AI 추천"; }
   }
   async function aiRubric(){
-    const b = el("dlg-airub"); b.disabled = true; b.textContent = "…";
+    const b = el("dlg-mine"); if(b){ b.disabled = true; b.textContent = "…"; }
     const rows = [...rubBox.querySelectorAll(".rrow2")];
     const levels = rows.map(r => r.querySelector(".rl").value.trim() || "수준");
+    const src = LV[dlgState.officialFor] || [];
     try{
       const r = await aiJSON(`한국 초등학교 ${S.klass.grade}학년 ${dlgSubjects().join("·") || mainSubject()} 평가과제의 ${levels.length}수준 루브릭을 쓴다.
 평가 요소: ${el("dlg-name").value.trim()} / 평가 내용: ${el("dlg-crit").value.trim()}
 성취기준:
 ${[...dlgState.sel].map(c => `- [${c}] ${CODEMAP[c]?.text||""}`).join("\n") || "- (없음)"}
+${src.length ? `교육부 성취수준 — 이것이 정본이다. 뜻을 바꾸지 말고, 위 평가 요소와 평가 내용에 맞게
+우리 반 활동으로 구체화해 다시 쓴다. 없는 활동을 지어내지 않는다.
+${levels.map((l,i)=>`- ${l}: ${src[i]||""}`).join("\n")}` : ""}
 수준을 가르는 기준: ${dlgState.axis || "자립도"}
 
 [모습] 그 수준에서 교실에 보이는 모습
@@ -4840,18 +5107,23 @@ ${[...dlgState.sel].map(c => `- [${c}] ${CODEMAP[c]?.text||""}`).join("\n") || "
 - "잘했어" "훌륭해" 같은 막연한 칭찬만으로 끝내지 않는다.
 
 JSON만 출력한다: {${levels.map(l=>`"${l}":{"모습":"…","피드백":"…"}`).join(",")}}`);
-      /* 뼈대와 같은 규칙 — 빈칸만 채운다. 형식을 어겨 문자열로 오면 모습으로 받는다 */
+      /* 교육부 것 그대로인 칸만 바꾼다 — 내가 고쳐 쓴 칸은 건드리지 않는다.
+         형식을 어겨 문자열로 오면 모습으로 받는다 */
+      let changed = 0;
       rows.forEach((row,i) => {
         const v = r[levels[i]];
         const 모습 = typeof v === "string" ? v : v?.모습;
         const 피드백 = typeof v === "string" ? "" : v?.피드백;
         const t = row.querySelector(".rt"), f = row.querySelector(".rf");
-        if(!t.value.trim() && 모습){ t.value = String(모습).trim(); growRubricField(t); }
+        if(untouchedCell(t, i) && 모습){ t.value = String(모습).trim(); growRubricField(t); changed++; }
         if(!f.value.trim() && 피드백){ f.value = String(피드백).trim(); growRubricField(f); }
       });
-      paintLint();
+      if(changed){ dlgState.officialClean = false; dlgState.mine = true; }
+      if(rubBox.hidden && changed){ rubBox.hidden = false; requestAnimationFrame(growRubric); }
+      paintOfficial(); paintLint();
     }catch(e){ el("dlg-lint").innerHTML = `<div class="dmsg" style="color:var(--low)">${esc(e.message)}</div>`; }
-    const b2 = el("dlg-airub"); if(b2){ b2.disabled = false; b2.textContent = "AI 초안"; }
+    const b2 = el("dlg-mine");
+    if(b2){ b2.disabled = false; b2.innerHTML = (aiOn() ? ICON.spark() : "") + "내 평가요소 반영"; }
   }
 }
 

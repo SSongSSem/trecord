@@ -19,12 +19,23 @@ const MAX_BODY = 8 * 1024 * 1024;
 
 const UPSTREAM = "https://generativelanguage.googleapis.com";
 
-function cors(origin) {
-  const ok = ALLOW.includes(origin);
+/* 개발 중인 로컬 화면을 위한 문 — 오리진만으로는 열지 않는다.
+   저장소가 공개라 누구나 같은 앱을 자기 localhost에 띄울 수 있기 때문에,
+   시크릿 DEV_TOKEN과 맞는 머리를 함께 보낼 때만 연다. */
+const LOCAL = /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/;
+
+function allowed(origin, req, env) {
+  if (ALLOW.includes(origin)) return true;
+  const tok = env.DEV_TOKEN;
+  return !!tok && LOCAL.test(origin) && req.headers.get("x-dev-token") === tok;
+}
+
+function cors(origin, env) {
+  const ok = ALLOW.includes(origin) || (env && env.DEV_TOKEN && LOCAL.test(origin));
   return {
     "Access-Control-Allow-Origin": ok ? origin : ALLOW[0],
     "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-    "Access-Control-Allow-Headers": "Content-Type",
+    "Access-Control-Allow-Headers": "Content-Type, x-dev-token",
     "Access-Control-Max-Age": "86400",
     "Vary": "Origin",
   };
@@ -38,10 +49,11 @@ const fail = (msg, status, h) =>
 export default {
   async fetch(req, env) {
     const origin = req.headers.get("Origin") || "";
-    const h = cors(origin);
+    const h = cors(origin, env);
 
     if (req.method === "OPTIONS") return new Response(null, { headers: h });
-    if (origin && !ALLOW.includes(origin))
+    /* 오리진이 없는 요청도 막는다 — 브라우저 밖에서 부르면 Origin이 붙지 않는다 */
+    if (!allowed(origin, req, env))
       return fail("허용되지 않은 주소에서 온 요청입니다.", 403, h);
 
     /* 시크릿 이름은 둘 다 받는다 — 대시보드에서 넣을 때 이름이 갈리기 쉽다 */
