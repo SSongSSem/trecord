@@ -53,10 +53,15 @@ PDF로 저장해 「AI로 읽기」를 쓰세요. (HWPX는 ZIP+XML이라 브라�
 ## 고치고 빌드하기
 
 ```bash
-python build.py     # app.src.html + 성취기준·키워드 JSON  →  index.html
+python build.py       # app.src.html + 성취기준·키워드 JSON  →  index.html
+node test_checks.mjs  # 기재요령 검사·루브릭 점검 회귀 시험
 ```
 
 `index.html`은 자체 포함 단일 파일입니다. 외부 요청이 없으므로 어디에 올려도 그대로 동작합니다.
+
+검사 규칙에는 표본에서 재서 넣은 임계값이 있어(수준 서술이 얼마나 겹치면 짚을지 등)
+손대다 보면 조용히 어긋납니다. `test_checks.mjs`는 `app.src.html`에서 검사 부분만 떼어
+그대로 돌리므로 규칙 사본을 따로 두지 않으며, `build.py`를 다시 돌리는 걸 잊었는지도 함께 봅니다.
 
 ## 공용 AI 연결 (선택)
 
