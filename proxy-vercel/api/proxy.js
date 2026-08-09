@@ -13,15 +13,29 @@ const ALLOW = [
   "https://ssongssem.github.io",
 ];
 
+/* 개발 중인 로컬 화면에서도 공용 연결을 쓰기 위한 문.
+   오리진만으로는 열지 않는다 — 이 저장소는 공개라서 누구나 같은 앱을
+   자기 localhost에 띄울 수 있고, 그러면 이 서버의 키가 그대로 남의 것이 된다.
+   그래서 환경 변수 DEV_TOKEN과 맞는 머리를 함께 보낼 때만 연다.
+   DEV_TOKEN을 넣지 않으면 이 문은 없는 것과 같다. */
+const LOCAL = /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/;
+
+function allowed(origin, req) {
+  if (ALLOW.includes(origin)) return true;
+  const tok = process.env.DEV_TOKEN;
+  return !!tok && LOCAL.test(origin) && req.headers.get("x-dev-token") === tok;
+}
+
 const MODEL_OK = /^gemini-[A-Za-z0-9._-]+$/;
 const MAX_BODY = 8 * 1024 * 1024;
 const UPSTREAM = "https://generativelanguage.googleapis.com";
 
 function cors(origin) {
+  const ok = ALLOW.includes(origin) || (process.env.DEV_TOKEN && LOCAL.test(origin));
   return {
-    "Access-Control-Allow-Origin": ALLOW.includes(origin) ? origin : ALLOW[0],
+    "Access-Control-Allow-Origin": ok ? origin : ALLOW[0],
     "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-    "Access-Control-Allow-Headers": "Content-Type",
+    "Access-Control-Allow-Headers": "Content-Type, x-dev-token",
     "Access-Control-Max-Age": "86400",
     "Vary": "Origin",
   };
@@ -38,7 +52,9 @@ export default {
     const h = cors(origin);
 
     if (request.method === "OPTIONS") return new Response(null, { headers: h });
-    if (origin && !ALLOW.includes(origin))
+    /* 오리진이 아예 없는 요청도 막는다. 브라우저 밖에서 부르면 Origin이 붙지 않으므로,
+       'origin이 있을 때만 검사'하면 문을 열어 둔 것과 같다. */
+    if (!allowed(origin, request))
       return fail("허용되지 않은 주소에서 온 요청입니다.", 403, h);
 
     /* 이름이 갈리기 쉬워 둘 다 받는다 */
