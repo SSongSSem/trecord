@@ -30,7 +30,8 @@ const REGION = s => [
   slice(s, "function check(text)", "const SVG =", "app.src.html"),
 ].join("\n");
 
-const { rubricLint, check } = new Function(REGION(SRC) + "; return {rubricLint, check};")();
+const { rubricLint, check, RUB_DEGREE } =
+  new Function(REGION(SRC) + "; return {rubricLint, check, RUB_DEGREE};")();
 
 let pass = 0, fail = 0;
 const t = (name, got, want) => {
@@ -139,6 +140,16 @@ for (const s of ["모둠 활동에서 중심 문장을 찾아 근거를 들어 �
                  "각도기를 정확히 맞추어 예각과 둔각을 구분하여 그림.",
                  "학급 회의에서 급식 잔반 줄이기 규칙을 제안하고 실천표를 만듦."])
   t(`「${s}」`, check(s).length, 0);
+
+/* AI 프롬프트와 검사가 어긋나면, AI가 쓴 것을 우리 검사가 곧바로 막는다.
+   한쪽만 고치기 쉬운 자리라 여기서 묶어 둔다. */
+group("AI에게 쓰지 말라고 한 정도부사를 검사도 잡는가");
+const promptLine = (SRC.match(/^- '자세히[^\n]*\n[^\n]*$/m) || [""])[0];
+t("루브릭 프롬프트에서 정도부사 줄을 찾음", promptLine.length > 0, true);
+for (const w of [...new Set((promptLine.match(/'([^']+)'/g) || [])
+                  .flatMap(s => s.slice(1, -1).split("·")).map(s => s.trim()).filter(Boolean))])
+  t(`프롬프트가 막는 '${w}' 를 rubricLint 도 잡음`,
+    RUB_DEGREE.test(`자료를 ${w} 정리함`), true);
 
 group("index.html 이 app.src.html 과 같은 규칙을 담고 있는가");
 const OUT = path.join(here, "index.html");
