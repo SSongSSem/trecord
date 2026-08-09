@@ -233,8 +233,6 @@ textarea{line-height:1.7}
 .rlc:hover{border-color:var(--accent-line);color:var(--accent)}
 .rlc[aria-pressed="true"]{background:var(--accent-soft);border-color:var(--accent-line);
      color:var(--accent-deep);font-weight:600}
-.memo .rtag{font-size:11px;color:var(--warm);background:var(--warm-soft);border:1px solid var(--warm-line);
-     border-radius:999px;padding:1px 7px;white-space:nowrap}
 .kwc{background:var(--surface);border:1px solid var(--rule);border-radius:999px;
      padding:2px 10px;font-size:12px;color:var(--ink-2);white-space:nowrap}
 .kwc:hover{border-color:var(--accent-line);color:var(--accent);background:var(--accent-soft)}
@@ -267,11 +265,6 @@ textarea{line-height:1.7}
      padding:3px 12px;font-size:12px;color:var(--ink-2)}
 .lvc:hover{border-color:var(--rule-strong);color:var(--ink)}
 .lvc[aria-pressed="true"]{border-color:var(--rule-strong);color:var(--ink);font-weight:600;background:var(--raise)}
-/* 성장은 교사가 고른 것이 아니라 쌓인 기록에서 읽은 것이다 — 수준 옆에 조용히 붙는다 */
-.gtag{font-size:11px;border-radius:999px;padding:1px 7px;white-space:nowrap;border:1px solid transparent}
-.gtag.up{color:var(--good);background:var(--good-soft);border-color:var(--good-soft)}
-.gtag.flat{color:var(--ink-3);background:var(--sink)}
-.gtag.down{color:var(--mid);background:var(--mid-soft)}
 /* 복사한 자국 — 어디까지 넘겼는지 알려 준다 */
 .foot .moved{font-size:11.5px;color:var(--good);background:var(--good-soft);border-radius:999px;padding:2px 9px;white-space:nowrap}
 .progress-table .mvtag{font-family:var(--mono);font-size:11.5px;color:var(--ink-3);background:var(--sink);border-radius:999px;padding:1px 8px}
@@ -296,11 +289,22 @@ textarea{line-height:1.7}
            padding:1px 9px;justify-self:start;white-space:nowrap}
 .memo .body{word-break:break-word;line-height:1.65}
 .memo .body{display:flex;flex-wrap:wrap;align-items:baseline;gap:6px}
+/* 동그라미는 「무엇을 보고 썼는가」 하나에만 두른다. 이 도구가 관찰마다 묻는 것이고,
+   기재요령이 근거로 인정하는 자료가 무엇인지 가르는 자리라서다.
+   나머지는 색과 크기로만 갈린다 — 다 두르면 무엇이 중한지 알 수 없다. */
+.memo .rtag{font-size:12px;color:var(--ink-3);white-space:nowrap}
+.memo .rtag:after{content:"·";margin-left:6px;color:var(--rule-strong)}
+.memo .lvtag{font-size:12px;font-weight:600;color:var(--ink-2);border:0;background:none;padding:0;white-space:nowrap}
+.memo .gmark{font-style:normal;font-weight:700;margin-left:3px}
+.memo .gmark.up{color:var(--good)}
+.memo .gmark.down{color:var(--mid)}
+.memo .gmark.flat{color:var(--ink-3)}
+.memo .meta{flex-basis:100%;display:flex;flex-wrap:wrap;align-items:baseline;gap:7px;margin-top:2px}
 .memo .code{font-family:var(--mono);font-size:11px;color:var(--accent)}
 .memo .code.legacy{color:var(--warm)}
 .memo .code em{font-style:normal;font-size:10px;border:1px solid var(--warm-line);border-radius:999px;padding:0 5px}
 .memo .stdinline{font-size:11.5px;color:var(--ink-3)}
-.memo .obs{flex-basis:100%;line-height:1.6}
+.memo .obs{flex:1;min-width:0;line-height:1.6;color:var(--ink)}
 .ic{width:15px;height:15px;flex:0 0 auto;vertical-align:-2px}
 .kwai{display:inline-flex;align-items:center;gap:5px;background:var(--accent);color:var(--on-accent);
       border:1px solid var(--accent);border-radius:999px;padding:5px 13px;font-size:12.5px;font-weight:600}
@@ -1963,19 +1967,22 @@ function detailHTML(){
     ${ns.length ? ns.map(n => `<div class="memo">
         <span class="dt" title="${esc(n.date)}">${esc(n.date.slice(5))}</span>
         <span class="src">${esc(n.source)}</span>
-        ${rolesOf(n).map(v=>`<span class="rtag">${esc(v)}</span>`).join("")}
         <span class="body">
-          ${(n.standards||[]).length?`<span class="code">${n.standards.map(esc).join(" ")}</span>`:""}
-          ${(n.legacy||[]).length?`<span class="code legacy">${n.legacy.map(esc).join(" ")} <em>2015</em></span>`:""}
-          ${(n.standards||[]).length?`<span class="stdinline">${n.standards.map(c=>esc(stdCut(c,52))).filter(Boolean).join(" / ")}</span>`:""}
+          ${rolesOf(n).length?`<span class="rtag">${rolesOf(n).map(esc).join("·")}</span>`:""}
           <span class="obs">${n.text ? esc(n.text)
             : `<span class="muted">${n.level ? esc(levelText(n) || "수준만 담김")
                 : n.fileId ? "산출물만 담김 — 눌러서 볼 수 있습니다" : "(빈 관찰)"}</span>`}</span>
-          ${n.level?`<span class="lvtag" title="${esc(levelText(n))}">${esc(n.level)}</span>`:""}
-          ${(() => { const g = growthOf(n); return g
-            ? `<span class="gtag ${g}" title="같은 평가과제의 지난 기록과 견준 것입니다">${GROWTH_LABEL[g]}</span>` : ""; })()}
-          ${taskOf(n)?`<span class="task">${esc(taskOf(n).name)}</span>`:""}
-          ${n.fileId?`<button class="clip" type="button" data-open="${esc(n.fileId)}" title="붙어 있는 산출물 보기">첨부</button>`:""}</span>
+          ${n.level?`<span class="lvtag" title="${esc(levelText(n))}">${esc(n.level)}${(() => {
+            const g = growthOf(n); return g
+              ? `<i class="gmark ${g}" title="같은 평가과제의 지난 기록보다 ${GROWTH_LABEL[g]}">${
+                  g==="up"?"↑":g==="down"?"↓":"="}</i>` : ""; })()}</span>`:""}
+          ${n.fileId?`<button class="clip" type="button" data-open="${esc(n.fileId)}" title="붙어 있는 산출물 보기">첨부</button>`:""}
+          ${(() => { const meta = []
+              .concat((n.standards||[]).length?[`<span class="code">${n.standards.map(esc).join(" ")}</span>`]:[])
+              .concat((n.legacy||[]).length?[`<span class="code legacy">${n.legacy.map(esc).join(" ")} <em>2015</em></span>`]:[])
+              .concat((n.standards||[]).length?[`<span class="stdinline">${n.standards.map(c=>esc(stdCut(c,52))).filter(Boolean).join(" / ")}</span>`]:[])
+              .concat(taskOf(n)?[`<span class="task">${esc(taskOf(n).name)}</span>`]:[]);
+            return meta.length?`<span class="meta">${meta.join("")}</span>`:""; })()}</span>
         <span style="display:flex;gap:2px;align-items:baseline;justify-content:flex-end">
           <button class="mv" type="button" data-mv="${n.id}" title="다른 학생에게 옮기기">옮기기</button>
           <button class="del" type="button" data-del="${n.id}" title="지우기">×</button></span></div>`).join("")
@@ -2262,7 +2269,7 @@ function bindDetail(){
   const goPrep = el("c-goprep");
   if(goPrep) goPrep.onclick = () => { S.ui.tab = "prep"; save(); render(); };
   const plain = el("c-plain");
-  if(plain) plain.onclick = () => { _taskId = "none"; _noteLevel = ""; repaint(); el("c-text")?.focus(); };
+  if(plain) plain.onclick = () => { _taskId = "none"; _noteLevel = ""; repaint(); el("c-text")?.focus({preventScroll:true}); };
   const editTask = el("c-edittask");
   if(editTask) editTask.onclick = () => {
     const t = S.tasks.find(x => x.id === _taskId); if(!t) return;
@@ -2337,14 +2344,14 @@ function bindDetail(){
     _roles = _roles.includes(v) ? _roles.filter(x => x !== v) : [..._roles, v];
     rbar.querySelectorAll("[data-role]").forEach(x =>
       x.setAttribute("aria-pressed", String(_roles.includes(x.dataset.role))));
-    el("c-text")?.focus();
+    el("c-text")?.focus({preventScroll:true});
   };
   const many = el("c-many"); if(many) many.onclick = addNoteMany;
   const skip = el("c-skip"); if(skip) skip.onclick = () => sweepNext();
   el("c-sweep").onclick = () => {
     _sweep = !_sweep; _sweepMsg = "";
     if(_sweep && S.students.length) S.ui.sid = S.students[0].id;
-    renderWrite(); el("c-text")?.focus();
+    renderWrite(); el("c-text")?.focus({preventScroll:true});
   };
 
   /* 산출물 사진·PDF → 글자 읽기 → 관찰 메모 후보 */
@@ -2377,7 +2384,7 @@ function bindDetail(){
       /* 첨부 칩이 이미 파일 이름을 보여주므로 여기서는 결과만 알린다(§7-2 40자) */
       const keep = `<div class="hint">보관했습니다 — 지금 담는 관찰에 붙습니다.</div>`;
       repaint();
-      if(!aiOn()){ el("c-shot-out").innerHTML = keep; el("c-text").focus(); return; }
+      if(!aiOn()){ el("c-shot-out").innerHTML = keep; el("c-text")?.focus({preventScroll:true}); return; }
       el("c-shot-out").innerHTML = `<div class="hint">사진에서 글자를 읽는 중… 잠시 기다려 주세요.</div>`;
       try{
         const b64 = await new Promise((ok,no) => {
@@ -2644,15 +2651,11 @@ ${S.drafts[k].text}`);
 
 /* 관찰 한 건을 짓는다. 학생만 다르고 나머지는 같다 —
    withLevel이 false면 수준을 붙이지 않는다(함께 담기에서 쓴다, §일괄의 경계). */
-/* 자주 쓰는 역할이 앞에 온다 — 최근 30건에서 세어 본다.
-   목록 자체는 바뀌지 않는다. 자리만 바뀐다(자리가 매번 달라지면 손이 헤맨다). */
+/* 한 개만 담기던 때의 기록도 그대로 읽는다 */
 const rolesOf = n => n.roles || (n.role ? [n.role] : []);
-function roleOrder(){
-  const c = {};
-  for(const n of S.notes.slice(-30)) for(const v of rolesOf(n)) c[v] = (c[v] || 0) + 1;
-  const hot = ROLES.filter(v => c[v]).sort((a, b) => c[b] - c[a]).slice(0, 3);
-  return [...hot, ...ROLES.filter(v => !hot.includes(v))];
-}
+/* 자리는 고정이다. 자주 쓰는 것을 앞으로 당겨 봤으나, 한 건 담을 때마다 셈이 달라져
+   칩이 눈앞에서 뒤섞였다. 일곱 개뿐이라 찾기 어렵지 않다 — 자리가 늘 같은 편이 손에 익는다. */
+function roleOrder(){ return ROLES; }
 function buildNote(sid, text, cur, withLevel){
   const n = {id:uid(), studentId:sid, date:today(), source:_src, text, standards:[]};
   if(cur.kind === "subj"){
@@ -2681,7 +2684,7 @@ function addNote(){
   /* 수준은 한 건에 한 번이다 — 비우지 않으면 다음 학생에게 판정이 조용히 따라간다(§10-5) */
   S.notes.push(n); pendingStd = []; _noteLevel = ""; _roles = []; save();
   if(_sweep){ sweepNext(); return; }
-  renderWrite(); el("c-text").focus();
+  renderWrite(); el("c-text")?.focus({preventScroll:true});
 }
 /* 다음 학생으로. 명렬 끝에 닿으면 스스로 멈춘다 — 되돌아 처음부터 돌지 않는다 */
 function sweepNext(){
@@ -2690,7 +2693,7 @@ function sweepNext(){
   if(next){ S.ui.sid = next.id; _sweepMsg = ""; }
   else { _sweep = false; _sweepMsg = "한 바퀴 돌았습니다."; }
   pendingStd = []; pendingFile = null; _noteLevel = ""; save();
-  renderWrite(); el("c-text")?.focus();
+  renderWrite(); el("c-text")?.focus({preventScroll:true});
 }
 /* 함께 담기 — 같은 장면을 여럿이 실제로 겪었을 때. 사실은 복제할 수 있다.
    그러나 수준 판정은 복제하지 않는다: 한 클릭이 N명의 수준을 정하면
