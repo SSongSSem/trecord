@@ -531,6 +531,9 @@ tr:hover .rowact,tr:focus-within .rowact{opacity:1}
 .promptbox .prow + .prow{border-top:1px solid var(--rule)}
 .promptbox .pname{flex:1;font-size:13.5px;font-weight:600;color:var(--ink)}
 .promptbox .hint{margin-top:7px;padding-top:8px;border-top:1px solid var(--rule)}
+.promptbox .ptext{margin:2px 0 8px;padding:11px 13px;border:1px solid var(--rule);border-radius:10px;
+  background:var(--surface);font-family:var(--mono);font-size:12.5px;line-height:1.7;color:var(--ink-2);
+  white-space:pre-wrap;word-break:break-word;max-height:360px;overflow:auto}
 .help{margin-top:10px;font-size:12.5px;color:var(--ink-2)}
 .help summary{font-size:12px;color:var(--ink-3)}
 .help div{padding-top:8px;line-height:1.7}
@@ -2768,6 +2771,8 @@ function renderPrep(){
    루브릭이 없는 과제는 설계를 시작할 수 없게 막는다 — 역산할 지표가 없으면
    활동 고르기가 다시 ‘재미있는 것’ 고르기로 돌아간다. */
 let _dsgId = "";
+/* 어느 프롬프트를 펴 두었나 — 확인하지 않고 복사하게 두지 않는다 */
+let _promptOpen = "";
 
 /* 초등 한 차시는 40분이다. 차시가 본디 단위이고 분은 거기서 나온다 —
    프로젝트 수업이면 차시가 얼마든지 늘 수 있으므로 위를 막지 않는다 */
@@ -2956,7 +2961,11 @@ function paintOut(t, d){
       ${hasFlow ? `<div class="promptbox">
         ${["sheet","deck"].map(k => `<div class="prow">
           <span class="pname">${esc(PROMPT_TITLES[k])}</span>
-          <button class="ghost" type="button" data-copy="${k}">복사</button></div>`).join("")}
+          <button class="ghost" type="button" data-see="${k}">${_promptOpen === k ? "접기" : "보기"}</button>
+          <button class="ghost" type="button" data-copy="${k}">복사</button></div>
+          ${_promptOpen === k
+            ? `<pre class="ptext">${esc(k === "sheet" ? sheetPrompt(t, d) : deckPrompt(t, d))}</pre>`
+            : ``}`).join("")}
         <div class="hint">쓰시는 AI에 그대로 넣으면 됩니다. 이 도구는 활동지·수업자료 파일을 만들지 않습니다 —
           글자가 한 자도 틀리면 안 되는 종이를 어설프게 그리는 것보다, 만드는 법을 정확히 적어 드리는 편이 낫습니다.</div>
       </div>` : ``}
@@ -2964,6 +2973,10 @@ function paintOut(t, d){
     </div>`;
   const hw = el("d-hwpx");
   if(hw) hw.onclick = () => saveHwpx(t, d, hw);
+  box.querySelectorAll("[data-see]").forEach(b => b.onclick = () => {
+    _promptOpen = _promptOpen === b.dataset.see ? "" : b.dataset.see;
+    paintOut(t, d);
+  });
   box.querySelectorAll("[data-copy]").forEach(b => b.onclick = async () => {
     const txt = b.dataset.copy === "sheet" ? sheetPrompt(t, d) : deckPrompt(t, d);
     try{ await navigator.clipboard.writeText(txt); }
